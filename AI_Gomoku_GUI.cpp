@@ -141,24 +141,39 @@ int cnt_lin(int r, int c, int dr, int dc, int p) {
     return cnt;
 }
 
-int get_thr(int r, int c, int p) {
-    int sc = 0;
-    int dr[] = {0, 1, 1, 1}, dc[] = {1, 0, 1, -1};
-    for (int i = 0; i < 4; i++) {
-        int cnt = cnt_lin(r, c, dr[i], dc[i], p);
-        if (cnt >= 5) return 10000;
-        if (cnt == 4) {
-            sc += 500;
-        } else if (cnt == 3) {
-            int emp = 0;
-            if (ok(r + dr[i] * 3, c + dc[i] * 3) &&
-                brd[r + dr[i] * 3][c + dc[i] * 3] == 0) emp++;
-            if (ok(r - dr[i], c - dc[i]) && brd[r - dr[i]][c - dc[i]] == 0) emp++;
-            if (emp == 2) sc += 100;
-        }
-    }
-    return sc;
-}
+  int get_thr(int r, int c, int p) {
+      // Immediate block: any 5‑cell segment containing (r,c) with 3+ stones of player p.
+      int dr[] = {0, 1, 1, 1, 0, -1, -1, -1};
+      int dc[] = {1, 1, 0, -1, -1, -1, 0, 1};
+      for (int d = 0; d < 8; ++d) {
+          int cnt = 0;
+          for (int k = -2; k <= 2; ++k) {
+              int nr = r + dr[d] * k;
+              int nc = c + dc[d] * k;
+              if (!ok(nr, nc)) continue;
+              if (brd[nr][nc] == p) cnt++;
+          }
+          if (cnt >= 3) return 10000;
+      }
+
+      // Heuristic score: centre preference + strongest direction threat count.
+      const int center = sz / 2;
+      const int dist = abs(r - center) + abs(c - center);
+      int base = (sz - dist) * 10;          // closer to centre gets higher base
+      int maxThreat = 0;
+      for (int d = 0; d < 8; ++d) {
+          int cnt = 0;
+          for (int k = -2; k <= 2; ++k) {
+              int nr = r + dr[d] * k;
+              int nc = c + dc[d] * k;
+              if (!ok(nr, nc)) continue;
+              if (brd[nr][nc] == p) cnt++;
+          }
+          maxThreat = max(maxThreat, cnt);
+      }
+      int sc = base + maxThreat * 50;
+      return sc;
+  }
 
 pair<int, int> vcf(int p, int dep) {
     if (dep <= 0) return {-1, -1};
@@ -203,7 +218,7 @@ bool check_win_at(int r, int c, int p) {
 }
 
 pair<int, int> choose_ai_move() {
-    pair<int, int> ap = vcf(2, 4);
+    pair<int, int> ap = vcf(2, 50);
     if (ap.first == -1) ap = vcf(1, 4);
     if (ap.first != -1) return ap;
 
