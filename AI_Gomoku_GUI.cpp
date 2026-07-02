@@ -217,6 +217,66 @@ bool check_win_at(int r, int c, int p) {
     return false;
 }
 
+// Detects forbidden moves for black: 3‑in‑a‑row with both ends open (33),
+// 4‑in‑a‑row with both ends open (44), or any 5‑in‑a‑row (장목).
+// The function temporarily places a stone at (r, c), checks the patterns,
+// and then restores the board. It returns true if the move would be
+// forbidden.
+bool is_forbidden_move(int r, int c) {
+    // Place temporary stone.
+    brd[r][c] = 1;
+    bool forbidden = false;
+    // Directions: horizontal, vertical, two diagonals.
+    const int dr[] = {0, 1, 1, 1};
+    const int dc[] = {1, 0, 1, -1};
+    for (int d = 0; d < 4; ++d) {
+        int left = 0, right = 0;
+        // Count contiguous black stones to the left.
+        int nr = r - dr[d];
+        int nc = c - dc[d];
+        while (ok(nr, nc) && brd[nr][nc] == 1) {
+            left++;
+            nr -= dr[d];
+            nc -= dc[d];
+        }
+        // Count contiguous black stones to the right.
+        nr = r + dr[d];
+        nc = c + dc[d];
+        while (ok(nr, nc) && brd[nr][nc] == 1) {
+            right++;
+            nr += dr[d];
+            nc += dc[d];
+        }
+        int total = 1 + left + right;
+        // Check for 5+ line (장목) – always forbidden.
+        if (total >= 5) {
+            forbidden = true;
+            break;
+        }
+        // Check 4‑in‑a‑row with both ends open (44).
+        if (total == 4) {
+            bool left_open = ok(r - dr[d] * (left + 1), c - dc[d] * (left + 1)) && brd[r - dr[d] * (left + 1)][c - dc[d] * (left + 1)] == 0;
+            bool right_open = ok(r + dr[d] * (right + 1), c + dc[d] * (right + 1)) && brd[r + dr[d] * (right + 1)][c + dc[d] * (right + 1)] == 0;
+            if (left_open && right_open) {
+                forbidden = true;
+                break;
+            }
+        }
+        // Check 3‑in‑a‑row with both ends open (33).
+        if (total == 3) {
+            bool left_open = ok(r - dr[d] * (left + 1), c - dc[d] * (left + 1)) && brd[r - dr[d] * (left + 1)][c - dc[d] * (left + 1)] == 0;
+            bool right_open = ok(r + dr[d] * (right + 1), c + dc[d] * (right + 1)) && brd[r + dr[d] * (right + 1)][c + dc[d] * (right + 1)] == 0;
+            if (left_open && right_open) {
+                forbidden = true;
+                break;
+            }
+        }
+    }
+    // Restore original state.
+    brd[r][c] = 0;
+    return forbidden;
+}
+
 pair<int, int> choose_ai_move() {
     pair<int, int> ap = vcf(2, 50);
     if (ap.first == -1) ap = vcf(1, 4);
@@ -419,7 +479,25 @@ void layout() {
     int full_px = ui.cell * (sz - 1) + ui.margin * 2;
     ui.board = {32, max(24, (ui.h - full_px) / 2), full_px, full_px};
     int px = ui.board.x + ui.board.w + 36;
-    int py = max(32, ui.board.y + 118);
+    // Position the first button below the board but make sure the entire button
+    // column stays above the lower‑text area ("Touch or click…" and
+    // "N/U/D/S/Q shortcuts supported.").  The bottom text is drawn at
+    // `ui.h - 48`, so the last button (index 5) must finish before that.
+    // Each button is 50px high and spaced 60px apart, so the bottom of the
+    // last button is at `py + 5 * 60 + 50`.  We enforce `py` such that
+    // `py + 350 <= ui.h - 48`.  This is equivalent to `py <= ui.h - 408`.
+    // Use a max to keep the buttons below the board and at least 32px from
+    // the top of the window.
+    // Compute the start Y position for the first button.
+    int py = max(32, ui.board.y + 200);
+    // Ensure the entire button column fits above the bottom‑text area.
+    // The last button (index 5) ends at py + 350.  The bottom‑text is drawn
+    // at ui.h - 76 (first line) and ui.h - 48 (second line).  We keep a
+    // margin by requiring the button column to finish before ui.h - 76.
+    if (py + 350 > ui.h - 48) {
+        py = ui.h - 48 - 350;
+        if (py < 32) py = 32;  // keep a small margin from top
+    }
     int bw = max(220, ui.w - px - 32);
     for (int i = 0; i < 6; i++) ui.buttons[i] = {px, py + i * 60, bw, 50};
 }
@@ -484,16 +562,21 @@ bool board_from_point(int x, int y, int& r, int& c) {
 }
 
 void play_human_move(int r, int c) {
-    if (review_mode || game_over || !ok(r, c) || brd[r][c] != 0) return;
-    brd[r][c] = 1;
-    log_v.push_back({r, c});
-    last_move = {r, c};
-    if (check_win_at(r, c, 1)) {
-        game_over = true;
-        winner = 1;
-        enter_review_after_game();
-        return;
-    }
+      // Reject forbidden moves (33, 44, 장목) for black.
+      if (review_mode || game_over || !ok(r, c) || brd[r][c] != 0) return;
+      if (is_forbidden_move(r, c)) {
+          // Move is illegal under the forbidden rule; ignore it.
+          return;
+      }
+      brd[r][c] = 1;
+      log_v.push_back({r, c});
+      last_move = {r, c};
+      if (check_win_at(r, c, 1)) {
+          game_over = true;
+          winner = 1;
+          enter_review_after_game();
+          return;
+      }
 
     pair<int, int> ap = choose_ai_move();
     if (ap.first != -1 && brd[ap.first][ap.second] == 0) {
