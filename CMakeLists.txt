@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(gomoku_gui AI_Gomoku_GUI.cpp)
+add_executable(gomoku_cli gomoku_cli.cpp)
 
 if(WIN32)
     target_link_libraries(gomoku_gui PRIVATE gdi32 user32)

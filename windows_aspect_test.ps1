@@ -17,7 +17,7 @@ $Src = Join-Path $ScriptDir "AI_Gomoku_GUI.cpp"
 if (!(Test-Path $Exe) -or ((Get-Item $Src).LastWriteTime -gt (Get-Item $Exe).LastWriteTime)) {
     $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
                 [Environment]::GetEnvironmentVariable("Path", "User")
-    g++ -std=c++17 -O3 $Src -o $Exe -lgdi32 -luser32
+    g++ -std=c++17 -O3 $Src -o $Exe -lgdi32 -luser32 -finput-charset=UTF-8
 }
 
 $env:GOMOKU_ASPECT = $AspectRatio

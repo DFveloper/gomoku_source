@@ -1,12 +1,18 @@
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <atomic>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
+
+#include "gomoku_core.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -47,6 +53,15 @@ pair<int, int> win_line_start = {-1, -1};
 pair<int, int> win_line_end = {-1, -1};
 bool review_mode = false;
 int review_ply = 0;
+pair<int, int> forbidden_warn = {-1, -1};
+chrono::steady_clock::time_point forbidden_warn_started{};
+bool ai_thinking = false;
+bool ai_move_ready = false;
+pair<int, int> ai_pending_move = {-1, -1};
+int ai_pending_job = 0;
+int ai_pending_ply = 0;
+atomic<int> ai_job_seq{0};
+mutex ai_mutex;
 
 struct MoveReview {
     int r = 0;
@@ -141,39 +156,114 @@ int cnt_lin(int r, int c, int dr, int dc, int p) {
     return cnt;
 }
 
-  int get_thr(int r, int c, int p) {
-      // Immediate block: any 5‑cell segment containing (r,c) with 3+ stones of player p.
-      int dr[] = {0, 1, 1, 1, 0, -1, -1, -1};
-      int dc[] = {1, 1, 0, -1, -1, -1, 0, 1};
-      for (int d = 0; d < 8; ++d) {
-          int cnt = 0;
-          for (int k = -2; k <= 2; ++k) {
-              int nr = r + dr[d] * k;
-              int nc = c + dc[d] * k;
-              if (!ok(nr, nc)) continue;
-              if (brd[nr][nc] == p) cnt++;
-          }
-          if (cnt >= 3) return 10000;
-      }
+enum ThreatKind {
+    TH_FIVE,
+    TH_OPEN_FOUR,
+    TH_CLOSED_FOUR,
+    TH_BROKEN_FOUR,
+    TH_OPEN_THREE,
+    TH_BROKEN_THREE,
+    TH_CLOSED_THREE,
+    TH_OPEN_TWO,
+    TH_BROKEN_TWO,
+    TH_CLOSED_TWO,
+    TH_KIND_COUNT
+};
 
-      // Heuristic score: centre preference + strongest direction threat count.
-      const int center = sz / 2;
-      const int dist = abs(r - center) + abs(c - center);
-      int base = (sz - dist) * 10;          // closer to centre gets higher base
-      int maxThreat = 0;
-      for (int d = 0; d < 8; ++d) {
-          int cnt = 0;
-          for (int k = -2; k <= 2; ++k) {
-              int nr = r + dr[d] * k;
-              int nc = c + dc[d] * k;
-              if (!ok(nr, nc)) continue;
-              if (brd[nr][nc] == p) cnt++;
-          }
-          maxThreat = max(maxThreat, cnt);
-      }
-      int sc = base + maxThreat * 50;
-      return sc;
-  }
+struct ThreatInfo {
+    int score = 0;
+    int count[TH_KIND_COUNT] = {};
+    int longest = 0;
+};
+
+struct PatternDef {
+    const char* pat;
+    ThreatKind kind;
+    int score;
+};
+
+const vector<PatternDef>& pattern_table() {
+    static const vector<PatternDef> patterns = {
+        {"XXXXX", TH_FIVE, 1000000},
+        {".XXXX.", TH_OPEN_FOUR, 180000},
+        {".XXXXO", TH_CLOSED_FOUR, 45000}, {"OXXXX.", TH_CLOSED_FOUR, 45000},
+        {"#XXXX.", TH_CLOSED_FOUR, 42000}, {".XXXX#", TH_CLOSED_FOUR, 42000},
+        {".XXX.X.", TH_BROKEN_FOUR, 90000}, {".XX.XX.", TH_BROKEN_FOUR, 90000}, {".X.XXX.", TH_BROKEN_FOUR, 90000},
+        {"OXXX.X.", TH_BROKEN_FOUR, 38000}, {".XXX.XO", TH_BROKEN_FOUR, 38000},
+        {"OXX.XX.", TH_BROKEN_FOUR, 38000}, {".XX.XXO", TH_BROKEN_FOUR, 38000},
+        {"OX.XXX.", TH_BROKEN_FOUR, 38000}, {".X.XXXO", TH_BROKEN_FOUR, 38000},
+        {"#XXX.X.", TH_BROKEN_FOUR, 36000}, {".XXX.X#", TH_BROKEN_FOUR, 36000},
+        {"#XX.XX.", TH_BROKEN_FOUR, 36000}, {".XX.XX#", TH_BROKEN_FOUR, 36000},
+        {"#X.XXX.", TH_BROKEN_FOUR, 36000}, {".X.XXX#", TH_BROKEN_FOUR, 36000},
+        {".XXX.", TH_OPEN_THREE, 13000},
+        {".XX.X.", TH_BROKEN_THREE, 9500}, {".X.XX.", TH_BROKEN_THREE, 9500},
+        {"OXXX.", TH_CLOSED_THREE, 2200}, {".XXXO", TH_CLOSED_THREE, 2200},
+        {"#XXX.", TH_CLOSED_THREE, 2000}, {".XXX#", TH_CLOSED_THREE, 2000},
+        {"OXX.X.", TH_CLOSED_THREE, 1700}, {".XX.XO", TH_CLOSED_THREE, 1700},
+        {"OX.XX.", TH_CLOSED_THREE, 1700}, {".X.XXO", TH_CLOSED_THREE, 1700},
+        {".XX.", TH_OPEN_TWO, 700},
+        {".X.X.", TH_BROKEN_TWO, 520},
+        {"OXX.", TH_CLOSED_TWO, 140}, {".XXO", TH_CLOSED_TWO, 140},
+        {"#XX.", TH_CLOSED_TWO, 120}, {".XX#", TH_CLOSED_TWO, 120},
+        {"OX.X.", TH_CLOSED_TWO, 100}, {".X.XO", TH_CLOSED_TWO, 100},
+    };
+    return patterns;
+}
+
+void encode_line(int r, int c, int dr, int dc, int p, char out[16]) {
+    int op = 3 - p;
+    for (int i = 0; i < 15; i++) {
+        int k = i - 7;
+        int nr = r + dr * k, nc = c + dc * k;
+        if (!ok(nr, nc)) out[i] = '#';
+        else if (k == 0) out[i] = 'X';
+        else if (brd[nr][nc] == p) out[i] = 'X';
+        else if (brd[nr][nc] == op) out[i] = 'O';
+        else out[i] = '.';
+    }
+    out[15] = '\0';
+}
+
+bool match_at(const char line[16], int pos, const char* pat) {
+    for (int i = 0; pat[i]; i++) {
+        if (pos + i >= 15 || line[pos + i] != pat[i]) return false;
+    }
+    return true;
+}
+
+ThreatInfo evaluate_line(const char line[16]) {
+    ThreatInfo info;
+    int run = 0;
+    for (int i = 0; i < 15; i++) {
+        if (line[i] == 'X') info.longest = max(info.longest, ++run);
+        else run = 0;
+    }
+
+    const vector<PatternDef>& patterns = pattern_table();
+    int best[TH_KIND_COUNT] = {};
+    for (const PatternDef& p : patterns) {
+        int len = (int)strlen(p.pat);
+        for (int i = 0; i + len <= 15; i++) {
+            if (i > 7 || i + len <= 7) continue;
+            if (!match_at(line, i, p.pat)) continue;
+            info.count[p.kind]++;
+            best[p.kind] = max(best[p.kind], p.score);
+        }
+    }
+
+    for (int i = 0; i < TH_KIND_COUNT; i++) info.score += best[i];
+    return info;
+}
+
+ThreatInfo evaluate_direction(int r, int c, int dr, int dc, int p) {
+    char line[16];
+    encode_line(r, c, dr, dc, p, line);
+    return evaluate_line(line);
+}
+
+int get_thr(int r, int c, int p) {
+    return gomoku::get_thr(brd, sz, r, c, p);
+}
 
 pair<int, int> vcf(int p, int dep) {
     if (dep <= 0) return {-1, -1};
@@ -196,121 +286,100 @@ pair<int, int> vcf(int p, int dep) {
 }
 
 bool check_win_at(int r, int c, int p) {
-    int dr[] = {0, 1, 1, 1}, dc[] = {1, 0, 1, -1};
-    for (int i = 0; i < 4; i++) {
-        if (cnt_lin(r, c, dr[i], dc[i], p) >= 5) {
-            int sr = r, sc = c;
-            int er = r, ec = c;
-            while (ok(sr - dr[i], sc - dc[i]) && brd[sr - dr[i]][sc - dc[i]] == p) {
-                sr -= dr[i];
-                sc -= dc[i];
-            }
-            while (ok(er + dr[i], ec + dc[i]) && brd[er + dr[i]][ec + dc[i]] == p) {
-                er += dr[i];
-                ec += dc[i];
-            }
-            win_line_start = {sr, sc};
-            win_line_end = {er, ec};
-            return true;
-        }
+    gomoku::WinLine line;
+    if (gomoku::check_win_at(brd, sz, r, c, p, &line)) {
+        win_line_start = {line.start.r, line.start.c};
+        win_line_end = {line.end.r, line.end.c};
+        return true;
     }
     return false;
 }
 
-// Detects forbidden moves for black: 3‑in‑a‑row with both ends open (33),
-// 4‑in‑a‑row with both ends open (44), or any 5‑in‑a‑row (장목).
-// The function temporarily places a stone at (r, c), checks the patterns,
-// and then restores the board. It returns true if the move would be
-// forbidden.
 bool is_forbidden_move(int r, int c) {
-    // Place temporary stone.
-    brd[r][c] = 1;
-    bool forbidden = false;
-    // Directions: horizontal, vertical, two diagonals.
-    const int dr[] = {0, 1, 1, 1};
-    const int dc[] = {1, 0, 1, -1};
-    for (int d = 0; d < 4; ++d) {
-        int left = 0, right = 0;
-        // Count contiguous black stones to the left.
-        int nr = r - dr[d];
-        int nc = c - dc[d];
-        while (ok(nr, nc) && brd[nr][nc] == 1) {
-            left++;
-            nr -= dr[d];
-            nc -= dc[d];
-        }
-        // Count contiguous black stones to the right.
-        nr = r + dr[d];
-        nc = c + dc[d];
-        while (ok(nr, nc) && brd[nr][nc] == 1) {
-            right++;
-            nr += dr[d];
-            nc += dc[d];
-        }
-        int total = 1 + left + right;
-        // Check for 5+ line (장목) – always forbidden.
-        if (total >= 5) {
-            forbidden = true;
-            break;
-        }
-        // Check 4‑in‑a‑row with both ends open (44).
-        if (total == 4) {
-            bool left_open = ok(r - dr[d] * (left + 1), c - dc[d] * (left + 1)) && brd[r - dr[d] * (left + 1)][c - dc[d] * (left + 1)] == 0;
-            bool right_open = ok(r + dr[d] * (right + 1), c + dc[d] * (right + 1)) && brd[r + dr[d] * (right + 1)][c + dc[d] * (right + 1)] == 0;
-            if (left_open && right_open) {
-                forbidden = true;
-                break;
-            }
-        }
-        // Check 3‑in‑a‑row with both ends open (33).
-        if (total == 3) {
-            bool left_open = ok(r - dr[d] * (left + 1), c - dc[d] * (left + 1)) && brd[r - dr[d] * (left + 1)][c - dc[d] * (left + 1)] == 0;
-            bool right_open = ok(r + dr[d] * (right + 1), c + dc[d] * (right + 1)) && brd[r + dr[d] * (right + 1)][c + dc[d] * (right + 1)] == 0;
-            if (left_open && right_open) {
-                forbidden = true;
-                break;
-            }
-        }
+    return gomoku::is_forbidden_move(brd, sz, r, c);
+}
+
+void show_forbidden_warning(int r, int c) {
+    forbidden_warn = {r, c};
+    forbidden_warn_started = chrono::steady_clock::now();
+}
+
+double forbidden_warning_phase() {
+    if (forbidden_warn.first == -1) return -1.0;
+    double ms = chrono::duration<double, milli>(chrono::steady_clock::now() - forbidden_warn_started).count();
+    if (ms >= 700.0) {
+        forbidden_warn = {-1, -1};
+        return -1.0;
     }
-    // Restore original state.
-    brd[r][c] = 0;
-    return forbidden;
+    return ms / 700.0;
 }
 
 pair<int, int> choose_ai_move() {
-    pair<int, int> ap = vcf(2, 50);
-    if (ap.first == -1) ap = vcf(1, 4);
-    if (ap.first != -1) return ap;
+    gomoku::Move m = gomoku::choose_ai_move(brd, sz, 2, 3);
+    return {m.r, m.c};
+}
 
-    double bst = -1;
-    ap = {sz / 2, sz / 2};
-    for (int r = 0; r < sz; r++) {
-        for (int c = 0; c < sz; c++) {
-            if (brd[r][c] == 0) {
-                double s = get_thr(r, c, 2) * 1.2 + get_thr(r, c, 1);
-                int dst = abs(r - sz / 2) + abs(c - sz / 2);
-                s += (sz - dst) * 0.1;
-                if (s > bst) {
-                    bst = s;
-                    ap = {r, c};
-                }
-            }
+void start_ai_turn() {
+    if (ai_thinking || review_mode || game_over) return;
+    array<int, kMaxBoard * kMaxBoard> snapshot{};
+    for (int r = 0; r < kMaxBoard; r++) {
+        for (int c = 0; c < kMaxBoard; c++) snapshot[r * kMaxBoard + c] = brd[r][c];
+    }
+    int local_sz = sz;
+    int local_ply = (int)log_v.size();
+    int job = ++ai_job_seq;
+    {
+        lock_guard<mutex> lock(ai_mutex);
+        ai_thinking = true;
+        ai_move_ready = false;
+        ai_pending_move = {-1, -1};
+        ai_pending_job = job;
+        ai_pending_ply = local_ply;
+    }
+
+    thread([snapshot, local_sz, local_ply, job]() {
+        int local_board[kMaxBoard][kMaxBoard] = {};
+        for (int r = 0; r < kMaxBoard; r++) {
+            for (int c = 0; c < kMaxBoard; c++) local_board[r][c] = snapshot[r * kMaxBoard + c];
+        }
+        gomoku::Move m = gomoku::choose_ai_move(local_board, local_sz, 2, 3);
+        lock_guard<mutex> lock(ai_mutex);
+        ai_pending_move = {m.r, m.c};
+        ai_pending_job = job;
+        ai_pending_ply = local_ply;
+        ai_move_ready = true;
+    }).detach();
+}
+
+void apply_pending_ai_move() {
+    pair<int, int> ap{-1, -1};
+    int job = 0, ply = 0;
+    {
+        lock_guard<mutex> lock(ai_mutex);
+        if (!ai_move_ready) return;
+        ap = ai_pending_move;
+        job = ai_pending_job;
+        ply = ai_pending_ply;
+        ai_move_ready = false;
+    }
+    if (job != ai_job_seq.load() || ply != (int)log_v.size() || game_over || review_mode) {
+        ai_thinking = false;
+        return;
+    }
+    if (ap.first != -1 && brd[ap.first][ap.second] == 0) {
+        brd[ap.first][ap.second] = 2;
+        log_v.push_back(ap);
+        last_move = ap;
+        if (check_win_at(ap.first, ap.second, 2)) {
+            game_over = true;
+            winner = 2;
         }
     }
-    return ap;
+    ai_thinking = false;
 }
 
 bool has_five_for(int p) {
-    int dr[] = {0, 1, 1, 1}, dc[] = {1, 0, 1, -1};
-    for (int r = 0; r < sz; r++) {
-        for (int c = 0; c < sz; c++) {
-            if (brd[r][c] != p) continue;
-            for (int i = 0; i < 4; i++) {
-                if (cnt_lin(r, c, dr[i], dc[i], p) >= 5) return true;
-            }
-        }
-    }
-    return false;
+    return gomoku::has_five_for(brd, sz, p);
 }
 
 int position_score_for(int p) {
@@ -403,7 +472,7 @@ void compute_reviews() {
 
 void enter_review_after_game() {
     if (review_mode) return;
-    compute_reviews();
+    reviews.clear();
     review_mode = true;
     review_ply = (int)log_v.size();
 }
@@ -439,6 +508,9 @@ void save_replay(const char* filename) {
 bool load_replay(const char* filename) {
     FILE* fp = fopen(filename, "r");
     if (!fp) return false;
+    ++ai_job_seq;
+    ai_thinking = false;
+    ai_move_ready = false;
     char magic[32] = {}, name[64] = {};
     int file_sz = 15, file_winner = 0;
     if (fscanf(fp, "%31s %d %d %63s", magic, &file_sz, &file_winner, name) != 4 ||
@@ -507,6 +579,9 @@ bool hit(Rect r, int x, int y) {
 }
 
 void new_game() {
+    ++ai_job_seq;
+    ai_thinking = false;
+    ai_move_ready = false;
     memset(brd, 0, sizeof(brd));
     log_v.clear();
     reviews.clear();
@@ -521,6 +596,9 @@ void new_game() {
 
 void undo_turn() {
     if (log_v.empty() || game_over) return;
+    ++ai_job_seq;
+    ai_thinking = false;
+    ai_move_ready = false;
     int count = min<int>(2, log_v.size());
     while (count--) {
         auto [r, c] = log_v.back();
@@ -562,33 +640,22 @@ bool board_from_point(int x, int y, int& r, int& c) {
 }
 
 void play_human_move(int r, int c) {
-      // Reject forbidden moves (33, 44, 장목) for black.
-      if (review_mode || game_over || !ok(r, c) || brd[r][c] != 0) return;
+      if (ai_thinking || review_mode || game_over || !ok(r, c) || brd[r][c] != 0) return;
       if (is_forbidden_move(r, c)) {
-          // Move is illegal under the forbidden rule; ignore it.
+          show_forbidden_warning(r, c);
           return;
       }
+      forbidden_warn = {-1, -1};
       brd[r][c] = 1;
       log_v.push_back({r, c});
       last_move = {r, c};
       if (check_win_at(r, c, 1)) {
           game_over = true;
           winner = 1;
-          enter_review_after_game();
           return;
       }
 
-    pair<int, int> ap = choose_ai_move();
-    if (ap.first != -1 && brd[ap.first][ap.second] == 0) {
-        brd[ap.first][ap.second] = 2;
-        log_v.push_back(ap);
-        last_move = ap;
-        if (check_win_at(ap.first, ap.second, 2)) {
-            game_over = true;
-            winner = 2;
-            enter_review_after_game();
-        }
-    }
+    start_ai_turn();
 }
 
 void cycle_size() {
@@ -624,6 +691,11 @@ void handle_click(int x, int y) {
 string status_text() {
     if (review_mode) return "GAME REVIEW";
     if (game_over) return winner == 1 ? "YOU WIN!" : "AI WINS!";
+    if (ai_thinking) {
+        static const char* spin[] = {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"};
+        auto ms = chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+        return string("CALCULATING... ") + spin[(ms / 90) % 10];
+    }
     return "YOUR TURN";
 }
 
@@ -819,6 +891,15 @@ void draw_scene(HDC hdc) {
         if (displayed_cell(r, c) == 1) ellipse(hdc, cx, cy, rad, rgb(20, 21, 20), rgb(9, 10, 9));
         else ellipse(hdc, cx, cy, rad, rgb(242, 238, 225), rgb(160, 154, 140));
     }
+    double warn_phase = (!review_mode && forbidden_warn.first != -1) ? forbidden_warning_phase() : -1.0;
+    if (warn_phase >= 0.0) {
+        int cx = gx0 + forbidden_warn.second * ui.cell, cy = gy0 + forbidden_warn.first * ui.cell;
+        double pulse = 0.5 + 0.5 * sin(warn_phase * 3.14159265358979323846 * 4.0);
+        int rad = max(10, ui.cell / 2 - 3) + (int)(pulse * 4.0);
+        COLORREF fill_c = rgb(170 + (int)(70 * pulse), 22, 24);
+        COLORREF outline_c = rgb(255, 190 + (int)(50 * pulse), 190 + (int)(50 * pulse));
+        ellipse(hdc, cx, cy, rad, fill_c, outline_c);
+    }
     pair<int, int> shown_last = last_move;
     if (review_mode && review_ply > 0 && review_ply <= (int)log_v.size()) shown_last = log_v[review_ply - 1];
     if (shown_last.first != -1) {
@@ -924,7 +1005,17 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_LBUTTONUP:
             handle_click(to_logical_x(GET_X_LPARAM(lp)), to_logical_y(GET_Y_LPARAM(lp)));
+            if (forbidden_warn.first != -1 || ai_thinking) SetTimer(hwnd, 1, 16, nullptr);
             repaint();
+            return 0;
+        case WM_TIMER:
+            apply_pending_ai_move();
+            if (forbidden_warn.first != -1 || ai_thinking) {
+                repaint();
+            } else {
+                KillTimer(hwnd, 1);
+                repaint();
+            }
             return 0;
         case WM_KEYUP:
             if (wp == 'Q' || wp == VK_ESCAPE) PostQuitMessage(0);
@@ -1129,6 +1220,14 @@ void draw_scene() {
         if (displayed_cell(r, c) == 1) ellipse(cx, cy, rad, color(20, 21, 20), color(8, 8, 8));
         else ellipse(cx, cy, rad, color(242, 238, 225), color(160, 154, 140));
     }
+    double warn_phase = (!review_mode && forbidden_warn.first != -1) ? forbidden_warning_phase() : -1.0;
+    if (warn_phase >= 0.0) {
+        int cx = gx0 + forbidden_warn.second * ui.cell, cy = gy0 + forbidden_warn.first * ui.cell;
+        double pulse = 0.5 + 0.5 * sin(warn_phase * 3.14159265358979323846 * 4.0);
+        int rad = max(10, ui.cell / 2 - 3) + (int)(pulse * 4.0);
+        ellipse(cx, cy, rad, color(170 + (int)(70 * pulse), 22, 24),
+                color(255, 190 + (int)(50 * pulse), 190 + (int)(50 * pulse)));
+    }
     pair<int, int> shown_last = last_move;
     if (review_mode && review_ply > 0 && review_ply <= (int)log_v.size()) shown_last = log_v[review_ply - 1];
     if (shown_last.first != -1) {
@@ -1287,6 +1386,8 @@ int main(int argc, char** argv) {
                 draw_scene();
             }
         }
+        apply_pending_ai_move();
+        if (forbidden_warn.first != -1 || ai_thinking) draw_scene();
         usleep(16000);
     }
     XFreeGC(dpy, gc);
