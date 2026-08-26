@@ -210,7 +210,10 @@ bool run_tests() {
     board[7][8] = board[8][7] = 2;
     gomoku::Move single_thread = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, 1);
     gomoku::Move four_threads = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, 4);
-    bool parallel_deterministic = single_thread.r == four_threads.r && single_thread.c == four_threads.c;
+    gomoku::Move thirty_two_threads = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, 32);
+    bool parallel_deterministic = single_thread.r == four_threads.r && single_thread.c == four_threads.c &&
+                                  single_thread.r == thirty_two_threads.r && single_thread.c == thirty_two_threads.c &&
+                                  gomoku::kMaxSearchThreads == 32;
     pass &= parallel_deterministic;
     std::printf("[%s] deterministic root multithreading\n", parallel_deterministic ? "PASS" : "FAIL");
 
@@ -496,7 +499,7 @@ int main(int argc, char** argv) {
     if (cmd == "genmove") return genmove();
     if (cmd == "genmove-history") {
         int depth = argc >= 3 ? std::max(1, std::min(6, std::atoi(argv[2]))) : 4;
-        int threads = argc >= 4 ? std::max(0, std::min(32, std::atoi(argv[3]))) : 0;
+        int threads = argc >= 4 ? std::max(0, std::min(gomoku::kMaxSearchThreads, std::atoi(argv[3]))) : 0;
         return genmove_history(depth, threads);
     }
     if (cmd == "play") return play();

@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/gomoku_webui.dir/link.d CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o -o gomoku_webui

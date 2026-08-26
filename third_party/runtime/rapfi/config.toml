@@ -10,7 +10,7 @@ reload_config_each_move = false
 clear_hash_after_config_loaded = false
 
 # Default thread number if not specified (0 means use all hardware concurrency)
-default_thread_num = 1
+default_thread_num = 0
 
 # Output message mode (Options are [normal, brief, ucilike, none])
 message_mode = "normal"
@@ -27,16 +27,18 @@ default_candidate_range = "square3_line4"
 memory_reserved_mb = [40, 40, 65]
 
 # Default transposition table size in KB
-default_tt_size_kb = 65536
+default_tt_size_kb = 262144
 
 
 [model]
-binary_file = "model210901.bin"
+# Classic pattern model is unused by the mix9svqnnue evaluator; omitted because
+# the legacy model210901.bin predates the current table layout.
+binary_file = ""
 
 
 [model.evaluator]
 # Type of the evaluator (Options are [mix9nnue, mix9litennue, mix9svqnnue])
-type = "mix9svqnnue"
+type = "mix9svq"
 
 # The winning rate of black when the game is a draw, in [0, 1] (default is 0.5).
 draw_black_winrate = 0.5

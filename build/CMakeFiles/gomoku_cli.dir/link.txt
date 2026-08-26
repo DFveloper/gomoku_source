@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/gomoku_cli.dir/link.d CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o -o gomoku_cli

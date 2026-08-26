@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#162e20">
+  <meta name="description" content="Configure and watch Gomoku engines play head-to-head.">
+  <meta property="og:title" content="Gomoku Model Match">
+  <meta property="og:description" content="Configure and watch Gomoku engines play head-to-head.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="__GOMOKU_ORIGIN__/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="__GOMOKU_ORIGIN__/og.png">
+  <title>Gomoku Model Match</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="arena">
+    <header class="topbar">
+      <div><p class="kicker">ENGINE ARENA</p><h1>MODEL MATCH</h1></div>
+      <div class="match-status"><span class="live-dot" id="liveDot"></span><strong id="status">CONFIGURE THE MATCH</strong><small id="moveCount">0 MOVES</small></div>
+    </header>
+
+    <section class="player-card black-card">
+      <div class="player-label"><i class="stone black"></i><span>BLACK</span><b id="blackState"></b></div>
+      <label>ENGINE<select id="blackEngine"></select></label>
+      <label>SEARCH LEVEL<select id="blackLevel"></select></label>
+    </section>
+
+    <section class="board-wrap">
+      <canvas id="board" aria-label="Gomoku model match board"></canvas>
+      <p class="opening-hint" id="openingHint">Random opening is generated when the match starts.</p>
+    </section>
+
+    <section class="player-card white-card">
+      <div class="player-label"><i class="stone white"></i><span>WHITE</span><b id="whiteState"></b></div>
+      <label>ENGINE<select id="whiteEngine"></select></label>
+      <label>SEARCH LEVEL<select id="whiteLevel"></select></label>
+    </section>
+
+    <aside class="control-panel">
+      <section>
+        <p class="section-title">OPENING</p>
+        <div class="segmented"><button data-mode="random" class="selected">RANDOM</button><button data-mode="custom">CUSTOM</button></div>
+        <div class="range-row" id="rangeRow"><label for="randomPlies">STARTING PLIES</label><output id="pliesValue">4</output></div>
+        <input id="randomPlies" type="range" min="0" max="12" value="4">
+        <button class="secondary" id="undoOpening" hidden>UNDO OPENING</button>
+      </section>
+      <section class="match-log-section"><p class="section-title">MOVE LOG</p><ol id="moveLog" class="move-log"></ol></section>
+      <div class="primary-actions"><button class="start" id="start">START MATCH</button><button class="reset" id="reset">RESET</button></div>
+      <p class="availability" id="runtimeNote"></p>
+      <p class="shortcuts">ENTER start · R reset · U undo opening · Q quit</p>
+    </aside>
+  </main>
+  <div id="toast" class="toast" hidden></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

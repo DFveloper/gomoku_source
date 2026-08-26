@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/mnt/openwebui/gomoku/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -21,15 +21,15 @@
     "caro6": ""
   },
   "use_symmetries": true,
-  "search_threads": 1,
+  "search_threads": 16,
   "devices": [
     {
       "device": "CPU",
-      "batch_size": 12
+      "batch_size": 32
     }
   ],
   "search_config": {
-    "max_batch_size": 12,
+    "max_batch_size": 32,
     "early_stopping": 0.995,
     "time_fraction_15x15": 0.885,
     "time_fraction_20x20": 0.912,
@@ -49,7 +49,7 @@
         "exploration_scaling": 0.15
       },
       "max_children": 64,
-      "policy_expansion_threshold": 0.00001,
+      "policy_expansion_threshold": 1e-05,
       "policy_temperature": 1.8
     },
     "tss_config": {

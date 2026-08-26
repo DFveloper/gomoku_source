@@ -5,6 +5,22 @@ At startup they are extracted into a process-specific temporary directory and
 communicated with through the Gomocup/Piskvork text protocol. Corresponding
 source repositories are vendored under `third_party/*-src`.
 
+## Linux / WebUI runtimes
+
+`gomoku_match_webui` launches the same protocol over POSIX pipes against native
+Linux binaries built from the vendored sources into `third_party/runtime/`:
+
+| Engine | Runtime | Notes |
+|---|---|---|
+| Carbon Classic | `runtime/carbon/pbrain-carbon` | Built with the `third_party/compat/windows.h` shim plus the documented `INFO max_depth` patch. |
+| Rapfi 2025 AVX2 | `runtime/rapfi/pbrain-rapfi` | Built from the vendored source (AVX2 + BMI2). The classic `model210901.bin` predates the current table layout and is unused by the mix9svq evaluator, so `config.toml` omits it. |
+| AlphaGomoku MK26 CPU | `runtime/alphagomoku/pbrain-agomoku` | Requires the MinML CPU backend (`git clone https://github.com/MaciejKozarzewski/MinML`). |
+| XL / Niren | `runtime/xl/pbrain-xl` | The compat shim redefines `clock()` to wall-clock milliseconds; upstream's time management assumed the Windows semantics and aborted every search otherwise. |
+
+Build everything with `scripts/build_third_party_engines.sh` or
+`cmake --build build --target third_party_engines`. The WebUI reports each
+engine as unavailable when its runtime binary is missing.
+
 | GUI name | Runtime | Evaluation/search | License/source |
 |---|---|---|---|
 | Carbon Classic | Carbon 2.3 | Classical expert patterns, minimax/alpha-beta, transposition table | Source-visible upstream; no explicit license file. Personal research only. `third_party/carbon-src` |

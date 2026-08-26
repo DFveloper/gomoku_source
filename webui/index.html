@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2a5232">
+  <meta name="description" content="Gomoku against the strengthened native AI, with heatmap and game review.">
+  <meta property="og:title" content="Gomoku WebUI">
+  <meta property="og:description" content="Play Gomoku against the strengthened native AI.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="__GOMOKU_ORIGIN__/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gomoku WebUI">
+  <meta name="twitter:description" content="Play Gomoku against the strengthened native AI.">
+  <meta name="twitter:image" content="__GOMOKU_ORIGIN__/og.png">
+  <title>Gomoku WebUI</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="app" aria-label="Gomoku game">
+    <section class="board-shell" aria-label="Gomoku board">
+      <canvas id="board" role="img" aria-label="Gomoku board. Click an empty intersection to place a black stone."></canvas>
+    </section>
+    <aside class="panel">
+      <header>
+        <p class="eyebrow">CLASSIC FIVE-IN-A-ROW</p>
+        <h1>GOMOKU</h1>
+        <p class="roles"><span><i class="stone black"></i>YOU · BLACK</span><span><i class="stone white"></i>AI · WHITE</span></p>
+      </header>
+      <section class="status-card" aria-live="polite">
+        <div><span class="status" id="status">YOUR TURN</span><span class="spinner" id="spinner" hidden></span></div>
+        <span class="moves" id="moves">0 MOVES</span>
+      </section>
+      <div class="actions" id="actions"></div>
+      <section class="review" id="review" hidden>
+        <div class="review-head">
+          <span id="ply">PLY 0/0</span>
+          <div class="review-result" id="reviewResult"></div>
+        </div>
+        <canvas id="graph" aria-label="Black win chance by move"></canvas>
+      </section>
+      <footer>
+        <p>Touch or click an intersection.</p>
+        <p id="shortcuts">N / U / D / S / L / Q shortcuts</p>
+      </footer>
+    </aside>
+  </main>
+  <input id="replayFile" type="file" accept=".txt,text/plain" hidden>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

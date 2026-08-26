@@ -3,6 +3,49 @@
 This version keeps the original AI logic and adds a single native GUI source.
 Windows uses Win32/GDI and Linux uses X11, so no heavy GUI framework is needed.
 
+## WebUI
+
+The WebUI uses the same C++ AI, Renju forbidden-move rules, heatmap, undo,
+board-size cycle, replay files, and post-game review graph as the native GUI.
+It has no web framework or runtime dependency.
+
+```bash
+cmake -S . -B build
+cmake --build build --target gomoku_webui
+./build/gomoku_webui --host 127.0.0.1 --port 8080 -t 32
+```
+
+Open `http://127.0.0.1:8080`. To make it reachable from other devices on the
+network, use `--host 0.0.0.0`. `--port` accepts values from 1 to 65535, and the
+initial board can be selected with `--board 9..30`.
+Use `-t N` or `--threads N` (`N` = 1-32) to set the AI search thread limit. If omitted, the
+engine selects the worker count automatically (up to its internal maximum).
+
+### Model Match WebUI
+
+Build and run the engine-versus-engine spectator UI separately:
+
+```bash
+cmake --build build --target gomoku_match_webui
+./build/gomoku_match_webui --host 127.0.0.1 --port 8081 -t 32
+```
+
+The included source tree runs Legacy v1, Strengthened v2, and Current v3 MT
+in-process. The four external engines run as child processes through Gomocup
+protocol adapters when their native Linux ports exist under
+`third_party/runtime/` — build them with
+`cmake --build build --target third_party_engines` or
+`scripts/build_third_party_engines.sh`. Missing runtimes are reported in the
+UI instead of being silently unavailable.
+Random openings support 0-12 plies. Custom openings use left-click to place an
+alternating stone and right-click or `UNDO OPENING` to undo.
+The `-t N`/`--threads N` setting applies to Current v3 MT searches; the legacy
+and strengthened engines retain their original single-threaded search paths.
+External engine threading is configured per runtime: Rapfi follows its
+`config.toml` (`default_thread_num = 0` = every core), AlphaGomoku uses its
+`config.json` MCTS thread count and CPU batch size; Carbon and XL are
+single-threaded engines by design.
+
 ## Ubuntu / Debian / ARM Linux
 
 ```bash
@@ -71,7 +114,7 @@ cmake --build build
 
 The AI now keeps late-game evaluation stable by scoring the strongest durable opportunities instead of summing every empty intersection. It also extends forcing four-threat lines past the normal horizon, widens selective search as the board fills, and safely returns a draw when no legal move remains.
 
-The default search depth is 4. Root candidates are evaluated in parallel on up to eight CPU threads, each with an independent board copy. On the included one-stone 15x15 benchmark at depth 3, eight workers reduced search time from 7.4 seconds to 2.1 seconds (3.45x on the development machine).
+The default search depth is 4. Root candidates are evaluated in parallel on up to 32 CPU threads, each with an independent board copy. The useful worker count is also bounded by the available CPU concurrency and the number of root candidates. On the included one-stone 15x15 benchmark at depth 3, eight workers reduced search time from 7.4 seconds to 2.1 seconds (3.45x on the development machine).
 
 Human moves are analyzed online for attack, defense, locality, center, and directional preferences. After neutral opening priors, the recent style profile changes which opponent replies are retained and searched first; tactical replies are still evaluated with worst-case negamax rather than assuming the prediction is always correct. At least 75% of each selective reply set comes from the style-free baseline, so a surprising human move is not discarded merely because it does not match the learned profile.
 

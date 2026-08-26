@@ -13,6 +13,7 @@
 namespace gomoku {
 
 constexpr int kMaxBoard = 30;
+constexpr int kMaxSearchThreads = 32;
 
 enum ThreatKind {
     TH_FIVE,
@@ -617,7 +618,8 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
     std::atomic<size_t> next{0};
     unsigned int available = std::max(1u, std::thread::hardware_concurrency());
     int worker_count = max_threads > 0 ? max_threads : static_cast<int>(available);
-    worker_count = std::max(1, std::min<int>({worker_count, 8, static_cast<int>(roots.size())}));
+    worker_count = std::max(1, std::min<int>({worker_count, kMaxSearchThreads,
+                                              static_cast<int>(roots.size())}));
 
     auto worker = [&]() {
         while (true) {

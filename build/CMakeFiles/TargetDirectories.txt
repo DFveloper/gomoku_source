@@ -1,0 +1,8 @@
+/mnt/openwebui/gomoku/build/CMakeFiles/gomoku_gui.dir
+/mnt/openwebui/gomoku/build/CMakeFiles/gomoku_cli.dir
+/mnt/openwebui/gomoku/build/CMakeFiles/gomoku_webui.dir
+/mnt/openwebui/gomoku/build/CMakeFiles/gomoku_match_webui.dir
+/mnt/openwebui/gomoku/build/CMakeFiles/third_party_engines.dir
+/mnt/openwebui/gomoku/build/CMakeFiles/test.dir
+/mnt/openwebui/gomoku/build/CMakeFiles/edit_cache.dir
+/mnt/openwebui/gomoku/build/CMakeFiles/rebuild_cache.dir

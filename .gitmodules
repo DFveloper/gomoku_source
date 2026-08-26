@@ -1,0 +1,12 @@
+[submodule "third_party/carbon-src"]
+	path = third_party/carbon-src
+	url = https://github.com/gomoku/Carbon-Gomoku.git
+[submodule "third_party/rapfi-src"]
+	path = third_party/rapfi-src
+	url = https://github.com/dhbloo/rapfi.git
+[submodule "third_party/alphagomoku-src"]
+	path = third_party/alphagomoku-src
+	url = https://github.com/MaciejKozarzewski/AlphaGomoku.git
+[submodule "third_party/xl-src"]
+	path = third_party/xl-src
+	url = https://github.com/accreator/xl-engine.git

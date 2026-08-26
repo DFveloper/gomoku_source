@@ -7,17 +7,36 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(gomoku_gui AI_Gomoku_GUI.cpp)
 add_executable(gomoku_cli gomoku_cli.cpp)
+add_executable(gomoku_webui AI_Gomoku_WebUI.cpp)
+add_executable(gomoku_match_webui Gomoku_Engine_Match_WebUI.cpp)
+
+target_compile_definitions(gomoku_webui PRIVATE
+    GOMOKU_WEB_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/webui")
+target_compile_definitions(gomoku_match_webui PRIVATE
+    GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 
 find_package(Threads REQUIRED)
 target_link_libraries(gomoku_gui PRIVATE Threads::Threads)
 target_link_libraries(gomoku_cli PRIVATE Threads::Threads)
+target_link_libraries(gomoku_webui PRIVATE Threads::Threads)
+target_link_libraries(gomoku_match_webui PRIVATE Threads::Threads)
 
 enable_testing()
 add_test(NAME gomoku_tactical_and_style_regression COMMAND gomoku_cli test)
 
+if(NOT WIN32)
+    add_custom_target(third_party_engines
+        COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_third_party_engines.sh"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Building native Linux ports of the external engines"
+        VERBATIM)
+endif()
+
 if(WIN32)
     enable_language(RC)
     target_link_libraries(gomoku_gui PRIVATE gdi32 user32)
+    target_link_libraries(gomoku_webui PRIVATE ws2_32)
+    target_link_libraries(gomoku_match_webui PRIVATE ws2_32)
 
     add_executable(carbon_classic_engine
         third_party/carbon-src/AICarbon.cpp
