@@ -66,3 +66,54 @@ cmake --build build
 - Optional board size argument: `gomoku_gui 19`.
 - Fullscreen/aspect options: `--fullscreen --aspect 4:3 --board 15`.
 - Windows monitor option: `--monitor 1`.
+
+## Strengthened AI
+
+The AI now keeps late-game evaluation stable by scoring the strongest durable opportunities instead of summing every empty intersection. It also extends forcing four-threat lines past the normal horizon, widens selective search as the board fills, and safely returns a draw when no legal move remains.
+
+The default search depth is 4. Root candidates are evaluated in parallel on up to eight CPU threads, each with an independent board copy. On the included one-stone 15x15 benchmark at depth 3, eight workers reduced search time from 7.4 seconds to 2.1 seconds (3.45x on the development machine).
+
+Human moves are analyzed online for attack, defense, locality, center, and directional preferences. After neutral opening priors, the recent style profile changes which opponent replies are retained and searched first; tactical replies are still evaluated with worst-case negamax rather than assuming the prediction is always correct. At least 75% of each selective reply set comes from the style-free baseline, so a surprising human move is not discarded merely because it does not match the learned profile.
+
+Search values now take precedence over root move-order heuristics, and low-value continuations whose useful line is blocked at both ends receive an abandonment penalty. This prevents the engine from carrying a dead plan forward after deeper search has rejected it.
+
+After a game, review mode opens automatically with a Chess.com-style black/white win-chance graph. It includes 25/50/75% guides, move-quality markers, and a current-move win-rate tooltip. The graph uses the engine's antisymmetric position evaluation instead of the old empty-point sum.
+
+Run the tactical, long-evaluation, draw, and style regressions with:
+
+```powershell
+.\gomoku_cli.exe test
+```
+
+The reproducible legacy-versus-strengthened match results and limitations are in [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md).
+
+For scripted style-aware analysis, optional depth and thread limits can be supplied:
+
+```powershell
+# size/player/move-count and move history are read from stdin
+.\gomoku_cli.exe genmove-history 4 8
+```
+
+## Engine vs engine GUI
+
+`gomoku_engine_match.exe` is a self-contained spectator program. It provides
+seven selectable engines:
+
+- Legacy v1
+- Strengthened v2
+- Current v3 MT
+- Carbon Classic
+- Rapfi 2025 AVX2
+- AlphaGomoku MK26 CPU
+- XL / Niren
+
+Black and white engines and search levels are independent. Opening mode can be
+random (0-12 starting plies) or custom. In custom mode, left-click intersections
+to place an alternating opening and right-click or press `UNDO OPENING` to undo.
+After `START MATCH`, all board input and engine-setting controls are locked; only
+`RESET` can terminate the match.
+
+The external runtimes, model files and dependent DLLs are embedded in the one
+GUI executable and extracted to a process-specific temporary directory at
+startup. See [THIRD_PARTY_ENGINES.md](THIRD_PARTY_ENGINES.md) for algorithms,
+runtime subsets, source locations and license notes.

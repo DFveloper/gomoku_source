@@ -34,6 +34,7 @@ namespace {
 constexpr int kMaxBoard = 30;
 constexpr int kMinBoard = 9;
 constexpr int kDefaultBoard = 15;
+constexpr int kAiDepth = 4;
 constexpr int kMinW = 900;
 constexpr int kMinH = 620;
 
@@ -72,6 +73,16 @@ struct MoveReview {
 };
 
 vector<MoveReview> reviews;
+
+void compute_reviews();
+
+gomoku::Move last_logged_move_for(int p) {
+    for (int i = static_cast<int>(log_v.size()) - 1; i >= 0; --i) {
+        int move_player = (i % 2 == 0) ? 1 : 2;
+        if (move_player == p) return {log_v[i].first, log_v[i].second};
+    }
+    return {-1, -1};
+}
 
 struct Rect {
     int x, y, w, h;
@@ -314,11 +325,6 @@ double forbidden_warning_phase() {
     return ms / 700.0;
 }
 
-pair<int, int> choose_ai_move() {
-    gomoku::Move m = gomoku::choose_ai_move(brd, sz, 2, 3);
-    return {m.r, m.c};
-}
-
 void start_ai_turn() {
     if (ai_thinking || review_mode || game_over) return;
     array<int, kMaxBoard * kMaxBoard> snapshot{};
@@ -327,6 +333,11 @@ void start_ai_turn() {
     }
     int local_sz = sz;
     int local_ply = (int)log_v.size();
+    vector<gomoku::Move> history;
+    history.reserve(log_v.size());
+    for (auto move : log_v) history.push_back({move.first, move.second});
+    gomoku::OpponentStyle opponent_style = gomoku::analyze_opponent_style(local_sz, history, 1);
+    gomoku::Move last_ai_move = last_logged_move_for(2);
     int job = ++ai_job_seq;
     {
         lock_guard<mutex> lock(ai_mutex);
@@ -337,12 +348,13 @@ void start_ai_turn() {
         ai_pending_ply = local_ply;
     }
 
-    thread([snapshot, local_sz, local_ply, job]() {
+    thread([snapshot, local_sz, local_ply, job, opponent_style, last_ai_move]() {
         int local_board[kMaxBoard][kMaxBoard] = {};
         for (int r = 0; r < kMaxBoard; r++) {
             for (int c = 0; c < kMaxBoard; c++) local_board[r][c] = snapshot[r * kMaxBoard + c];
         }
-        gomoku::Move m = gomoku::choose_ai_move(local_board, local_sz, 2, 3);
+        gomoku::Move m = gomoku::choose_ai_move(local_board, local_sz, 2, kAiDepth,
+                                                &opponent_style, 0, last_ai_move);
         lock_guard<mutex> lock(ai_mutex);
         ai_pending_move = {m.r, m.c};
         ai_pending_job = job;
@@ -373,6 +385,8 @@ void apply_pending_ai_move() {
         if (check_win_at(ap.first, ap.second, 2)) {
             game_over = true;
             winner = 2;
+            compute_reviews();
+            review_mode = true;
         }
     }
     ai_thinking = false;
@@ -382,32 +396,13 @@ bool has_five_for(int p) {
     return gomoku::has_five_for(brd, sz, p);
 }
 
-int position_score_for(int p) {
-    if (has_five_for(p)) return 1000000;
-    int op = 3 - p;
-    int score = 0;
-    for (int r = 0; r < sz; r++) {
-        for (int c = 0; c < sz; c++) {
-            if (brd[r][c] == p) {
-                score += 3;
-            } else if (brd[r][c] == 0) {
-                score += get_thr(r, c, p);
-                score += get_thr(r, c, op) / 2;
-                int dst = abs(r - sz / 2) + abs(c - sz / 2);
-                score += max(0, sz - dst) / 4;
-            }
-        }
-    }
-    return score;
-}
-
 double estimate_black_winrate() {
     if (has_five_for(1)) return 100.0;
     if (has_five_for(2)) return 0.0;
-    int black = position_score_for(1);
-    int white = position_score_for(2);
-    double diff = static_cast<double>(black - white);
-    double wr = 50.0 + tanh(diff / 900.0) * 48.0;
+    // Calibrate the same antisymmetric evaluation used by the search.  The old
+    // graph summed every empty point and saturated early on crowded boards.
+    double evaluation = static_cast<double>(gomoku::static_eval(brd, sz, 1));
+    double wr = 50.0 + tanh(evaluation / 350000.0) * 49.0;
     return min(99.0, max(1.0, wr));
 }
 
@@ -429,15 +424,16 @@ string classify_move(int p, double before, double after, double best_after, bool
 
 double best_possible_after_for(int p) {
     double best = (p == 1) ? -1.0 : 101.0;
-    for (int r = 0; r < sz; r++) {
-        for (int c = 0; c < sz; c++) {
-            if (brd[r][c] != 0) continue;
-            brd[r][c] = p;
-            double wr = estimate_black_winrate();
-            brd[r][c] = 0;
-            if (p == 1) best = max(best, wr);
-            else best = min(best, wr);
-        }
+    // Review the tactically relevant alternatives instead of every empty
+    // intersection; this keeps automatic post-game analysis responsive.
+    auto candidates = gomoku::ranked_candidates(brd, sz, p, 12, nullptr);
+    for (const auto& candidate : candidates) {
+        int r = candidate.second.r, c = candidate.second.c;
+        brd[r][c] = p;
+        double wr = estimate_black_winrate();
+        brd[r][c] = 0;
+        if (p == 1) best = max(best, wr);
+        else best = min(best, wr);
     }
     return best < 0.0 || best > 100.0 ? estimate_black_winrate() : best;
 }
@@ -467,13 +463,6 @@ void compute_reviews() {
         reviews.push_back({r, c, p, after, classify_move(p, before, after, best_after, had_win, made_win, (int)i)});
     }
     memcpy(brd, saved, sizeof(brd));
-    review_ply = (int)log_v.size();
-}
-
-void enter_review_after_game() {
-    if (review_mode) return;
-    reviews.clear();
-    review_mode = true;
     review_ply = (int)log_v.size();
 }
 
@@ -551,27 +540,23 @@ void layout() {
     int full_px = ui.cell * (sz - 1) + ui.margin * 2;
     ui.board = {32, max(24, (ui.h - full_px) / 2), full_px, full_px};
     int px = ui.board.x + ui.board.w + 36;
-    // Position the first button below the board but make sure the entire button
-    // column stays above the lower‑text area ("Touch or click…" and
-    // "N/U/D/S/Q shortcuts supported.").  The bottom text is drawn at
-    // `ui.h - 48`, so the last button (index 5) must finish before that.
-    // Each button is 50px high and spaced 60px apart, so the bottom of the
-    // last button is at `py + 5 * 60 + 50`.  We enforce `py` such that
-    // `py + 350 <= ui.h - 48`.  This is equivalent to `py <= ui.h - 408`.
-    // Use a max to keep the buttons below the board and at least 32px from
-    // the top of the window.
-    // Compute the start Y position for the first button.
     int py = max(32, ui.board.y + 200);
-    // Ensure the entire button column fits above the bottom‑text area.
-    // The last button (index 5) ends at py + 350.  The bottom‑text is drawn
-    // at ui.h - 76 (first line) and ui.h - 48 (second line).  We keep a
-    // margin by requiring the button column to finish before ui.h - 76.
     if (py + 350 > ui.h - 48) {
         py = ui.h - 48 - 350;
-        if (py < 32) py = 32;  // keep a small margin from top
+        if (py < 32) py = 32;
     }
     int bw = max(220, ui.w - px - 32);
-    for (int i = 0; i < 6; i++) ui.buttons[i] = {px, py + i * 60, bw, 50};
+    if (review_mode) {
+        // Two columns leave enough vertical room for the Chess-style graph,
+        // including at the minimum supported window height.
+        int review_y = max(145, min(220, ui.h - 438));
+        int col_w = max(96, (bw - 10) / 2);
+        for (int i = 0; i < 6; ++i) {
+            ui.buttons[i] = {px + (i % 2) * (col_w + 10), review_y + (i / 2) * 60, col_w, 50};
+        }
+    } else {
+        for (int i = 0; i < 6; i++) ui.buttons[i] = {px, py + i * 60, bw, 50};
+    }
 }
 
 bool hit(Rect r, int x, int y) {
@@ -652,6 +637,8 @@ void play_human_move(int r, int c) {
       if (check_win_at(r, c, 1)) {
           game_over = true;
           winner = 1;
+          compute_reviews();
+          review_mode = true;
           return;
       }
 
@@ -956,18 +943,30 @@ void draw_scene(HDC hdc) {
             const MoveReview& mv = reviews[review_ply - 1];
             draw_review_badge(hdc, mv.label, panel.x + 28, y + 30);
             text(hdc, display_label(mv.label), panel.x + 78, y + 36, 22, review_color(mv.label), true);
-            text(hdc, "WINRATE: " + to_string((int)(mv.winrate + 0.5)) + "%", panel.x + 28, y + 66, 18, rgb(245, 244, 232), true);
+            text(hdc, "BLACK WIN: " + to_string((int)(mv.winrate + 0.5)) + "%", panel.x + 28, y + 66, 18, rgb(245, 244, 232), true);
         }
-        Rect graph{panel.x + 28, y + 100, max(120, panel.w - 60), 112};
-        fill(hdc, graph, rgb(31, 54, 36));
-        HPEN axis = CreatePen(PS_SOLID, 1, rgb(214, 224, 200));
-        HPEN old = (HPEN)SelectObject(hdc, axis);
-        MoveToEx(hdc, graph.x, graph.y + graph.h / 2, nullptr);
-        LineTo(hdc, graph.x + graph.w, graph.y + graph.h / 2);
+        Rect graph{panel.x + 28, y + 100, max(120, panel.w - 60), 126};
+        fill(hdc, {graph.x, graph.y, graph.w, graph.h / 2}, rgb(49, 50, 47));
+        fill(hdc, {graph.x, graph.y + graph.h / 2, graph.w, graph.h - graph.h / 2}, rgb(225, 224, 214));
+        HPEN border = CreatePen(PS_SOLID, 1, rgb(104, 107, 101));
+        HPEN old = (HPEN)SelectObject(hdc, border);
+        HBRUSH old_brush = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
+        Rectangle(hdc, graph.x, graph.y, graph.x + graph.w, graph.y + graph.h);
+        SelectObject(hdc, old_brush);
         SelectObject(hdc, old);
-        DeleteObject(axis);
+        DeleteObject(border);
+        for (int pct : {25, 50, 75}) {
+            int gy = graph.y + graph.h - pct * graph.h / 100;
+            HPEN grid = CreatePen(pct == 50 ? PS_SOLID : PS_DOT, pct == 50 ? 2 : 1,
+                                  pct == 50 ? rgb(129, 182, 76) : rgb(135, 137, 130));
+            old = (HPEN)SelectObject(hdc, grid);
+            MoveToEx(hdc, graph.x, gy, nullptr);
+            LineTo(hdc, graph.x + graph.w, gy);
+            SelectObject(hdc, old);
+            DeleteObject(grid);
+        }
         if (reviews.size() > 1) {
-            HPEN pen = CreatePen(PS_SOLID, 3, rgb(129, 182, 76));
+            HPEN pen = CreatePen(PS_SOLID, 3, rgb(240, 181, 54));
             old = (HPEN)SelectObject(hdc, pen);
             for (size_t i = 1; i < reviews.size(); i++) {
                 int x1 = graph.x + (int)((i - 1) * graph.w / (reviews.size() - 1));
@@ -980,18 +979,32 @@ void draw_scene(HDC hdc) {
             SelectObject(hdc, old);
             DeleteObject(pen);
         }
+        for (size_t i = 0; i < reviews.size(); ++i) {
+            if (reviews[i].label != "Inaccuracy" && reviews[i].label != "Mistake" &&
+                reviews[i].label != "Blunder" && reviews[i].label != "Brilliant") continue;
+            int px = graph.x + (reviews.size() == 1 ? graph.w / 2 : (int)(i * graph.w / (reviews.size() - 1)));
+            int py = graph.y + graph.h - (int)(reviews[i].winrate * graph.h / 100.0);
+            ellipse(hdc, px, py, 4, review_color(reviews[i].label), rgb(255, 255, 255));
+        }
+        text(hdc, "B", graph.x + 5, graph.y + 3, 14, rgb(245, 244, 232), true);
+        text(hdc, "50", graph.x + 5, graph.y + graph.h / 2 - 17, 13, rgb(245, 244, 232), true);
+        text(hdc, "W", graph.x + 5, graph.y + graph.h - 19, 14, rgb(38, 49, 38), true);
         if (!reviews.empty() && review_ply > 0) {
             int idx = min<int>(review_ply - 1, reviews.size() - 1);
-            int cx = graph.x + (reviews.size() == 1 ? graph.w : (int)(idx * graph.w / (reviews.size() - 1)));
-            HPEN pen = CreatePen(PS_SOLID, 2, rgb(255, 255, 255));
+            int cx = graph.x + (reviews.size() == 1 ? graph.w / 2 : (int)(idx * graph.w / (reviews.size() - 1)));
+            int cy = graph.y + graph.h - (int)(reviews[idx].winrate * graph.h / 100.0);
+            HPEN pen = CreatePen(PS_DOT, 1, rgb(255, 255, 255));
             HPEN old = (HPEN)SelectObject(hdc, pen);
-            MoveToEx(hdc, cx, graph.y - 4, nullptr);
-            LineTo(hdc, cx, graph.y + graph.h + 4);
+            MoveToEx(hdc, cx, graph.y, nullptr);
+            LineTo(hdc, cx, graph.y + graph.h);
             SelectObject(hdc, old);
             DeleteObject(pen);
-            draw_review_badge(hdc, reviews[idx].label, cx - 21, graph.y - 42);
+            ellipse(hdc, cx, cy, 5, rgb(240, 181, 54), rgb(255, 255, 255));
+            Rect tooltip{graph.x + graph.w - 99, graph.y + 7, 92, 25};
+            round_rect(hdc, tooltip, rgb(27, 29, 27));
+            text(hdc, "B " + to_string((int)(reviews[idx].winrate + 0.5)) + "%  #" +
+                      to_string(idx + 1), tooltip.x + 8, tooltip.y + 4, 14, rgb(255, 255, 255), true);
         }
-        text(hdc, "SAVE/LOAD REPLAY ONLY", panel.x + 28, graph.y + graph.h + 24, 18, rgb(214, 224, 200), true);
     }
 }
 
@@ -1274,11 +1287,24 @@ void draw_scene() {
             const MoveReview& mv = reviews[review_ply - 1];
             draw_review_badge(mv.label, panel.x + 28, y + 28);
             text(display_label(mv.label), panel.x + 78, y + 34, 22, review_color(mv.label));
-            text("WINRATE: " + to_string((int)(mv.winrate + 0.5)) + "%", panel.x + 28, y + 64, 18, cream);
+            text("BLACK WIN: " + to_string((int)(mv.winrate + 0.5)) + "%", panel.x + 28, y + 64, 18, cream);
         }
-        Rect graph{panel.x + 28, y + 98, max(120, panel.w - 60), 104};
-        fill(graph, color(31, 54, 36));
-        line(graph.x, graph.y + graph.h / 2, graph.x + graph.w, graph.y + graph.h / 2, color(214, 224, 200));
+        Rect graph{panel.x + 28, y + 98, max(120, panel.w - 60), 126};
+        fill({graph.x, graph.y, graph.w, graph.h / 2}, color(49, 50, 47));
+        fill({graph.x, graph.y + graph.h / 2, graph.w, graph.h - graph.h / 2}, color(225, 224, 214));
+        auto border_c = color(104, 107, 101);
+        line(graph.x, graph.y, graph.x + graph.w, graph.y, border_c);
+        line(graph.x, graph.y + graph.h, graph.x + graph.w, graph.y + graph.h, border_c);
+        line(graph.x, graph.y, graph.x, graph.y + graph.h, border_c);
+        line(graph.x + graph.w, graph.y, graph.x + graph.w, graph.y + graph.h, border_c);
+        for (int pct : {25, 50, 75}) {
+            int gy = graph.y + graph.h - pct * graph.h / 100;
+            if (pct == 50) XSetLineAttributes(dpy, gc, 2, LineSolid, CapButt, JoinMiter);
+            else XSetLineAttributes(dpy, gc, 1, LineOnOffDash, CapButt, JoinMiter);
+            line(graph.x, gy, graph.x + graph.w, gy,
+                 pct == 50 ? green : color(135, 137, 130));
+        }
+        XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
         if (reviews.size() > 1) {
             XSetLineAttributes(dpy, gc, 3, LineSolid, CapRound, JoinRound);
             for (size_t i = 1; i < reviews.size(); i++) {
@@ -1286,19 +1312,33 @@ void draw_scene() {
                 int x2 = graph.x + (int)(i * graph.w / (reviews.size() - 1));
                 int y1 = graph.y + graph.h - (int)(reviews[i - 1].winrate * graph.h / 100.0);
                 int y2 = graph.y + graph.h - (int)(reviews[i].winrate * graph.h / 100.0);
-                line(x1, y1, x2, y2, green);
+                line(x1, y1, x2, y2, color(240, 181, 54));
             }
             XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
         }
+        for (size_t i = 0; i < reviews.size(); ++i) {
+            if (reviews[i].label != "Inaccuracy" && reviews[i].label != "Mistake" &&
+                reviews[i].label != "Blunder" && reviews[i].label != "Brilliant") continue;
+            int px = graph.x + (reviews.size() == 1 ? graph.w / 2 : (int)(i * graph.w / (reviews.size() - 1)));
+            int py = graph.y + graph.h - (int)(reviews[i].winrate * graph.h / 100.0);
+            ellipse(px, py, 4, review_color(reviews[i].label), color(255, 255, 255));
+        }
+        text("B", graph.x + 5, graph.y + 1, 14, cream);
+        text("50", graph.x + 5, graph.y + graph.h / 2 - 16, 13, cream);
+        text("W", graph.x + 5, graph.y + graph.h - 18, 14, color(38, 49, 38));
         if (!reviews.empty() && review_ply > 0) {
             int idx = min<int>(review_ply - 1, reviews.size() - 1);
-            int cx = graph.x + (reviews.size() == 1 ? graph.w : (int)(idx * graph.w / (reviews.size() - 1)));
-            XSetLineAttributes(dpy, gc, 2, LineSolid, CapRound, JoinRound);
-            line(cx, graph.y - 4, cx, graph.y + graph.h + 4, color(255, 255, 255));
+            int cx = graph.x + (reviews.size() == 1 ? graph.w / 2 : (int)(idx * graph.w / (reviews.size() - 1)));
+            int cy = graph.y + graph.h - (int)(reviews[idx].winrate * graph.h / 100.0);
+            XSetLineAttributes(dpy, gc, 1, LineOnOffDash, CapButt, JoinMiter);
+            line(cx, graph.y, cx, graph.y + graph.h, color(255, 255, 255));
             XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
-            draw_review_badge(reviews[idx].label, cx - 21, graph.y - 42);
+            ellipse(cx, cy, 5, color(240, 181, 54), color(255, 255, 255));
+            Rect tooltip{graph.x + graph.w - 99, graph.y + 7, 92, 25};
+            fill(tooltip, color(27, 29, 27));
+            text("B " + to_string((int)(reviews[idx].winrate + 0.5)) + "%  #" +
+                 to_string(idx + 1), tooltip.x + 8, tooltip.y + 3, 14, color(255, 255, 255));
         }
-        text("SAVE/LOAD REPLAY ONLY", panel.x + 28, graph.y + graph.h + 22, 18, color(214, 224, 200));
     }
     XFlush(dpy);
 }

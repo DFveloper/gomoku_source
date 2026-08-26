@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <vector>
 
 #include "gomoku_core.h"
 
@@ -15,14 +16,23 @@ int sz = 15;
 int turn = 1;
 bool game_over = false;
 int winner = 0;
-int default_depth = 3;
+int default_depth = 4;
 FILE* agent_log = nullptr;
+std::vector<gomoku::Move> move_history;
+
+gomoku::Move last_history_move_for(int p) {
+    for (int i = static_cast<int>(move_history.size()) - 1; i >= 0; --i) {
+        if (((i % 2 == 0) ? 1 : 2) == p) return move_history[i];
+    }
+    return {-1, -1};
+}
 
 void clear_board() {
     std::memset(board, 0, sizeof(board));
     turn = 1;
     game_over = false;
     winner = 0;
+    move_history.clear();
 }
 
 void log_line(const std::string& s) {
@@ -85,6 +95,7 @@ void print_state() {
 
 void apply_move(int r, int c, int p) {
     board[r][c] = p;
+    move_history.push_back({r, c});
     if (gomoku::check_win_at(board, sz, r, c, p)) {
         game_over = true;
         winner = p;
@@ -129,6 +140,95 @@ bool run_tests() {
     pass &= gomoku::is_forbidden_move(board, sz, 7, 7);
     std::printf("[%s] double-three forbidden check\n", pass ? "PASS" : "FAIL");
 
+    clear_board();
+    board[7][7] = board[7][8] = 1;
+    board[6][7] = board[8][8] = 2;
+    int black_eval = gomoku::static_eval(board, sz, 1);
+    int white_eval = gomoku::static_eval(board, sz, 2);
+    bool symmetric = black_eval == -white_eval;
+    pass &= symmetric;
+    std::printf("[%s] antisymmetric long-game evaluation\n", symmetric ? "PASS" : "FAIL");
+
+    gomoku::OpponentStyle attacking_style, defending_style;
+    for (int sample = 0; sample < 5; ++sample) {
+        clear_board();
+        int row = 3 + sample;
+        board[row][4] = board[row][5] = board[row][6] = 1;
+        gomoku::observe_opponent_move(attacking_style, board, sz, {row, 7});
+        clear_board();
+        board[row][4] = board[row][5] = board[row][6] = 2;
+        gomoku::observe_opponent_move(defending_style, board, sz, {row, 7});
+    }
+    bool style_learned = attacking_style.attack_preference > attacking_style.defense_preference &&
+                         defending_style.defense_preference > defending_style.attack_preference &&
+                         attacking_style.confidence() > 0.5;
+    pass &= style_learned;
+    std::printf("[%s] opponent attack/defense style learning\n", style_learned ? "PASS" : "FAIL");
+
+    clear_board();
+    board[7][5] = board[7][6] = 1;
+    board[10][5] = board[10][6] = 2;
+    gomoku::OpponentStyle aggressive, defensive;
+    aggressive.observations = defensive.observations = 8;
+    aggressive.attack_preference = 1.0;
+    aggressive.defense_preference = 0.0;
+    defensive.attack_preference = 0.0;
+    defensive.defense_preference = 1.0;
+    bool style_applied =
+        gomoku::style_move_bonus(board, sz, 1, {7, 7}, &aggressive) >
+            gomoku::style_move_bonus(board, sz, 1, {7, 7}, &defensive) &&
+        gomoku::style_move_bonus(board, sz, 1, {10, 7}, &defensive) >
+            gomoku::style_move_bonus(board, sz, 1, {10, 7}, &aggressive);
+    pass &= style_applied;
+    std::printf("[%s] style-conditioned tree move ordering\n", style_applied ? "PASS" : "FAIL");
+
+    auto baseline = gomoku::ranked_candidates(board, sz, 1, 8, nullptr);
+    auto modeled = gomoku::ranked_candidates(board, sz, 1, 8, &aggressive);
+    bool baseline_preserved = true;
+    for (int i = 0; i < 6 && i < static_cast<int>(baseline.size()); ++i) {
+        bool found = false;
+        for (const auto& item : modeled) {
+            if (item.second.r == baseline[i].second.r && item.second.c == baseline[i].second.c) found = true;
+        }
+        baseline_preserved &= found;
+    }
+    pass &= baseline_preserved;
+    std::printf("[%s] style model preserves safe baseline replies\n", baseline_preserved ? "PASS" : "FAIL");
+
+    clear_board();
+    board[7][7] = board[7][8] = 2;
+    board[7][6] = board[7][10] = 1;
+    board[10][7] = board[10][8] = 2;
+    int dead_penalty = gomoku::stale_continuation_penalty(board, sz, 2, {7, 9}, {7, 8});
+    int live_penalty = gomoku::stale_continuation_penalty(board, sz, 2, {10, 9}, {7, 8});
+    bool stale_abandoned = dead_penalty > 0 && live_penalty == 0;
+    pass &= stale_abandoned;
+    std::printf("[%s] abandon dead continuation\n", stale_abandoned ? "PASS" : "FAIL");
+
+    clear_board();
+    board[7][7] = board[8][8] = 1;
+    board[7][8] = board[8][7] = 2;
+    gomoku::Move single_thread = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, 1);
+    gomoku::Move four_threads = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, 4);
+    bool parallel_deterministic = single_thread.r == four_threads.r && single_thread.c == four_threads.c;
+    pass &= parallel_deterministic;
+    std::printf("[%s] deterministic root multithreading\n", parallel_deterministic ? "PASS" : "FAIL");
+
+    bool version_catalog = true;
+    for (int i = 0; i < static_cast<int>(gomoku::EngineVersion::Count); ++i) {
+        const char* name = gomoku::engine_version_name(static_cast<gomoku::EngineVersion>(i));
+        version_catalog &= name && std::strcmp(name, "Unknown") != 0;
+    }
+    pass &= version_catalog;
+    std::printf("[%s] seven-engine match catalog\n", version_catalog ? "PASS" : "FAIL");
+
+    clear_board();
+    for (int r = 0; r < sz; ++r) for (int c = 0; c < sz; ++c) board[r][c] = ((r + c) % 2) + 1;
+    gomoku::Move no_move = gomoku::choose_ai_move(board, sz, 2, 1);
+    bool draw_safe = no_move.r == -1 && no_move.c == -1;
+    pass &= draw_safe;
+    std::printf("[%s] full-board draw handling\n", draw_safe ? "PASS" : "FAIL");
+
     return pass;
 }
 
@@ -137,6 +237,7 @@ void print_help() {
     std::printf("  play              interactive human black vs AI white\n");
     std::printf("  agent             text protocol for Codex / other LLMs\n");
     std::printf("  genmove           read current board from stdin, print AI move\n");
+    std::printf("  genmove-history [depth] [threads]  style-aware move (defaults: 4, auto)\n");
     std::printf("  test              run tactical regression tests\n");
     std::printf("Agent commands: new [size], play r c, ai, show, state, legal r c, depth n, quit\n");
     std::printf("Board input for genmove: first line size, then size lines using X O .\n");
@@ -162,8 +263,32 @@ int genmove() {
         std::fprintf(stderr, "invalid board input\n");
         return 2;
     }
-    gomoku::Move m = gomoku::choose_ai_move(board, sz, 2, 3);
+    gomoku::Move m = gomoku::choose_ai_move(board, sz, 2, 4);
     std::printf("%d %d\n", m.r, m.c);
+    return 0;
+}
+
+int genmove_history(int search_depth, int max_threads) {
+    clear_board();
+    int ai_player = 2, count = 0;
+    if (std::scanf("%d %d %d", &sz, &ai_player, &count) != 3 ||
+        sz < 9 || sz > gomoku::kMaxBoard || (ai_player != 1 && ai_player != 2) || count < 0) {
+        std::fprintf(stderr, "invalid history header\n");
+        return 2;
+    }
+    for (int i = 0; i < count; ++i) {
+        int r = -1, c = -1;
+        if (std::scanf("%d %d", &r, &c) != 2 || !gomoku::ok(sz, r, c) || board[r][c] != 0) {
+            std::fprintf(stderr, "invalid move history\n");
+            return 2;
+        }
+        board[r][c] = (i % 2 == 0) ? 1 : 2;
+        move_history.push_back({r, c});
+    }
+    gomoku::OpponentStyle style = gomoku::analyze_opponent_style(sz, move_history, 3 - ai_player);
+    gomoku::Move move = gomoku::choose_ai_move(board, sz, ai_player, search_depth, &style, max_threads,
+                                               last_history_move_for(ai_player));
+    std::printf("%d %d\n", move.r, move.c);
     return 0;
 }
 
@@ -182,21 +307,23 @@ int play() {
             std::printf("forbidden move\n");
             continue;
         }
-        board[r][c] = 1;
-        if (gomoku::check_win_at(board, sz, r, c, 1)) {
+        apply_move(r, c, 1);
+        if (game_over) {
             print_board();
             std::printf("black wins\n");
             return 0;
         }
-        gomoku::Move ai = gomoku::choose_ai_move(board, sz, 2, 3);
+        gomoku::OpponentStyle style = gomoku::analyze_opponent_style(sz, move_history, 1);
+        gomoku::Move ai = gomoku::choose_ai_move(board, sz, 2, 4, &style, 0,
+                                                 last_history_move_for(2));
         if (ai.r == -1) {
             std::printf("draw\n");
             return 0;
         }
-        board[ai.r][ai.c] = 2;
+        apply_move(ai.r, ai.c, 2);
         std::printf("ai %d %d\n", ai.r, ai.c);
         print_board();
-        if (gomoku::check_win_at(board, sz, ai.r, ai.c, 2)) {
+        if (game_over) {
             std::printf("white wins\n");
             return 0;
         }
@@ -242,7 +369,7 @@ int agent() {
         }
         if (cmd == "depth") {
             int d = default_depth;
-            if (iss >> d) default_depth = std::max(1, std::min(5, d));
+            if (iss >> d) default_depth = std::max(1, std::min(6, d));
             std::printf("DEPTH %d\n", default_depth);
             log_line(std::string("DEPTH ") + std::to_string(default_depth));
             continue;
@@ -304,7 +431,9 @@ int agent() {
                 log_line("RESULT BLACK_WINS");
                 continue;
             }
-            gomoku::Move ai = gomoku::choose_ai_move(board, sz, 2, default_depth);
+            gomoku::OpponentStyle style = gomoku::analyze_opponent_style(sz, move_history, 1);
+            gomoku::Move ai = gomoku::choose_ai_move(board, sz, 2, default_depth, &style, 0,
+                                                     last_history_move_for(2));
             if (ai.r == -1) {
                 game_over = true;
                 winner = 0;
@@ -332,7 +461,9 @@ int agent() {
                 log_line("ERR not white turn");
                 continue;
             }
-            gomoku::Move ai = gomoku::choose_ai_move(board, sz, 2, default_depth);
+            gomoku::OpponentStyle style = gomoku::analyze_opponent_style(sz, move_history, 1);
+            gomoku::Move ai = gomoku::choose_ai_move(board, sz, 2, default_depth, &style, 0,
+                                                     last_history_move_for(2));
             if (ai.r == -1) {
                 game_over = true;
                 winner = 0;
@@ -363,6 +494,11 @@ int main(int argc, char** argv) {
     std::string cmd = argc >= 2 ? argv[1] : "help";
     if (cmd == "test") return run_tests() ? 0 : 1;
     if (cmd == "genmove") return genmove();
+    if (cmd == "genmove-history") {
+        int depth = argc >= 3 ? std::max(1, std::min(6, std::atoi(argv[2]))) : 4;
+        int threads = argc >= 4 ? std::max(0, std::min(32, std::atoi(argv[3]))) : 0;
+        return genmove_history(depth, threads);
+    }
     if (cmd == "play") return play();
     if (cmd == "agent") return agent();
     print_help();
