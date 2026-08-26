@@ -70,6 +70,24 @@ h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp
 .spinner[hidden] { display: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.ai-setup { display: grid; grid-template-columns: 1.7fr 1fr; gap: 10px; margin-bottom: 14px; }
+.ai-setup label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 800; letter-spacing: .09em; color: var(--muted); }
+.ai-setup select {
+  min-height: 46px;
+  padding: 0 10px;
+  border: 1px solid rgba(214,224,200,.25);
+  border-radius: 6px;
+  background: rgba(0,0,0,.22);
+  color: var(--cream);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color .12s ease;
+}
+.ai-setup select:hover:not(:disabled) { border-color: var(--lime); }
+.ai-setup select:focus-visible { outline: 3px solid #f0b536; outline-offset: 1px; }
+.ai-setup select:disabled { opacity: .45; cursor: not-allowed; }
+
 .actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .actions.review-actions { grid-template-columns: 1fr 1fr; }
 .action {

@@ -7,6 +7,8 @@ const rangeRow = $('#rangeRow'), undoOpening = $('#undoOpening');
 const startButton = $('#start'), resetButton = $('#reset');
 const toastEl = $('#toast');
 let state, fetching = false, toastTimer;
+let postQueue = Promise.resolve();
+let configDraft;
 
 function toast(message) { toastEl.textContent = message; toastEl.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.hidden = true, 2000); }
 async function request(path, options = {}) {
@@ -15,8 +17,13 @@ async function request(path, options = {}) {
   return result;
 }
 async function post(path, body = {}) {
-  try { state = await request(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}); render(); }
-  catch (error) { toast(error.message); }
+  postQueue = postQueue.then(async () => {
+    try {
+      const next = await request(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+      if (!state || next.revision >= state.revision) { state = next; render(); }
+    } catch (error) { toast(error.message); }
+  });
+  return postQueue;
 }
 
 function fillSelects() {
@@ -75,8 +82,9 @@ function render() {
   renderLog();drawBoard();
 }
 async function saveConfig(patch={}) {
-  const body={blackEngine:+blackEngine.value,whiteEngine:+whiteEngine.value,blackLevel:+blackLevel.value,whiteLevel:+whiteLevel.value,openingMode:state.openingMode,randomPlies:+randomPlies.value,...patch};
-  await post('/api/match/config',body);
+  const current=configDraft||{blackEngine:state.blackEngine,whiteEngine:state.whiteEngine,blackLevel:state.blackLevel,whiteLevel:state.whiteLevel,openingMode:state.openingMode,randomPlies:state.randomPlies};
+  configDraft={...current,blackEngine:+blackEngine.value,whiteEngine:+whiteEngine.value,blackLevel:+blackLevel.value,whiteLevel:+whiteLevel.value,randomPlies:+randomPlies.value,...patch};
+  await post('/api/match/config',configDraft);
 }
 for(const select of [blackEngine,whiteEngine,blackLevel,whiteLevel])select.addEventListener('change',()=>saveConfig());
 randomPlies.addEventListener('input',()=>pliesValue.value=randomPlies.value);randomPlies.addEventListener('change',()=>saveConfig());
@@ -86,5 +94,5 @@ board.addEventListener('pointerup',event=>{if(!state||state.phase!=='setup'||sta
 board.addEventListener('contextmenu',event=>{event.preventDefault();if(state?.phase==='setup'&&state.openingMode==='custom')post('/api/match/undo-opening');});
 document.addEventListener('keydown',event=>{if(event.target.matches('select,input'))return;const key=event.key.toLowerCase();if(key==='enter'&&state?.phase==='setup')post('/api/match/start');else if(key==='r')post('/api/match/reset');else if(key==='u')post('/api/match/undo-opening');else if(key==='q')request('/api/match/quit',{method:'POST'}).then(()=>$('#status').textContent='SERVER STOPPED');});
 new ResizeObserver(drawBoard).observe(document.querySelector('.arena'));
-async function refresh(){if(fetching)return;fetching=true;try{const next=await request('/api/match/state');const changed=!state||next.revision!==state.revision;state=next;if(changed)render();}catch{ $('#status').textContent='CONNECTION LOST'; }finally{fetching=false;}}
+async function refresh(){if(fetching)return;fetching=true;try{const next=await request('/api/match/state');const changed=!state||next.revision>state.revision;if(changed){state=next;render();}}catch{ $('#status').textContent='CONNECTION LOST'; }finally{fetching=false;}}
 refresh();setInterval(refresh,250);

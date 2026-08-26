@@ -1,0 +1,35 @@
+Start testing: Aug 26 22:40 KST
+----------------------------------------------------------
+1/1 Testing: gomoku_tactical_and_style_regression
+1/1 Test: gomoku_tactical_and_style_regression
+Command: "/mnt/openwebui/gomoku/build/gomoku_cli" "test"
+Directory: /mnt/openwebui/gomoku/build
+"gomoku_tactical_and_style_regression" start time: Aug 26 22:40 KST
+Output:
+----------------------------------------------------------
+[PASS] block straight four -> 7 4
+[PASS] take immediate win -> 8 2
+[PASS] block broken four -> 7 7
+[PASS] last-move win check
+[PASS] double-three forbidden check
+[PASS] antisymmetric long-game evaluation
+[PASS] opponent attack/defense style learning
+[PASS] style-conditioned tree move ordering
+[PASS] style model preserves safe baseline replies
+[PASS] abandon dead continuation
+[PASS] deterministic root multithreading
+[PASS] seven-engine match catalog
+[PASS] all built-in full-board draw handling
+[PASS] isolated legal fallback move
+[PASS] external move parsing and legality
+[PASS] final-square draw state
+[PASS] built-in search cancellation
+<end of output>
+Test time =   0.59 sec
+----------------------------------------------------------
+Test Passed.
+"gomoku_tactical_and_style_regression" end time: Aug 26 22:40 KST
+"gomoku_tactical_and_style_regression" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Aug 26 22:40 KST

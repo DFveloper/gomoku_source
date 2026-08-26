@@ -6,12 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(gomoku_gui AI_Gomoku_GUI.cpp)
+target_compile_definitions(gomoku_gui PRIVATE
+    GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 add_executable(gomoku_cli gomoku_cli.cpp)
 add_executable(gomoku_webui AI_Gomoku_WebUI.cpp)
 add_executable(gomoku_match_webui Gomoku_Engine_Match_WebUI.cpp)
 
 target_compile_definitions(gomoku_webui PRIVATE
-    GOMOKU_WEB_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/webui")
+    GOMOKU_WEB_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/webui"
+    GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(gomoku_match_webui PRIVATE
     GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 

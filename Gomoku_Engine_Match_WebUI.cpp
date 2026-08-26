@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <random>
 #include <sstream>
@@ -16,6 +17,7 @@
 #include <vector>
 
 #include "gomoku_core.h"
+#include "engine_adapter.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -70,11 +72,13 @@ struct MatchState {
     int thinking_player = 0;
     gomoku::WinLine win_line{};
     int job = 0;
+    shared_ptr<atomic<bool>> search_cancel;
     unsigned long long revision = 1;
 };
 
 MatchState match_state;
 atomic<bool> server_running{true};
+atomic<int> active_match_workers{0};
 Socket listener_socket = kInvalidSocket;
 filesystem::path match_web_root;
 filesystem::path common_web_root;
@@ -137,118 +141,6 @@ bool engine_available(int engine) {
     return true;
 }
 
-// Runs one turn of a Gomocup/Piskvork protocol engine in a child process and
-// returns its move, mirroring external_best_move() of the Win32 match GUI.
-gomoku::Move external_best_move(gomoku::EngineVersion version,
-                                const vector<gomoku::Move>& moves, int player, int depth,
-                                int job, string& error) {
-    using gomoku::EngineVersion;
-    filesystem::path program = external_engine_path(static_cast<int>(version));
-    error.clear();
-    auto fail = [&](const char* reason) {
-        error = string(kEngineNames[static_cast<int>(version)]) + " " + reason;
-        return gomoku::Move{-1, -1};
-    };
-    if (program.empty()) return fail("runtime binary not found");
-
-    int to_child[2] = {-1, -1}, from_child[2] = {-1, -1};
-    if (pipe(to_child) != 0 || pipe(from_child) != 0) {
-        for (int fd : {to_child[0], to_child[1], from_child[0], from_child[1]})
-            if (fd != -1) close(fd);
-        return fail("pipe creation failed");
-    }
-
-    string program_string = program.string();
-    string working_dir = program.parent_path().string();
-    pid_t pid = fork();
-    if (pid < 0) {
-        for (int fd : {to_child[0], to_child[1], from_child[0], from_child[1]}) close(fd);
-        return fail("process launch failed");
-    }
-    if (pid == 0) {
-        dup2(to_child[0], STDIN_FILENO);
-        dup2(from_child[1], STDOUT_FILENO);
-        dup2(from_child[1], STDERR_FILENO);
-        for (int fd : {to_child[0], to_child[1], from_child[0], from_child[1]})
-            close(fd);
-        if (!working_dir.empty()) chdir(working_dir.c_str());
-        execl(program_string.c_str(), program.filename().c_str(), static_cast<char*>(nullptr));
-        _exit(127);
-    }
-    close(to_child[0]);
-    close(from_child[1]);
-
-    bool cancelled = false;
-    {
-        lock_guard<mutex> guard(match_state.lock);
-        cancelled = job != match_state.job || match_state.phase != "running";
-    }
-
-    int turn_time_ms = std::min(16000, 250 * (1 << std::max(0, depth - 1)));
-    if (version == EngineVersion::CarbonClassic) turn_time_ms = 180000;
-    string input = "START 15\nINFO timeout_turn " + to_string(turn_time_ms) +
-                   "\nINFO timeout_match 1800000\n";
-    input += "INFO rule 4\nINFO max_depth " + to_string(depth) + "\nBOARD\n";
-    for (size_t i = 0; i < moves.size(); ++i) {
-        int absolute_stone = i % 2 == 0 ? 1 : 2;
-        int stone = absolute_stone == player ? 1 : 2;  // Gomocup: 1=engine, 2=opponent.
-        input += to_string(moves[i].c) + "," + to_string(moves[i].r) + "," + to_string(stone) + "\n";
-    }
-    input += "DONE\nEND\n";
-
-    // Feed stdin from a helper thread so search output can never deadlock us.
-    thread writer([to_fd = to_child[1], text = std::move(input)]() {
-        size_t sent = 0;
-        while (sent < text.size()) {
-            ssize_t count = write(to_fd, text.data() + sent, text.size() - sent);
-            if (count <= 0) break;
-            sent += static_cast<size_t>(count);
-        }
-        close(to_fd);
-    });
-    writer.detach();
-
-    auto cancelled_by_job = [&]() {
-        lock_guard<mutex> guard(match_state.lock);
-        return job != match_state.job || match_state.phase != "running";
-    };
-
-    gomoku::Move result{-1, -1};
-    string output;
-    auto deadline = chrono::steady_clock::now() +
-                    chrono::milliseconds(std::max(30000, turn_time_ms + 15000));
-    while (result.r == -1) {
-        if (cancelled_by_job()) { cancelled = true; break; }
-        if (chrono::steady_clock::now() >= deadline) break;
-        pollfd fds{from_child[0], POLLIN, 0};
-        int ready = poll(&fds, 1, 10);
-        if (ready <= 0) continue;
-        char buffer[4096];
-        ssize_t count = read(from_child[0], buffer, sizeof(buffer));
-        if (count <= 0) break;  // Engine exited without a move.
-        output.append(buffer, buffer + count);
-        size_t line_end;
-        while ((line_end = output.find('\n')) != string::npos) {
-            string line = output.substr(0, line_end);
-            output.erase(0, line_end + 1);
-            int x = -1, y = -1;
-            if (sscanf(line.c_str(), "%d,%d", &x, &y) == 2 && gomoku::ok(kBoardSize, y, x))
-                result = {y, x};
-        }
-    }
-    close(from_child[0]);
-    if (cancelled) kill(pid, SIGKILL);
-    else if (result.r == -1) error = string(kEngineNames[static_cast<int>(version)]) + " returned no move";
-    int status = 0;
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        pid_t done = waitpid(pid, &status, attempt == 99 ? 0 : WNOHANG);
-        if (done == pid) break;
-        if (done < 0) break;
-        this_thread::sleep_for(chrono::milliseconds(10));
-    }
-    return result;
-}
-
 string state_json_locked() {
     ostringstream out;
     out << "{\"size\":" << kBoardSize << ",\"board\":[";
@@ -300,6 +192,8 @@ string state_json_locked() {
 
 void clear_board_locked() {
     ++match_state.job;
+    if (match_state.search_cancel) match_state.search_cancel->store(true);
+    match_state.search_cancel.reset();
     memset(match_state.board, 0, sizeof(match_state.board));
     match_state.moves.clear();
     match_state.phase = "setup";
@@ -329,6 +223,17 @@ bool board_full_locked() {
     return true;
 }
 
+int position_winner_locked(gomoku::WinLine* line = nullptr) {
+    for (auto it = match_state.moves.rbegin(); it != match_state.moves.rend(); ++it) {
+        gomoku::WinLine found;
+        if (gomoku::check_win_at(match_state.board, kBoardSize, it->r, it->c, it->p, &found)) {
+            if (line) *line = found;
+            return it->p;
+        }
+    }
+    return 0;
+}
+
 void finish_locked(int winner, const string& message) {
     match_state.phase = "finished";
     match_state.winner = winner;
@@ -350,16 +255,21 @@ void make_random_opening_locked() {
         gomoku::Move move = candidates.front();
         match_state.board[move.r][move.c] = player;
         match_state.moves.push_back({move.r, move.c, player, 0, true});
+        if (gomoku::check_win_at(match_state.board, kBoardSize, move.r, move.c, player)) break;
     }
 }
 
 void run_match(int job) {
+    struct WorkerGuard {
+        ~WorkerGuard() { --active_match_workers; }
+    } worker_guard;
     while (true) {
         int snapshot[kMaxBoard][kMaxBoard]{};
         vector<gomoku::Move> history;
         int player = 0, engine = 0, depth = 0;
         gomoku::OpponentStyle style;
         gomoku::Move last_own;
+        shared_ptr<atomic<bool>> cancel;
         {
             lock_guard<mutex> guard(match_state.lock);
             if (job != match_state.job || match_state.phase != "running") return;
@@ -370,6 +280,8 @@ void run_match(int job) {
             history = history_locked();
             style = gomoku::analyze_opponent_style(kBoardSize, history, 3 - player);
             last_own = last_for_locked(player);
+            cancel = make_shared<atomic<bool>>(false);
+            match_state.search_cancel = cancel;
             match_state.thinking_player = player;
             match_state.message = string(player == 1 ? "BLACK" : "WHITE") + " CALCULATING";
             ++match_state.revision;
@@ -378,13 +290,48 @@ void run_match(int job) {
         auto started = chrono::steady_clock::now();
         gomoku::Move move{-1, -1};
         string engine_error;
+        bool recovered = false;
         if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
-            move = external_best_move(static_cast<gomoku::EngineVersion>(engine), history,
-                                      player, depth, job, engine_error);
+            gomoku::ExternalEngineRequest request;
+            request.version = static_cast<gomoku::EngineVersion>(engine);
+            request.moves = history;
+            request.player = player;
+            request.level = depth;
+            request.board_size = kBoardSize;
+            request.program = external_engine_path(engine);
+            request.cancel = cancel.get();
+            for (int attempt = 0; attempt < 2; ++attempt) {
+                move = gomoku::run_external_engine(request, engine_error);
+                if (cancel->load()) return;
+                if (gomoku::is_legal_move(snapshot, kBoardSize, player, move)) break;
+                if (attempt == 0) {
+                    lock_guard<mutex> guard(match_state.lock);
+                    if (job != match_state.job || match_state.phase != "running") return;
+                    match_state.message = string(player == 1 ? "BLACK" : "WHITE") +
+                                          " RETRYING " + kEngineNames[engine];
+                    ++match_state.revision;
+                }
+            }
         } else {
             move = gomoku::choose_versioned_move(
                 snapshot, kBoardSize, player, depth, static_cast<gomoku::EngineVersion>(engine),
-                &style, search_threads, last_own);
+                &style, search_threads, last_own, cancel.get());
+        }
+        if (cancel->load()) return;
+        if (!gomoku::is_legal_move(snapshot, kBoardSize, player, move)) {
+            recovered = true;
+            {
+                lock_guard<mutex> guard(match_state.lock);
+                if (job != match_state.job || match_state.phase != "running") return;
+                match_state.message = string(player == 1 ? "BLACK" : "WHITE") + " USING SAFE FALLBACK";
+                ++match_state.revision;
+            }
+            move = gomoku::choose_ai_move(snapshot, kBoardSize, player,
+                                          max(2, min(depth, 3)), &style, search_threads, last_own,
+                                          cancel.get());
+            if (cancel->load()) return;
+            if (!gomoku::is_legal_move(snapshot, kBoardSize, player, move))
+                move = gomoku::first_legal_move(snapshot, kBoardSize, player);
         }
         int elapsed = static_cast<int>(chrono::duration_cast<chrono::milliseconds>(
             chrono::steady_clock::now() - started).count());
@@ -392,13 +339,8 @@ void run_match(int job) {
         {
             lock_guard<mutex> guard(match_state.lock);
             if (job != match_state.job || match_state.phase != "running") return;
-            if (move.r < 0 || move.c < 0 || move.r >= kBoardSize || move.c >= kBoardSize ||
-                match_state.board[move.r][move.c] != 0 ||
-                (player == 1 && gomoku::is_forbidden_move(match_state.board, kBoardSize, move.r, move.c))) {
-                string reason = engine_error.empty()
-                                    ? string(kEngineNames[engine]) + " COULD NOT RETURN A LEGAL MOVE"
-                                    : engine_error;
-                finish_locked(3 - player, reason);
+            if (!gomoku::is_legal_move(match_state.board, kBoardSize, player, move)) {
+                finish_locked(0, board_full_locked() ? "DRAW" : "DRAW · NO LEGAL MOVES");
                 return;
             }
             match_state.board[move.r][move.c] = player;
@@ -414,7 +356,8 @@ void run_match(int job) {
                 return;
             }
             match_state.thinking_player = 0;
-            match_state.message = "MOVE " + to_string(match_state.moves.size());
+            match_state.message = "MOVE " + to_string(match_state.moves.size()) +
+                                  (recovered ? " · ENGINE RECOVERED" : "");
             ++match_state.revision;
         }
         this_thread::sleep_for(chrono::milliseconds(240));
@@ -539,12 +482,15 @@ void handle_connection(Socket socket) {
         int player = match_state.moves.size() % 2 == 0 ? 1 : 2;
         if (match_state.phase != "setup" || match_state.opening_mode != "custom" || r < 0 || c < 0 ||
             r >= kBoardSize || c >= kBoardSize || match_state.board[r][c] ||
+            position_winner_locked() != 0 ||
             (player == 1 && gomoku::is_forbidden_move(match_state.board, kBoardSize, r, c))) {
             respond(socket, 400, "application/json", "{\"error\":\"illegal opening move\"}");
         } else {
             match_state.board[r][c] = player;
             match_state.moves.push_back({r, c, player, 0, true});
-            match_state.message = "CUSTOM OPENING · " + to_string(match_state.moves.size()) + " PLIES";
+            bool terminal = gomoku::check_win_at(match_state.board, kBoardSize, r, c, player);
+            match_state.message = terminal ? "CUSTOM OPENING COMPLETE" :
+                                  "CUSTOM OPENING · " + to_string(match_state.moves.size()) + " PLIES";
             ++match_state.revision;
             respond(socket, 200, "application/json", state_json_locked());
         }
@@ -569,13 +515,24 @@ void handle_connection(Socket socket) {
                 match_state.moves.clear();
                 make_random_opening_locked();
             }
-            match_state.phase = "running";
-            match_state.message = "MATCH STARTED";
             match_state.winner = 0;
             match_state.win_line = {};
             int job = ++match_state.job;
-            ++match_state.revision;
-            thread(run_match, job).detach();
+            gomoku::WinLine opening_line;
+            int opening_winner = position_winner_locked(&opening_line);
+            if (opening_winner) {
+                match_state.win_line = opening_line;
+                finish_locked(opening_winner,
+                              string(opening_winner == 1 ? "BLACK" : "WHITE") + " WINS IN OPENING");
+            } else if (board_full_locked()) {
+                finish_locked(0, "DRAW · OPENING FILLED THE BOARD");
+            } else {
+                match_state.phase = "running";
+                match_state.message = "MATCH STARTED";
+                ++match_state.revision;
+                ++active_match_workers;
+                thread(run_match, job).detach();
+            }
             respond(socket, 200, "application/json", state_json_locked());
         }
     } else if (request.method == "POST" && request.path == "/api/match/reset") {
@@ -584,6 +541,12 @@ void handle_connection(Socket socket) {
         respond(socket, 200, "application/json", state_json_locked());
     } else if (request.method == "POST" && request.path == "/api/match/quit") {
         respond(socket, 200, "application/json", "{\"ok\":true}");
+        {
+            lock_guard<mutex> guard(match_state.lock);
+            ++match_state.job;
+            if (match_state.search_cancel) match_state.search_cancel->store(true);
+            match_state.phase = "stopped";
+        }
         server_running = false;
 #ifdef _WIN32
         shutdown(listener_socket, SD_BOTH);
@@ -692,6 +655,7 @@ int main(int argc, char** argv) {
         thread(handle_connection, client).detach();
     }
     close_socket(listener_socket);
+    while (active_match_workers.load() > 0) this_thread::sleep_for(chrono::milliseconds(10));
 #ifdef _WIN32
     WSACleanup();
 #endif

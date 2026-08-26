@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "gomoku_core.h"
+#include "engine_adapter.h"
 
 namespace {
 
@@ -99,6 +100,9 @@ void apply_move(int r, int c, int p) {
     if (gomoku::check_win_at(board, sz, r, c, p)) {
         game_over = true;
         winner = p;
+    } else if (move_history.size() >= static_cast<size_t>(sz * sz)) {
+        game_over = true;
+        winner = 0;
     } else {
         turn = 3 - p;
     }
@@ -228,9 +232,54 @@ bool run_tests() {
     clear_board();
     for (int r = 0; r < sz; ++r) for (int c = 0; c < sz; ++c) board[r][c] = ((r + c) % 2) + 1;
     gomoku::Move no_move = gomoku::choose_ai_move(board, sz, 2, 1);
-    bool draw_safe = no_move.r == -1 && no_move.c == -1;
+    gomoku::Move legacy_no_move = gomoku::legacy_choose_move(board, sz, 2, 1);
+    bool draw_safe = no_move.r == -1 && no_move.c == -1 &&
+                     legacy_no_move.r == -1 && legacy_no_move.c == -1;
     pass &= draw_safe;
-    std::printf("[%s] full-board draw handling\n", draw_safe ? "PASS" : "FAIL");
+    std::printf("[%s] all built-in full-board draw handling\n", draw_safe ? "PASS" : "FAIL");
+
+    clear_board();
+    for (int r = 0; r < sz; ++r) for (int c = 0; c < sz; ++c) board[r][c] = 2;
+    board[0][0] = 0;
+    gomoku::Move emergency = gomoku::first_legal_move(board, sz, 2);
+    bool isolated_fallback = emergency.r == 0 && emergency.c == 0;
+    pass &= isolated_fallback;
+    std::printf("[%s] isolated legal fallback move\n", isolated_fallback ? "PASS" : "FAIL");
+
+    gomoku::ExternalEngineRequest request;
+    request.board_size = sz;
+    request.player = 2;
+    request.moves = {{7, 7}};
+    gomoku::Move parsed;
+    bool adapter_validation = gomoku::parse_external_move_line("8,7\r", parsed) &&
+                              parsed.r == 7 && parsed.c == 8 &&
+                              gomoku::legal_external_move(request, parsed) &&
+                              gomoku::parse_external_move_line("7,7", parsed) &&
+                              !gomoku::legal_external_move(request, parsed) &&
+                              !gomoku::parse_external_move_line("8,7 debug", parsed);
+    pass &= adapter_validation;
+    std::printf("[%s] external move parsing and legality\n", adapter_validation ? "PASS" : "FAIL");
+
+    clear_board();
+    for (int r = 0; r < sz; ++r) for (int c = 0; c < sz; ++c) board[r][c] = 1;
+    board[7][7] = 0;
+    move_history.resize(sz * sz - 1, {0, 0});
+    apply_move(7, 7, 2);
+    bool final_square_draw = game_over && winner == 0;
+    pass &= final_square_draw;
+    std::printf("[%s] final-square draw state\n", final_square_draw ? "PASS" : "FAIL");
+
+    clear_board();
+    std::atomic<bool> cancelled{true};
+    bool built_in_cancel = true;
+    for (int version = 0; version <= static_cast<int>(gomoku::EngineVersion::CurrentV3); ++version) {
+        gomoku::Move cancelled_move = gomoku::choose_versioned_move(
+            board, sz, 1, 5, static_cast<gomoku::EngineVersion>(version), nullptr, 4,
+            {-1, -1}, &cancelled);
+        built_in_cancel &= cancelled_move.r == -1 && cancelled_move.c == -1;
+    }
+    pass &= built_in_cancel;
+    std::printf("[%s] built-in search cancellation\n", built_in_cancel ? "PASS" : "FAIL");
 
     return pass;
 }
@@ -313,7 +362,7 @@ int play() {
         apply_move(r, c, 1);
         if (game_over) {
             print_board();
-            std::printf("black wins\n");
+            std::printf("%s\n", winner == 1 ? "black wins" : "draw");
             return 0;
         }
         gomoku::OpponentStyle style = gomoku::analyze_opponent_style(sz, move_history, 1);
@@ -327,7 +376,7 @@ int play() {
         std::printf("ai %d %d\n", ai.r, ai.c);
         print_board();
         if (game_over) {
-            std::printf("white wins\n");
+            std::printf("%s\n", winner == 2 ? "white wins" : "draw");
             return 0;
         }
     }
@@ -430,8 +479,9 @@ int agent() {
             std::printf("OK BLACK %d %d\n", r, c);
             log_board_snapshot("MOVE");
             if (game_over) {
-                std::printf("RESULT BLACK_WINS\n");
-                log_line("RESULT BLACK_WINS");
+                const char* result = winner == 1 ? "RESULT BLACK_WINS" : "RESULT DRAW";
+                std::printf("%s\n", result);
+                log_line(result);
                 continue;
             }
             gomoku::OpponentStyle style = gomoku::analyze_opponent_style(sz, move_history, 1);
@@ -448,8 +498,9 @@ int agent() {
             std::printf("AI %d %d\n", ai.r, ai.c);
             log_board_snapshot("AI");
             if (game_over) {
-                std::printf("RESULT WHITE_WINS\n");
-                log_line("RESULT WHITE_WINS");
+                const char* result = winner == 2 ? "RESULT WHITE_WINS" : "RESULT DRAW";
+                std::printf("%s\n", result);
+                log_line(result);
             }
             continue;
         }
@@ -478,8 +529,9 @@ int agent() {
             std::printf("AI %d %d\n", ai.r, ai.c);
             log_board_snapshot("AI");
             if (game_over) {
-                std::printf("RESULT WHITE_WINS\n");
-                log_line("RESULT WHITE_WINS");
+                const char* result = winner == 2 ? "RESULT WHITE_WINS" : "RESULT DRAW";
+                std::printf("%s\n", result);
+                log_line(result);
             }
             continue;
         }

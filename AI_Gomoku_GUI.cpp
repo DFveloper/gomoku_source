@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <atomic>
+#include <filesystem>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -13,6 +15,7 @@
 #include <vector>
 
 #include "gomoku_core.h"
+#include "engine_adapter.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -35,6 +38,7 @@ constexpr int kMaxBoard = 30;
 constexpr int kMinBoard = 9;
 constexpr int kDefaultBoard = 15;
 constexpr int kAiDepth = 4;
+constexpr int kMaxLevel = 5;
 constexpr int kMinW = 900;
 constexpr int kMinH = 620;
 
@@ -62,7 +66,12 @@ pair<int, int> ai_pending_move = {-1, -1};
 int ai_pending_job = 0;
 int ai_pending_ply = 0;
 atomic<int> ai_job_seq{0};
+atomic<bool> ai_cancel{false};
 mutex ai_mutex;
+filesystem::path engine_runtime_root;
+
+int engine_sel = static_cast<int>(gomoku::EngineVersion::CurrentV3);
+int level_sel = kAiDepth;
 
 struct MoveReview {
     int r = 0;
@@ -92,7 +101,7 @@ struct Ui {
     int w = 1120, h = 720;
     int cell = 32, margin = 24;
     Rect board{};
-    array<Rect, 6> buttons{};
+    array<Rect, 7> buttons{};
 } ui;
 
 bool ok(int r, int c) { return r >= 0 && r < sz && c >= 0 && c < sz; }
@@ -133,6 +142,82 @@ void parse_args(int argc, char** argv) {
     if (target_aspect <= 0.0 && env_aspect) target_aspect = parse_aspect_value(env_aspect);
 }
 
+int engine_count() { return static_cast<int>(gomoku::EngineVersion::Count); }
+
+bool engine_available(int engine) {
+    if (engine < 0 || engine >= engine_count()) return false;
+    if (engine < static_cast<int>(gomoku::EngineVersion::CarbonClassic)) return true;
+    error_code ec;
+    return filesystem::exists(
+        gomoku::external_runtime_path(engine_runtime_root,
+                                      static_cast<gomoku::EngineVersion>(engine)), ec);
+}
+
+void locate_engine_runtime_root() {
+#ifdef _WIN32
+    char module_path[MAX_PATH] = {};
+    GetModuleFileNameA(nullptr, module_path, MAX_PATH);
+    filesystem::path exe_dir = filesystem::path(module_path).parent_path();
+#else
+    char link_path[1024] = {};
+    ssize_t len = readlink("/proc/self/exe", link_path, sizeof(link_path) - 1);
+    filesystem::path exe_dir;
+    if (len > 0) {
+        link_path[len] = '\0';
+        exe_dir = filesystem::path(link_path).parent_path();
+    }
+#endif
+    vector<filesystem::path> candidates;
+#ifdef GOMOKU_SOURCE_ROOT
+    candidates.push_back(filesystem::path(GOMOKU_SOURCE_ROOT) / "third_party" / "runtime");
+#endif
+    candidates.push_back(exe_dir / "third_party" / "runtime");
+    candidates.push_back(exe_dir / ".." / "third_party" / "runtime");
+    candidates.push_back(filesystem::current_path() / "third_party" / "runtime");
+    for (const auto& path : candidates) {
+        error_code ec;
+        if (filesystem::exists(path, ec)) {
+            engine_runtime_root = filesystem::weakly_canonical(path, ec);
+            return;
+        }
+    }
+}
+
+// The ENGINE and LEVEL buttons cycle like the SIZE button: one tap per step,
+// unavailable external runtimes are skipped without leaving the list.
+void cycle_engine() {
+    if (ai_thinking) return;
+    for (int step = 1; step < engine_count(); ++step) {
+        int candidate = (engine_sel + step) % engine_count();
+        if (!engine_available(candidate)) continue;
+        engine_sel = candidate;
+        return;
+    }
+}
+
+void cycle_level() {
+    if (!ai_thinking) level_sel = level_sel % kMaxLevel + 1;
+}
+
+string engine_line_text() {
+    string name = gomoku::engine_version_name(static_cast<gomoku::EngineVersion>(engine_sel));
+    if (!engine_available(engine_sel)) name += " (NOT FOUND)";
+    return "AI ENGINE: " + name + "  LV " + to_string(level_sel);
+}
+
+const char* engine_short_name(int engine) {
+    switch (engine) {
+        case 0: return "LEGACY V1";
+        case 1: return "STRENGTH V2";
+        case 2: return "CURRENT V3";
+        case 3: return "CARBON";
+        case 4: return "RAPFI";
+        case 5: return "ALPHAGOMOKU";
+        case 6: return "XL / NIREN";
+        default: return "?";
+    }
+}
+
 void set_surface_size(int w, int h) {
     physical_w = max(1, w);
     physical_h = max(1, h);
@@ -151,20 +236,6 @@ int to_logical_x(int x) {
 
 int to_logical_y(int y) {
     return target_aspect > 0.0 ? static_cast<int>(y * (double)ui.h / physical_h + 0.5) : y;
-}
-
-int cnt_lin(int r, int c, int dr, int dc, int p) {
-    int cnt = 1;
-    int dir[] = {1, -1};
-    for (int i = 0; i < 2; i++) {
-        int nr = r + dr * dir[i], nc = c + dc * dir[i];
-        while (ok(nr, nc) && brd[nr][nc] == p) {
-            cnt++;
-            nr += dr * dir[i];
-            nc += dc * dir[i];
-        }
-    }
-    return cnt;
 }
 
 enum ThreatKind {
@@ -276,26 +347,6 @@ int get_thr(int r, int c, int p) {
     return gomoku::get_thr(brd, sz, r, c, p);
 }
 
-pair<int, int> vcf(int p, int dep) {
-    if (dep <= 0) return {-1, -1};
-    for (int r = 0; r < sz; r++) {
-        for (int c = 0; c < sz; c++) {
-            if (brd[r][c] != 0) continue;
-            if (cnt_lin(r, c, 0, 1, p) >= 5 || cnt_lin(r, c, 1, 0, p) >= 5 ||
-                cnt_lin(r, c, 1, 1, p) >= 5 || cnt_lin(r, c, 1, -1, p) >= 5) {
-                return {r, c};
-            }
-            if (get_thr(r, c, p) >= 500) {
-                brd[r][c] = p;
-                pair<int, int> res = vcf(p, dep - 1);
-                brd[r][c] = 0;
-                if (res.first != -1) return {r, c};
-            }
-        }
-    }
-    return {-1, -1};
-}
-
 bool check_win_at(int r, int c, int p) {
     gomoku::WinLine line;
     if (gomoku::check_win_at(brd, sz, r, c, p, &line)) {
@@ -338,6 +389,9 @@ void start_ai_turn() {
     for (auto move : log_v) history.push_back({move.first, move.second});
     gomoku::OpponentStyle opponent_style = gomoku::analyze_opponent_style(local_sz, history, 1);
     gomoku::Move last_ai_move = last_logged_move_for(2);
+    int engine = engine_sel;
+    int level = level_sel;
+    ai_cancel.store(false);
     int job = ++ai_job_seq;
     {
         lock_guard<mutex> lock(ai_mutex);
@@ -348,13 +402,41 @@ void start_ai_turn() {
         ai_pending_ply = local_ply;
     }
 
-    thread([snapshot, local_sz, local_ply, job, opponent_style, last_ai_move]() {
-        int local_board[kMaxBoard][kMaxBoard] = {};
-        for (int r = 0; r < kMaxBoard; r++) {
-            for (int c = 0; c < kMaxBoard; c++) local_board[r][c] = snapshot[r * kMaxBoard + c];
+    thread([snapshot, local_sz, local_ply, job, opponent_style, last_ai_move, engine, level, history]() {
+        auto restore_board = [snapshot](int (&local_board)[kMaxBoard][kMaxBoard]) {
+            for (int r = 0; r < kMaxBoard; r++) {
+                for (int c = 0; c < kMaxBoard; c++) local_board[r][c] = snapshot[r * kMaxBoard + c];
+            }
+        };
+        gomoku::Move m{-1, -1};
+        if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
+            string error;
+            gomoku::ExternalEngineRequest request;
+            request.version = static_cast<gomoku::EngineVersion>(engine);
+            request.moves = history;
+            request.player = 2;
+            request.level = level;
+            request.board_size = local_sz;
+            request.program = gomoku::external_runtime_path(engine_runtime_root, request.version);
+            request.cancel = &ai_cancel;
+            m = gomoku::run_external_engine(request, error);
+            if (m.r < 0 && ai_cancel.load()) return;  // Game reset while thinking.
+            if (m.r < 0 || m.c < 0) {
+                // Never strand the human: fall back to the built-in engine.
+                fprintf(stderr, "[gui] external engine failed (%s), falling back\n", error.c_str());
+                int local_board[kMaxBoard][kMaxBoard];
+                restore_board(local_board);
+                m = gomoku::choose_ai_move(local_board, local_sz, 2,
+                                           max(2, min(level, kAiDepth)),
+                                           &opponent_style, 0, last_ai_move);
+            }
+        } else {
+            int local_board[kMaxBoard][kMaxBoard];
+            restore_board(local_board);
+            m = gomoku::choose_versioned_move(local_board, local_sz, 2, level,
+                                              static_cast<gomoku::EngineVersion>(engine),
+                                              &opponent_style, 0, last_ai_move);
         }
-        gomoku::Move m = gomoku::choose_ai_move(local_board, local_sz, 2, kAiDepth,
-                                                &opponent_style, 0, last_ai_move);
         lock_guard<mutex> lock(ai_mutex);
         ai_pending_move = {m.r, m.c};
         ai_pending_job = job;
@@ -396,24 +478,14 @@ bool has_five_for(int p) {
     return gomoku::has_five_for(brd, sz, p);
 }
 
-double estimate_black_winrate() {
-    if (has_five_for(1)) return 100.0;
-    if (has_five_for(2)) return 0.0;
-    // Calibrate the same antisymmetric evaluation used by the search.  The old
-    // graph summed every empty point and saturated early on crowded boards.
-    double evaluation = static_cast<double>(gomoku::static_eval(brd, sz, 1));
-    double wr = 50.0 + tanh(evaluation / 350000.0) * 49.0;
-    return min(99.0, max(1.0, wr));
-}
-
 string classify_move(int p, double before, double after, double best_after, bool had_win, bool made_win, int ply) {
     double own_delta = (p == 1) ? (after - before) : (before - after);
     double best_gap = (p == 1) ? (best_after - after) : (after - best_after);
     if (had_win && !made_win) return "Missed Win";
     if (made_win) return "Best";
-    if (ply < 8 && best_gap < 8.0) return "Book";
-    if (own_delta > 18.0 && best_gap < 4.0) return "Brilliant";
-    if (own_delta > 10.0) return "Great";
+    if (ply < 8 && best_gap < 6.0) return "Book";
+    if (own_delta > 14.0 && best_gap < 4.0) return "Brilliant";
+    if (own_delta > 8.0) return "Great";
     if (best_gap < 2.0) return "Best";
     if (best_gap < 5.0) return "Excellent";
     if (best_gap < 10.0) return "Good";
@@ -422,20 +494,20 @@ string classify_move(int p, double before, double after, double best_after, bool
     return "Blunder";
 }
 
-double best_possible_after_for(int p) {
+double best_possible_after_for(int p, int mover_after) {
     double best = (p == 1) ? -1.0 : 101.0;
     // Review the tactically relevant alternatives instead of every empty
     // intersection; this keeps automatic post-game analysis responsive.
-    auto candidates = gomoku::ranked_candidates(brd, sz, p, 12, nullptr);
+    auto candidates = gomoku::ranked_candidates(brd, sz, p, 10, nullptr);
     for (const auto& candidate : candidates) {
         int r = candidate.second.r, c = candidate.second.c;
         brd[r][c] = p;
-        double wr = estimate_black_winrate();
+        double wr = gomoku::black_win_chance(brd, sz, mover_after);
         brd[r][c] = 0;
         if (p == 1) best = max(best, wr);
         else best = min(best, wr);
     }
-    return best < 0.0 || best > 100.0 ? estimate_black_winrate() : best;
+    return best < 0.0 || best > 100.0 ? gomoku::black_win_chance(brd, sz, p) : best;
 }
 
 void build_board_to_ply(int ply, int out[kMaxBoard][kMaxBoard]) {
@@ -454,12 +526,12 @@ void compute_reviews() {
     for (size_t i = 0; i < log_v.size(); i++) {
         int p = (i % 2 == 0) ? 1 : 2;
         int r = log_v[i].first, c = log_v[i].second;
-        double before = estimate_black_winrate();
-        bool had_win = vcf(p, 1).first != -1;
-        double best_after = best_possible_after_for(p);
+        double before = gomoku::black_win_chance(brd, sz, p);
+        bool had_win = gomoku::has_forced_four_win(brd, sz, p);
+        double best_after = best_possible_after_for(p, 3 - p);
         brd[r][c] = p;
         bool made_win = has_five_for(p);
-        double after = estimate_black_winrate();
+        double after = gomoku::black_win_chance(brd, sz, 3 - p);
         reviews.push_back({r, c, p, after, classify_move(p, before, after, best_after, had_win, made_win, (int)i)});
     }
     memcpy(brd, saved, sizeof(brd));
@@ -498,6 +570,7 @@ bool load_replay(const char* filename) {
     FILE* fp = fopen(filename, "r");
     if (!fp) return false;
     ++ai_job_seq;
+    ai_cancel.store(true);
     ai_thinking = false;
     ai_move_ready = false;
     char magic[32] = {}, name[64] = {};
@@ -540,11 +613,7 @@ void layout() {
     int full_px = ui.cell * (sz - 1) + ui.margin * 2;
     ui.board = {32, max(24, (ui.h - full_px) / 2), full_px, full_px};
     int px = ui.board.x + ui.board.w + 36;
-    int py = max(32, ui.board.y + 200);
-    if (py + 350 > ui.h - 48) {
-        py = ui.h - 48 - 350;
-        if (py < 32) py = 32;
-    }
+    int py = max(32, ui.board.y + 240);
     int bw = max(220, ui.w - px - 32);
     if (review_mode) {
         // Two columns leave enough vertical room for the Chess-style graph,
@@ -555,7 +624,14 @@ void layout() {
             ui.buttons[i] = {px + (i % 2) * (col_w + 10), review_y + (i / 2) * 60, col_w, 50};
         }
     } else {
-        for (int i = 0; i < 6; i++) ui.buttons[i] = {px, py + i * 60, bw, 50};
+        // Seven touch buttons: NEW/UNDO/HEAT/SAVE/SIZE plus ENGINE and LEVEL.
+        const int step = 54, height = 46;
+        int needed = 6 * step + height;
+        if (py + needed > ui.h - 48) {
+            py = ui.h - 48 - needed;
+            if (py < 32) py = 32;
+        }
+        for (int i = 0; i < 7; i++) ui.buttons[i] = {px, py + i * step, bw, height};
     }
 }
 
@@ -565,6 +641,7 @@ bool hit(Rect r, int x, int y) {
 
 void new_game() {
     ++ai_job_seq;
+    ai_cancel.store(true);
     ai_thinking = false;
     ai_move_ready = false;
     memset(brd, 0, sizeof(brd));
@@ -582,6 +659,7 @@ void new_game() {
 void undo_turn() {
     if (log_v.empty() || game_over) return;
     ++ai_job_seq;
+    ai_cancel.store(true);
     ai_thinking = false;
     ai_move_ready = false;
     int count = min<int>(2, log_v.size());
@@ -672,6 +750,10 @@ void handle_click(int x, int y) {
         save_log("gomoku_log.txt");
     } else if (hit(ui.buttons[4], x, y)) {
         cycle_size();
+    } else if (hit(ui.buttons[5], x, y)) {
+        cycle_engine();
+    } else if (hit(ui.buttons[6], x, y)) {
+        cycle_level();
     }
 }
 
@@ -917,25 +999,31 @@ void draw_scene(HDC hdc) {
     fill(hdc, panel, rgb(37, 72, 45));
     text(hdc, "GOMOKU", panel.x + 24, 38, 40, rgb(245, 244, 232), true);
     text(hdc, "Chess.com style board UI", panel.x + 28, 86, 18, rgb(214, 224, 200));
-    text(hdc, "YOU: BLACK    AI: WHITE", panel.x + 28, 122, 20, rgb(245, 244, 232), true);
-    text(hdc, status_text(), panel.x + 28, 162, 30, rgb(129, 182, 76), true);
-    text(hdc, "MOVES: " + to_string(log_v.size()), panel.x + 28, 202, 20, rgb(245, 244, 232), true);
+    text(hdc, "YOU: BLACK    AI: WHITE", panel.x + 28, 118, 20, rgb(245, 244, 232), true);
+    text(hdc, engine_line_text(), panel.x + 28, 148, 18, rgb(214, 224, 200));
+    text(hdc, status_text(), panel.x + 28, 180, 30, rgb(129, 182, 76), true);
+    text(hdc, "MOVES: " + to_string(log_v.size()), panel.x + 28, 220, 20, rgb(245, 244, 232), true);
 
-    const string labels[5] = {
+    const string labels[7] = {
         review_mode ? "PREV" : "NEW",
         review_mode ? "NEXT" : "UNDO",
         review_mode ? "END" : (dbg ? "HEAT ON" : "HEAT OFF"),
         review_mode ? "SAVE" : "SAVE",
-        review_mode ? "LOAD" : ("SIZE " + to_string(sz))
+        review_mode ? "LOAD" : ("SIZE " + to_string(sz)),
+        review_mode ? "" : (string("ENGINE ") + engine_short_name(engine_sel)),
+        review_mode ? "" : ("LEVEL " + to_string(level_sel))
     };
     const string review_new_label = "NEW";
-    int button_count = review_mode ? 6 : 5;
+    int button_count = review_mode ? 6 : 7;
     for (int i = 0; i < button_count; i++) {
         round_rect(hdc, ui.buttons[i], i == 2 && dbg ? rgb(129, 182, 76) : rgb(238, 238, 228));
-        text(hdc, (i == 5) ? review_new_label : labels[i], ui.buttons[i].x + 22, ui.buttons[i].y + 12, 22, rgb(38, 49, 38), true);
+        text(hdc, (i == 5 && review_mode) ? review_new_label : labels[i],
+             ui.buttons[i].x + 22, ui.buttons[i].y + 10, 22, rgb(38, 49, 38), true);
     }
-    text(hdc, "Touch or click an intersection.", panel.x + 28, ui.h - 76, 18, rgb(214, 224, 200));
-    text(hdc, "N/U/D/S/Q shortcuts supported.", panel.x + 28, ui.h - 48, 18, rgb(214, 224, 200));
+    if (!review_mode) {
+        text(hdc, "Touch or click an intersection.", panel.x + 28, ui.h - 76, 18, rgb(214, 224, 200));
+        text(hdc, "N/U/D/E/V/S/Q shortcuts supported.", panel.x + 28, ui.h - 48, 18, rgb(214, 224, 200));
+    }
     if (review_mode) {
         int y = ui.buttons[5].y + 64;
         text(hdc, "PLY: " + to_string(review_ply) + "/" + to_string(log_v.size()), panel.x + 28, y, 18, rgb(245, 244, 232), true);
@@ -1036,6 +1124,8 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             else if (wp == 'N') new_game();
             else if (wp == 'U') undo_turn();
             else if (wp == 'D') dbg = !dbg;
+            else if (wp == 'E') cycle_engine();
+            else if (wp == 'V') cycle_level();
             else if (wp == 'S') save_log("gomoku_log.txt");
             else if (wp == 'L') load_replay("gomoku_replay.txt");
             repaint();
@@ -1069,6 +1159,7 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
 int main(int argc, char** argv) {
     parse_args(argc, argv);
+    locate_engine_runtime_root();
     new_game();
     HINSTANCE inst = GetModuleHandle(nullptr);
     WNDCLASSA wc{};
@@ -1263,23 +1354,30 @@ void draw_scene() {
     Rect panel{ui.board.x + ui.board.w + 28, 0, ui.w - ui.board.x - ui.board.w - 28, ui.h};
     fill(panel, panel_c);
     text("GOMOKU", panel.x + 24, 38, 40, cream);
-    text("YOU: BLACK    AI: WHITE", panel.x + 28, 122, 20, cream);
-    text(status_text(), panel.x + 28, 162, 30, green);
-    text("MOVES: " + to_string(log_v.size()), panel.x + 28, 202, 20, cream);
-    const string labels[5] = {
+    text("YOU: BLACK    AI: WHITE", panel.x + 28, 118, 20, cream);
+    text(engine_line_text(), panel.x + 28, 148, 18, color(214, 224, 200));
+    text(status_text(), panel.x + 28, 180, 30, green);
+    text("MOVES: " + to_string(log_v.size()), panel.x + 28, 220, 20, cream);
+    const string labels[7] = {
         review_mode ? "PREV" : "NEW",
         review_mode ? "NEXT" : "UNDO",
         review_mode ? "END" : (dbg ? "HEAT ON" : "HEAT OFF"),
         review_mode ? "SAVE" : "SAVE",
-        review_mode ? "LOAD" : ("SIZE " + to_string(sz))
+        review_mode ? "LOAD" : ("SIZE " + to_string(sz)),
+        review_mode ? "" : (string("ENGINE ") + engine_short_name(engine_sel)),
+        review_mode ? "" : ("LEVEL " + to_string(level_sel))
     };
     const string review_new_label = "NEW";
-    int button_count = review_mode ? 6 : 5;
+    int button_count = review_mode ? 6 : 7;
     for (int i = 0; i < button_count; i++) {
         fill(ui.buttons[i], i == 2 && dbg ? green : color(238, 238, 228));
-        text((i == 5) ? review_new_label : labels[i], ui.buttons[i].x + 22, ui.buttons[i].y + 15, 22, color(38, 49, 38));
+        text((i == 5 && review_mode) ? review_new_label : labels[i],
+             ui.buttons[i].x + 22, ui.buttons[i].y + 12, 22, color(38, 49, 38));
     }
-    text("Touch or click an intersection.", panel.x + 28, ui.h - 76, 18, color(214, 224, 200));
+    if (!review_mode) {
+        text("Touch or click an intersection.", panel.x + 28, ui.h - 76, 18, color(214, 224, 200));
+        text("N/U/D/E/V/S/Q shortcuts supported.", panel.x + 28, ui.h - 48, 18, color(214, 224, 200));
+    }
     if (review_mode) {
         int y = ui.buttons[5].y + 64;
         text("PLY: " + to_string(review_ply) + "/" + to_string(log_v.size()), panel.x + 28, y, 18, cream);
@@ -1365,6 +1463,7 @@ void enable_touch_events() {
 
 int main(int argc, char** argv) {
     parse_args(argc, argv);
+    locate_engine_runtime_root();
     new_game();
     dpy = XOpenDisplay(nullptr);
     if (!dpy) {
@@ -1421,6 +1520,8 @@ int main(int argc, char** argv) {
                 else if (ch == 'n' || ch == 'N') new_game();
                 else if (ch == 'u' || ch == 'U') undo_turn();
                 else if (ch == 'd' || ch == 'D') dbg = !dbg;
+                else if (ch == 'e' || ch == 'E') cycle_engine();
+                else if (ch == 'v' || ch == 'V') cycle_level();
                 else if (ch == 's' || ch == 'S') save_log("gomoku_log.txt");
                 else if (ch == 'l' || ch == 'L') load_replay("gomoku_replay.txt");
                 draw_scene();

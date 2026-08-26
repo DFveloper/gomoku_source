@@ -11,10 +11,13 @@ const plyEl = document.querySelector('#ply');
 const reviewResultEl = document.querySelector('#reviewResult');
 const replayFileEl = document.querySelector('#replayFile');
 const toastEl = document.querySelector('#toast');
+const engineSelect = document.querySelector('#engineSelect');
+const levelSelect = document.querySelector('#levelSelect');
 
 let state = null;
 let fetching = false;
 let toastTimer = 0;
+let configQueue = Promise.resolve();
 
 const qualityColors = {
   'Brilliant': '#23a7a0', 'Great': '#5c9e46', 'Best': '#81b64c', 'Excellent': '#6aa94f',
@@ -42,9 +45,13 @@ async function refresh() {
   fetching = true;
   try {
     const next = await request('/api/state');
-    const changed = !state || next.revision !== state.revision || next.forbidden;
-    state = next;
-    if (changed) render();
+    const currentForbidden = state?.forbidden?.join(',') || '';
+    const nextForbidden = next.forbidden?.join(',') || '';
+    const changed = !state || next.revision > state.revision || nextForbidden !== currentForbidden;
+    if (!state || next.revision >= state.revision) {
+      state = next;
+      if (changed) render();
+    }
   } catch (error) {
     statusEl.textContent = 'CONNECTION LOST';
     spinnerEl.hidden = true;
@@ -53,11 +60,39 @@ async function refresh() {
 
 async function action(name) {
   try {
-    state = await request('/api/action', {
+    const next = await request('/api/action', {
       method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({action: name})
     });
-    render();
+    if (!state || next.revision >= state.revision) { state = next; render(); }
   } catch (error) { toast(error.message); }
+}
+
+function configure(payload) {
+  configQueue = configQueue.then(async () => {
+    try {
+      const next = await request('/api/config', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+      });
+      if (!state || next.revision >= state.revision) { state = next; render(); }
+    } catch (error) { toast(error.message); render(); }
+  });
+  return configQueue;
+}
+
+function renderSetup() {
+  const engines = state.engines || [];
+  if (engineSelect.options.length !== engines.length) {
+    engineSelect.innerHTML = engines.map(engine =>
+      `<option value="${engine.id}"${engine.available ? '' : ' disabled'}>${engine.name}${engine.available ? '' : ' · NOT FOUND'}</option>`
+    ).join('');
+  }
+  if (engineSelect.value !== String(state.engine)) engineSelect.value = String(state.engine);
+  const maxLevel = state.maxLevel || 5;
+  if (levelSelect.options.length !== maxLevel) {
+    levelSelect.innerHTML = Array.from({length: maxLevel}, (_, i) =>
+      `<option value="${i + 1}">LEVEL ${i + 1}</option>`).join('');
+  }
+  if (levelSelect.value !== String(state.level)) levelSelect.value = String(state.level);
 }
 
 function resizeCanvas(canvas, ctx) {
@@ -219,7 +254,7 @@ function render() {
   statusEl.textContent = state.status;
   movesEl.textContent = `${state.moves.length} MOVE${state.moves.length === 1 ? '' : 'S'}`;
   spinnerEl.hidden = !state.aiThinking;
-  renderActions(); renderReview(); drawBoard();
+  renderSetup(); renderActions(); renderReview(); drawBoard();
 }
 
 boardCanvas.addEventListener('pointerup', async event => {
@@ -230,8 +265,8 @@ boardCanvas.addEventListener('pointerup', async event => {
   const x = margin + c * cell, y = margin + r * cell;
   if (r < 0 || c < 0 || r >= state.size || c >= state.size || Math.hypot(event.clientX - rect.left - x, event.clientY - rect.top - y) > Math.max(18, cell / 2)) return;
   try {
-    state = await request('/api/move', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({r,c})});
-    render();
+    const next = await request('/api/move', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({r,c})});
+    if (!state || next.revision >= state.revision) { state = next; render(); }
   } catch (error) { toast(error.message === 'forbidden move' ? 'Forbidden move for black' : error.message); refresh(); }
 });
 
@@ -248,11 +283,22 @@ replayFileEl.addEventListener('change', async () => {
   const file = replayFileEl.files[0];
   if (!file) return;
   try {
-    state = await request('/api/load', {method:'POST', headers:{'Content-Type':'text/plain'}, body:await file.text()});
-    render(); toast('Replay loaded');
+    const next = await request('/api/load', {method:'POST', headers:{'Content-Type':'text/plain'}, body:await file.text()});
+    if (!state || next.revision >= state.revision) { state = next; render(); }
+    toast('Replay loaded');
   } catch (error) { toast('Invalid replay file'); }
   replayFileEl.value = '';
 });
+
+function applyAiSettings() {
+  configure({
+    engine: Number(engineSelect.value),
+    level: Number(levelSelect.value)
+  });
+}
+
+engineSelect.addEventListener('change', applyAiSettings);
+levelSelect.addEventListener('change', applyAiSettings);
 
 document.addEventListener('keydown', event => {
   if (event.ctrlKey || event.metaKey || event.altKey || event.target.matches('input')) return;

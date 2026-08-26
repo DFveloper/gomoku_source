@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -16,6 +17,7 @@
 #include <vector>
 
 #include "gomoku_core.h"
+#include "engine_adapter.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -41,6 +43,7 @@ constexpr int kMaxBoard = gomoku::kMaxBoard;
 constexpr int kMinBoard = 9;
 constexpr int kDefaultBoard = 15;
 constexpr int kAiDepth = 4;
+constexpr int kMaxLevel = 5;
 constexpr size_t kMaxRequest = 2 * 1024 * 1024;
 
 struct MoveReview {
@@ -66,6 +69,9 @@ struct Game {
     int review_ply = 0;
     bool ai_thinking = false;
     int ai_job = 0;
+    shared_ptr<atomic<bool>> ai_cancel;
+    int engine = static_cast<int>(gomoku::EngineVersion::CurrentV3);
+    int level = kAiDepth;
     pair<int, int> forbidden{-1, -1};
     chrono::steady_clock::time_point forbidden_at{};
     unsigned long long revision = 1;
@@ -73,10 +79,12 @@ struct Game {
 
 Game game;
 atomic<bool> running{true};
+atomic<int> active_ai_workers{0};
 Socket listener_socket = kInvalidSocket;
 filesystem::path web_root;
 string public_origin;
 int ai_threads = 0;
+filesystem::path engine_runtime_root;
 
 void close_socket(Socket s) {
 #ifdef _WIN32
@@ -107,42 +115,26 @@ bool five_for(const int board[kMaxBoard][kMaxBoard], int size, int player) {
     return gomoku::has_five_for(board, size, player);
 }
 
-double black_winrate(int board[kMaxBoard][kMaxBoard], int size) {
-    if (five_for(board, size, 1)) return 100.0;
-    if (five_for(board, size, 2)) return 0.0;
-    double evaluation = static_cast<double>(gomoku::static_eval(board, size, 1));
-    return min(99.0, max(1.0, 50.0 + tanh(evaluation / 350000.0) * 49.0));
-}
-
-pair<int, int> vcf(int board[kMaxBoard][kMaxBoard], int size, int player, int depth) {
-    if (depth <= 0) return {-1, -1};
-    for (int r = 0; r < size; ++r) for (int c = 0; c < size; ++c) {
-        if (board[r][c] != 0) continue;
-        board[r][c] = player;
-        bool wins = gomoku::check_win_at(board, size, r, c, player);
-        board[r][c] = 0;
-        if (wins) return {r, c};
-        if (gomoku::get_thr(board, size, r, c, player) >= 500) {
-            board[r][c] = player;
-            auto result = vcf(board, size, player, depth - 1);
-            board[r][c] = 0;
-            if (result.first != -1) return {r, c};
-        }
-    }
-    return {-1, -1};
+// Black's win chance with `mover` to move, from the shared Chess.com-style
+// core model: forced fives and continuous-four chains pin 100/0, everything
+// else runs through a logistic curve over a tempo-aware evaluation.
+double black_winrate(int board[kMaxBoard][kMaxBoard], int size, int mover) {
+    return gomoku::black_win_chance(board, size, mover);
 }
 
 double best_after(int board[kMaxBoard][kMaxBoard], int size, int player) {
+    // Every considered reply hands the move to the opponent.
+    const int responder = 3 - player;
     double best = player == 1 ? -1.0 : 101.0;
-    auto candidates = gomoku::ranked_candidates(board, size, player, 12, nullptr);
+    auto candidates = gomoku::ranked_candidates(board, size, player, 10, nullptr);
     for (const auto& candidate : candidates) {
         auto move = candidate.second;
         board[move.r][move.c] = player;
-        double wr = black_winrate(board, size);
+        double wr = black_winrate(board, size, responder);
         board[move.r][move.c] = 0;
         best = player == 1 ? max(best, wr) : min(best, wr);
     }
-    return best < 0.0 || best > 100.0 ? black_winrate(board, size) : best;
+    return best < 0.0 || best > 100.0 ? black_winrate(board, size, player) : best;
 }
 
 string classify_move(int player, double before, double after, double best,
@@ -151,9 +143,9 @@ string classify_move(int player, double before, double after, double best,
     double best_gap = player == 1 ? best - after : after - best;
     if (had_win && !made_win) return "Missed Win";
     if (made_win) return "Best";
-    if (ply < 8 && best_gap < 8.0) return "Book";
-    if (own_delta > 18.0 && best_gap < 4.0) return "Brilliant";
-    if (own_delta > 10.0) return "Great";
+    if (ply < 8 && best_gap < 6.0) return "Book";
+    if (own_delta > 14.0 && best_gap < 4.0) return "Brilliant";
+    if (own_delta > 8.0) return "Great";
     if (best_gap < 2.0) return "Best";
     if (best_gap < 5.0) return "Excellent";
     if (best_gap < 10.0) return "Good";
@@ -168,20 +160,26 @@ void compute_reviews_locked() {
     for (size_t i = 0; i < game.moves.size(); ++i) {
         int player = i % 2 == 0 ? 1 : 2;
         int r = game.moves[i].first, c = game.moves[i].second;
-        double before = black_winrate(replay, game.size);
-        bool had_win = vcf(replay, game.size, player, 1).first != -1;
+        double before = black_winrate(replay, game.size, player);
+        bool had_win = gomoku::has_forced_four_win(replay, game.size, player);
         double best = best_after(replay, game.size, player);
         replay[r][c] = player;
         bool made_win = five_for(replay, game.size, player);
-        double after = black_winrate(replay, game.size);
+        double after = black_winrate(replay, game.size, 3 - player);
         game.reviews.push_back({r, c, player, after,
             classify_move(player, before, after, best, had_win, made_win, static_cast<int>(i))});
     }
     game.review_ply = static_cast<int>(game.moves.size());
 }
 
-void reset_locked() {
+void cancel_pending_ai_locked() {
     ++game.ai_job;
+    if (game.ai_cancel) game.ai_cancel->store(true);
+    game.ai_thinking = false;
+}
+
+void reset_locked() {
+    cancel_pending_ai_locked();
     memset(game.board, 0, sizeof(game.board));
     game.moves.clear();
     game.reviews.clear();
@@ -191,7 +189,6 @@ void reset_locked() {
     game.winner = 0;
     game.review_mode = false;
     game.review_ply = 0;
-    game.ai_thinking = false;
     game.forbidden = {-1, -1};
     ++game.revision;
 }
@@ -201,6 +198,10 @@ gomoku::Move last_move_for_locked(int player) {
         if ((i % 2 == 0 ? 1 : 2) == player) return {game.moves[i].first, game.moves[i].second};
     }
     return {-1, -1};
+}
+
+bool board_full_locked() {
+    return game.moves.size() >= static_cast<size_t>(game.size * game.size);
 }
 
 void start_ai_locked() {
@@ -215,20 +216,60 @@ void start_ai_locked() {
     int job = ++game.ai_job;
     gomoku::OpponentStyle style = gomoku::analyze_opponent_style(size, history, 1);
     gomoku::Move last_ai = last_move_for_locked(2);
+    int engine = game.engine;
+    int level = game.level;
+    auto cancel = make_shared<atomic<bool>>(false);
+    game.ai_cancel = cancel;
     game.ai_thinking = true;
     ++game.revision;
 
-    thread([snapshot, size, ply, job, style, last_ai]() {
-        int board[kMaxBoard][kMaxBoard]{};
+    ++active_ai_workers;
+    thread([snapshot, size, ply, job, style, last_ai, engine, level, cancel, history]() {
+        struct WorkerGuard {
+            ~WorkerGuard() { --active_ai_workers; }
+        } worker_guard;
+        gomoku::Move move{-1, -1};
+        int local_board[kMaxBoard][kMaxBoard]{};
         for (int r = 0; r < kMaxBoard; ++r) for (int c = 0; c < kMaxBoard; ++c)
-            board[r][c] = snapshot[r * kMaxBoard + c];
-        gomoku::Move move = gomoku::choose_ai_move(board, size, 2, kAiDepth, &style, ai_threads, last_ai);
+            local_board[r][c] = snapshot[r * kMaxBoard + c];
+        if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
+            string error;
+            gomoku::ExternalEngineRequest request;
+            request.version = static_cast<gomoku::EngineVersion>(engine);
+            request.moves = history;
+            request.player = 2;
+            request.level = level;
+            request.board_size = size;
+            request.program = gomoku::external_runtime_path(engine_runtime_root,
+                                                            request.version);
+            request.cancel = cancel.get();
+            for (int attempt = 0; attempt < 2; ++attempt) {
+                move = gomoku::run_external_engine(request, error);
+                if (cancel->load()) return;
+                if (gomoku::is_legal_move(local_board, size, 2, move)) break;
+                cerr << "[webui] external engine attempt " << attempt + 1
+                     << " failed (" << error << ")\n";
+            }
+        } else {
+            move = gomoku::choose_versioned_move(local_board, size, 2, level,
+                                                 static_cast<gomoku::EngineVersion>(engine),
+                                                 &style, ai_threads, last_ai, cancel.get());
+        }
+        if (cancel->load()) return;
+        if (!gomoku::is_legal_move(local_board, size, 2, move)) {
+            // Never strand the human after a transient or malformed engine response.
+            move = gomoku::choose_ai_move(local_board, size, 2, max(2, min(level, kAiDepth)),
+                                          &style, ai_threads, last_ai, cancel.get());
+            if (cancel->load()) return;
+            if (!gomoku::is_legal_move(local_board, size, 2, move))
+                move = gomoku::first_legal_move(local_board, size, 2);
+        }
 
         lock_guard<mutex> guard(game.lock);
         if (job != game.ai_job || ply != static_cast<int>(game.moves.size()) ||
             game.game_over || game.review_mode) return;
         game.ai_thinking = false;
-        if (move.r >= 0 && move.c >= 0 && game.board[move.r][move.c] == 0) {
+        if (gomoku::is_legal_move(game.board, game.size, 2, move)) {
             game.board[move.r][move.c] = 2;
             game.moves.push_back({move.r, move.c});
             game.last_move = {move.r, move.c};
@@ -239,7 +280,17 @@ void start_ai_locked() {
                 game.win_line = line;
                 compute_reviews_locked();
                 game.review_mode = true;
+            } else if (board_full_locked()) {
+                game.game_over = true;
+                game.winner = 0;
+                compute_reviews_locked();
+                game.review_mode = true;
             }
+        } else if (board_full_locked()) {
+            game.game_over = true;
+            game.winner = 0;
+            compute_reviews_locked();
+            game.review_mode = true;
         }
         ++game.revision;
     }).detach();
@@ -247,9 +298,29 @@ void start_ai_locked() {
 
 string status_locked() {
     if (game.review_mode) return "GAME REVIEW";
-    if (game.game_over) return game.winner == 1 ? "YOU WIN!" : "AI WINS!";
+    if (game.game_over) return game.winner == 0 ? "DRAW" : game.winner == 1 ? "YOU WIN!" : "AI WINS!";
     if (game.ai_thinking) return "CALCULATING...";
     return "YOUR TURN";
+}
+
+int engine_count() { return static_cast<int>(gomoku::EngineVersion::Count); }
+
+bool engine_supports_size(int engine, int size) {
+    using gomoku::EngineVersion;
+    switch (static_cast<EngineVersion>(engine)) {
+        case EngineVersion::Rapfi2025: return size >= 5 && size <= 22;
+        case EngineVersion::AlphaGomoku2026: return size == 15 || size == 20;
+        case EngineVersion::XLNiren: return size == 15;
+        default: return size >= kMinBoard && size <= kMaxBoard;
+    }
+}
+
+bool engine_available(int engine) {
+    if (engine < 0 || engine >= engine_count()) return false;
+    if (!engine_supports_size(engine, game.size)) return false;
+    if (engine < static_cast<int>(gomoku::EngineVersion::CarbonClassic)) return true;
+    return filesystem::exists(gomoku::external_runtime_path(
+        engine_runtime_root, static_cast<gomoku::EngineVersion>(engine)));
 }
 
 string state_json_locked() {
@@ -288,6 +359,16 @@ string state_json_locked() {
     }
     out << "],\"gameOver\":" << (game.game_over ? "true" : "false")
         << ",\"winner\":" << game.winner
+        << ",\"engines\":[";
+    for (int i = 0; i < engine_count(); ++i) {
+        if (i) out << ',';
+        out << "{\"id\":" << i << ",\"name\":\""
+            << json_escape(gomoku::engine_version_name(static_cast<gomoku::EngineVersion>(i)))
+            << "\",\"available\":" << (engine_available(i) ? "true" : "false") << '}';
+    }
+    out << "],\"engine\":" << game.engine
+        << ",\"level\":" << game.level
+        << ",\"maxLevel\":" << kMaxLevel
         << ",\"reviewMode\":" << (game.review_mode ? "true" : "false")
         << ",\"reviewPly\":" << game.review_ply
         << ",\"aiThinking\":" << (game.ai_thinking ? "true" : "false")
@@ -509,6 +590,11 @@ void handle_connection(Socket socket) {
                 game.win_line = line;
                 compute_reviews_locked();
                 game.review_mode = true;
+            } else if (board_full_locked()) {
+                game.game_over = true;
+                game.winner = 0;
+                compute_reviews_locked();
+                game.review_mode = true;
             } else {
                 start_ai_locked();
             }
@@ -522,8 +608,7 @@ void handle_connection(Socket socket) {
         if (action == "new") reset_locked();
         else if (action == "undo") {
             if (!game.moves.empty() && !game.game_over) {
-                ++game.ai_job;
-                game.ai_thinking = false;
+                cancel_pending_ai_locked();
                 int count = min<int>(2, game.moves.size());
                 while (count--) {
                     auto move = game.moves.back(); game.moves.pop_back();
@@ -537,6 +622,8 @@ void handle_connection(Socket socket) {
             if (game.moves.empty()) {
                 game.size = game.size == 15 ? 19 : game.size == 19 ? 13 : 15;
                 reset_locked();
+                if (!engine_available(game.engine))
+                    game.engine = static_cast<int>(gomoku::EngineVersion::CurrentV3);
             }
         } else if (action == "prev") game.review_ply = max(0, game.review_ply - 1);
         else if (action == "next") game.review_ply = min<int>(game.moves.size(), game.review_ply + 1);
@@ -544,6 +631,23 @@ void handle_connection(Socket socket) {
         else valid = false;
         if (action == "prev" || action == "next" || action == "end") ++game.revision;
         respond(socket, valid ? 200 : 400, "application/json", valid ? state_json_locked() : "{\"error\":\"unknown action\"}");
+    } else if (request.method == "POST" && request.path == "/api/config") {
+        lock_guard<mutex> guard(game.lock);
+        int engine = json_int(request.body, "engine", game.engine);
+        int level = json_int(request.body, "level", game.level);
+        if (!engine_available(engine) || level < 1 || level > kMaxLevel) {
+            respond(socket, 400, "application/json", "{\"error\":\"invalid AI settings\"}");
+        } else {
+            bool restart = game.ai_thinking && !game.game_over && !game.review_mode;
+            cancel_pending_ai_locked();
+            game.engine = engine;
+            game.level = level;
+            // A mid-search switch re-asks the newly selected engine at once;
+            // otherwise the choice simply applies from the next AI turn.
+            if (restart) start_ai_locked();
+            ++game.revision;
+            respond(socket, 200, "application/json", state_json_locked());
+        }
     } else if (request.method == "GET" && request.path == "/api/log") {
         lock_guard<mutex> guard(game.lock);
         string body = log_locked();
@@ -565,6 +669,10 @@ void handle_connection(Socket socket) {
         }
     } else if (request.method == "POST" && request.path == "/api/quit") {
         respond(socket, 200, "application/json", "{\"ok\":true}");
+        {
+            lock_guard<mutex> guard(game.lock);
+            cancel_pending_ai_locked();
+        }
         running = false;
 #ifdef _WIN32
         shutdown(listener_socket, SD_BOTH);
@@ -619,6 +727,23 @@ filesystem::path locate_web_root(const char* argv0) {
     return {};
 }
 
+void locate_engine_runtime_root(const char* argv0) {
+    vector<filesystem::path> candidates;
+#ifdef GOMOKU_SOURCE_ROOT
+    candidates.push_back(filesystem::path(GOMOKU_SOURCE_ROOT) / "third_party" / "runtime");
+#endif
+    error_code ec;
+    filesystem::path exe = filesystem::absolute(argv0, ec).parent_path();
+    candidates.push_back(filesystem::current_path() / "third_party" / "runtime");
+    candidates.push_back(exe / "third_party" / "runtime");
+    candidates.push_back(exe / ".." / "third_party" / "runtime");
+    for (const auto& path : candidates)
+        if (filesystem::exists(path)) {
+            engine_runtime_root = filesystem::canonical(path);
+            return;
+        }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -632,6 +757,14 @@ int main(int argc, char** argv) {
     if (web_root.empty()) {
         cerr << "WebUI assets not found. Run from the project directory or rebuild with CMake.\n";
         return 1;
+    }
+    locate_engine_runtime_root(argv[0]);
+    for (int i = static_cast<int>(gomoku::EngineVersion::CarbonClassic); i < engine_count(); ++i) {
+        filesystem::path runtime = gomoku::external_runtime_path(
+            engine_runtime_root, static_cast<gomoku::EngineVersion>(i));
+        cout << "External engine "
+             << gomoku::engine_version_name(static_cast<gomoku::EngineVersion>(i)) << ": "
+             << (filesystem::exists(runtime) ? runtime.string() : string("not found")) << '\n';
     }
 #ifdef _WIN32
     WSADATA data{};
@@ -679,6 +812,7 @@ int main(int argc, char** argv) {
         thread(handle_connection, client).detach();
     }
     close_socket(listener_socket);
+    while (active_ai_workers.load() > 0) this_thread::sleep_for(chrono::milliseconds(10));
 #ifdef _WIN32
     WSACleanup();
 #endif

@@ -1,1 +1,1 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/gomoku_match_webui.dir/link.d CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o -o gomoku_match_webui
+/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/gomoku_match_webui.dir/link.d CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o -o gomoku_match_webui

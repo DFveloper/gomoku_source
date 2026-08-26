@@ -334,6 +334,24 @@ inline bool is_forbidden_move(int board[kMaxBoard][kMaxBoard], int sz, int r, in
     return overline || open_threes >= 2 || fours >= 2;
 }
 
+inline bool is_legal_move(int board[kMaxBoard][kMaxBoard], int sz, int p, Move move) {
+    return ok(sz, move.r, move.c) && board[move.r][move.c] == 0 &&
+           (p != 1 || !is_forbidden_move(board, sz, move.r, move.c));
+}
+
+// Last-resort move selection for adapters and UI recovery paths. A full scan
+// is intentional: candidate generators may omit isolated empty intersections.
+inline Move first_legal_move(int board[kMaxBoard][kMaxBoard], int sz, int p) {
+    const int center = sz / 2;
+    for (int distance = 0; distance <= sz * 2; ++distance) {
+        for (int r = 0; r < sz; ++r) for (int c = 0; c < sz; ++c) {
+            if (std::abs(r - center) + std::abs(c - center) != distance) continue;
+            if (is_legal_move(board, sz, p, {r, c})) return {r, c};
+        }
+    }
+    return {-1, -1};
+}
+
 inline std::vector<Move> generate_candidates(const int board[kMaxBoard][kMaxBoard], int sz, int radius) {
     bool any = false;
     bool mark[kMaxBoard][kMaxBoard] = {};
@@ -551,7 +569,9 @@ inline std::vector<std::pair<int, Move>> forcing_candidates(int board[kMaxBoard]
 }
 
 inline int negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth, int alpha, int beta,
-                   Move last, int last_p, const OpponentStyle* style = nullptr, int quiet_depth = 2) {
+                   Move last, int last_p, const OpponentStyle* style = nullptr, int quiet_depth = 2,
+                   const std::atomic<bool>* cancel = nullptr) {
+    if (cancel && cancel->load()) return 0;
     int op = 3 - p;
     if (last.r != -1 && check_win_at(board, sz, last.r, last.c, last_p)) {
         return last_p == p ? 200000000 + depth : -200000000 - depth;
@@ -564,7 +584,8 @@ inline int negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth, in
         for (const auto& item : forcing) {
             Move m = item.second;
             board[m.r][m.c] = p;
-            int val = -negamax(board, sz, op, 0, -beta, -alpha, m, p, style, quiet_depth - 1);
+            int val = -negamax(board, sz, op, 0, -beta, -alpha, m, p, style,
+                               quiet_depth - 1, cancel);
             board[m.r][m.c] = 0;
             best = std::max(best, val);
             alpha = std::max(alpha, val);
@@ -582,7 +603,8 @@ inline int negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth, in
     for (auto item : moves) {
         Move m = item.second;
         board[m.r][m.c] = p;
-        int val = -negamax(board, sz, op, depth - 1, -beta, -alpha, m, p, style, quiet_depth);
+        int val = -negamax(board, sz, op, depth - 1, -beta, -alpha, m, p, style,
+                           quiet_depth, cancel);
         board[m.r][m.c] = 0;
         best = std::max(best, val);
         alpha = std::max(alpha, val);
@@ -604,7 +626,8 @@ inline Move find_immediate_win(int board[kMaxBoard][kMaxBoard], int sz, int p) {
 
 inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, int depth = 2,
                            const OpponentStyle* style = nullptr, int max_threads = 0,
-                           Move last_own = {-1, -1}) {
+                           Move last_own = {-1, -1}, const std::atomic<bool>* cancel = nullptr) {
+    if (cancel && cancel->load()) return {-1, -1};
     int op = 3 - p;
     Move win = find_immediate_win(board, sz, p);
     if (win.r != -1) return win;
@@ -623,6 +646,7 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
 
     auto worker = [&]() {
         while (true) {
+            if (cancel && cancel->load()) return;
             size_t index = next.fetch_add(1);
             if (index >= roots.size()) return;
             int local[kMaxBoard][kMaxBoard];
@@ -633,7 +657,7 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
                 values[index] = 200000000 + depth;
             } else {
                 values[index] = -negamax(local, sz, op, depth, -210000000, 210000000,
-                                         m, p, style, 2);
+                                          m, p, style, 2, cancel);
             }
         }
     };
@@ -641,6 +665,7 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
     workers.reserve(worker_count);
     for (int i = 0; i < worker_count; ++i) workers.emplace_back(worker);
     for (auto& thread : workers) thread.join();
+    if (cancel && cancel->load()) return {-1, -1};
 
     int best_index = 0;
     for (size_t i = 1; i < roots.size(); ++i) {
@@ -652,6 +677,174 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
         }
     }
     return roots[best_index].second;
+}
+
+// ---------------------------------------------------------------------------
+// Chess.com-style win-chance model for the review graph.
+//
+// The graph answers one question per position: how likely is Black to win
+// with this exact board and this player to move?  Forced results pin the
+// value at 100/0, everything else runs through the Chess.com logistic curve
+// applied to a tempo-aware evaluation.  The old tanh mapping ignored whose
+// turn it was, so identical boards got identical chances even when the
+// initiative flipped the outcome.
+// ---------------------------------------------------------------------------
+
+// Distinct empty squares where p would complete five immediately.  Two or
+// more cannot be covered by a single block, which decides the game outright.
+inline int five_completion_squares(int board[kMaxBoard][kMaxBoard], int sz,
+                                   int p, int wanted = 2) {
+    static const int dr[] = {0, 1, 1, 1};
+    static const int dc[] = {1, 0, 1, -1};
+    int found = 0;
+    for (Move m : generate_candidates(board, sz, 2)) {
+        if (p == 1 && is_forbidden_move(board, sz, m.r, m.c)) continue;
+        bool completes = false;
+        for (int d = 0; d < 4 && !completes; ++d)
+            completes = count_line(board, sz, m.r, m.c, dr[d], dc[d], p) >= 5;
+        if (completes && ++found >= wanted) return found;
+    }
+    return found;
+}
+
+// Continuous-four (VCF) probe.  The attacker only plays four threats, every
+// one forcing the reply, so the branching factor stays tiny.  The defender
+// model always blocks, which is exact unless the defender holds a five point
+// of their own; callers guarantee that never happens.  Attack and node
+// budgets bound the worst case for post-game replay loops.
+inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
+                               int attacks_left, int& budget) {
+    if (attacks_left <= 0 || budget <= 0) return false;
+    --budget;
+    const int op = 3 - p;
+    // The defender would simply convert their own five instead of blocking.
+    if (find_immediate_win(board, sz, op).r != -1) return false;
+
+    struct FourCandidate { Move move; int score; };
+    std::vector<FourCandidate> fours;
+    for (Move m : generate_candidates(board, sz, 1)) {
+        ThreatInfo info = analyze_move(board, sz, m.r, m.c, p);
+        if (info.count[TH_FIVE]) return true;  // Five available right now.
+        if (!info.count[TH_OPEN_FOUR] && !info.count[TH_BROKEN_FOUR] &&
+            !info.count[TH_CLOSED_FOUR]) continue;
+        if (p == 1 && is_forbidden_move(board, sz, m.r, m.c)) continue;
+        fours.push_back({m, info.score});
+        if (fours.size() >= 10) break;
+    }
+    std::sort(fours.begin(), fours.end(),
+              [](const FourCandidate& a, const FourCandidate& b) { return a.score > b.score; });
+
+    static const int dr[] = {0, 1, 1, 1};
+    static const int dc[] = {1, 0, 1, -1};
+    for (const auto& item : fours) {
+        Move f = item.move;
+        board[f.r][f.c] = p;
+        // Squares that would finish five after this four; two at once is
+        // unstoppable, one must be blocked before anything else matters.
+        Move block{-1, -1};
+        bool double_threat = false;
+        for (int rr = std::max(0, f.r - 4); rr <= std::min(sz - 1, f.r + 4) && !double_threat; ++rr) {
+            for (int cc = std::max(0, f.c - 4); cc <= std::min(sz - 1, f.c + 4); ++cc) {
+                if (board[rr][cc] != 0) continue;
+                bool completes = false;
+                for (int d = 0; d < 4 && !completes; ++d)
+                    completes = count_line(board, sz, rr, cc, dr[d], dc[d], p) >= 5;
+                if (!completes) continue;
+                if (block.r == -1) block = {rr, cc};
+                else { double_threat = true; break; }
+            }
+        }
+        bool won = false;
+        if (double_threat) {
+            won = true;  // One block cannot cover two completion squares.
+        } else if (block.r != -1) {
+            if (op == 1 && is_forbidden_move(board, sz, block.r, block.c)) {
+                won = true;  // The forced block is itself illegal for Black.
+            } else {
+                board[block.r][block.c] = op;
+                won = forced_four_search(board, sz, p, attacks_left - 1, budget);
+                board[block.r][block.c] = 0;
+            }
+        }
+        board[f.r][f.c] = 0;
+        if (won) return true;
+        if (budget <= 0) break;
+    }
+    return false;
+}
+
+inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, int p,
+                                int max_attacks = 6) {
+    int local[kMaxBoard][kMaxBoard];
+    std::memcpy(local, board, sizeof(local));
+    int budget = 900;
+    return forced_four_search(local, sz, p, max_attacks, budget);
+}
+
+// static_eval ingredients recombined for tempo.  Potential entries here are
+// place-a-stone scores, which run one conversion ahead of reality (an open
+// three already reads as a four-class number), so neither side counts at face
+// value.  The player to move still converts first and earns the larger share,
+// while the idle side's plan is discounted hardest because the mover answers
+// it before it matures.  Positive favours the mover.
+inline int mover_tempo_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
+    const int op = 3 - p;
+    std::vector<int> own_scores, opponent_scores;
+    auto candidates = generate_candidates(board, sz, 2);
+    own_scores.reserve(candidates.size());
+    opponent_scores.reserve(candidates.size());
+    for (Move m : candidates) {
+        int own = get_thr(board, sz, m.r, m.c, p);
+        int opponent = get_thr(board, sz, m.r, m.c, op);
+        // Five-completion squares never enter the potential: they are either
+        // pinned outright or a mandatory block, both handled structurally.
+        if (!analyze_move(board, sz, m.r, m.c, p).count[TH_FIVE]) {
+            if (!(p == 1 && own >= 18000 && is_forbidden_move(board, sz, m.r, m.c)))
+                own_scores.push_back(own);
+        }
+        if (!analyze_move(board, sz, m.r, m.c, op).count[TH_FIVE]) {
+            if (!(op == 1 && opponent >= 18000 && is_forbidden_move(board, sz, m.r, m.c)))
+                opponent_scores.push_back(opponent);
+        }
+    }
+    const int mine = weighted_potential(own_scores);
+    const int theirs = weighted_potential(opponent_scores);
+    const int shape = board_shape_score(board, sz, p) - board_shape_score(board, sz, op);
+    return mine * 52 / 100 - theirs * 35 / 100 + shape;
+}
+
+// Logistic slope calibrated against tempo-weighted outputs: one net open
+// three with the move lands near 62%, answering one leaves the injured side
+// about 58%, double threats push past 70%, and forced lines pin at the
+// rails.  Same sigmoid family Chess.com applies to centipawns.
+constexpr double kWinChanceScale = 1.15e-6;
+
+inline double chance_from_mover_score(double score) {
+    double logistic = 2.0 / (1.0 + std::exp(-score * kWinChanceScale));  // 0..2
+    return 50.0 * logistic;  // 0..100, 50 at equality.
+}
+
+// Black's winning percentage (0-100) for the review graph.  `side_to_move`
+// is 1 for Black or 2 for White and drives both forced-line probes and the
+// tempo weighting, so the graph finally reacts to initiative swings.
+inline double black_win_chance(int board[kMaxBoard][kMaxBoard], int sz, int side_to_move) {
+    if (has_five_for(board, sz, 1)) return 100.0;
+    if (has_five_for(board, sz, 2)) return 0.0;
+    const int mover = side_to_move == 2 ? 2 : 1;
+    const int idle = 3 - mover;
+    if (find_immediate_win(board, sz, mover).r != -1) return mover == 1 ? 100.0 : 0.0;
+    const int completions = five_completion_squares(board, sz, idle, 2);
+    if (completions >= 2) return idle == 1 ? 100.0 : 0.0;
+    // While the idle side holds even one five point they convert it instead
+    // of blocking, so a forcing chain only proves anything without it.
+    if (completions == 0 && has_forced_four_win(board, sz, mover)) return mover == 1 ? 100.0 : 0.0;
+    double score = static_cast<double>(mover_tempo_eval(board, sz, mover));
+    // A lone five point on the idle side is a mandatory block: the mover
+    // spends this turn answering it and forfeits the initiative.
+    if (completions == 1) score -= 150000.0;
+    double chance = chance_from_mover_score(score);
+    chance = std::min(99.0, std::max(1.0, chance));
+    return mover == 1 ? chance : 100.0 - chance;
 }
 
 enum class EngineVersion {
@@ -707,7 +900,9 @@ inline std::vector<std::pair<int, Move>> legacy_ranked_candidates(
 }
 
 inline int legacy_negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth,
-                          int alpha, int beta, Move last, int last_p) {
+                          int alpha, int beta, Move last, int last_p,
+                          const std::atomic<bool>* cancel = nullptr) {
+    if (cancel && cancel->load()) return 0;
     int op = 3 - p;
     if (last.r != -1 && check_win_at(board, sz, last.r, last.c, last_p))
         return last_p == p ? 200000000 + depth : -200000000 - depth;
@@ -718,7 +913,7 @@ inline int legacy_negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int de
     for (const auto& item : moves) {
         Move m = item.second;
         board[m.r][m.c] = p;
-        int value = -legacy_negamax(board, sz, op, depth - 1, -beta, -alpha, m, p);
+        int value = -legacy_negamax(board, sz, op, depth - 1, -beta, -alpha, m, p, cancel);
         board[m.r][m.c] = 0;
         best = std::max(best, value);
         alpha = std::max(alpha, value);
@@ -727,18 +922,21 @@ inline int legacy_negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int de
     return best;
 }
 
-inline Move legacy_choose_move(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth) {
+inline Move legacy_choose_move(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth,
+                               const std::atomic<bool>* cancel = nullptr) {
+    if (cancel && cancel->load()) return {-1, -1};
     int op = 3 - p;
     Move win = find_immediate_win(board, sz, p);
     if (win.r != -1) return win;
     Move block = find_immediate_win(board, sz, op);
     if (block.r != -1 && !(p == 1 && is_forbidden_move(board, sz, block.r, block.c))) return block;
     int best_score = -210000000;
-    Move best{sz / 2, sz / 2};
+    Move best{-1, -1};
     for (const auto& item : legacy_ranked_candidates(board, sz, p, 18)) {
+        if (cancel && cancel->load()) return {-1, -1};
         Move m = item.second;
         board[m.r][m.c] = p;
-        int value = -legacy_negamax(board, sz, op, depth, -210000000, 210000000, m, p);
+        int value = -legacy_negamax(board, sz, op, depth, -210000000, 210000000, m, p, cancel);
         board[m.r][m.c] = 0;
         value += item.first / 20;
         if (value > best_score) {
@@ -786,7 +984,9 @@ inline std::vector<std::pair<int, Move>> v2_forcing_candidates(
 
 inline int v2_negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth,
                       int alpha, int beta, Move last, int last_p,
-                      const OpponentStyle* style, int quiet_depth = 2) {
+                      const OpponentStyle* style, int quiet_depth = 2,
+                      const std::atomic<bool>* cancel = nullptr) {
+    if (cancel && cancel->load()) return 0;
     int op = 3 - p;
     if (last.r != -1 && check_win_at(board, sz, last.r, last.c, last_p))
         return last_p == p ? 200000000 + depth : -200000000 - depth;
@@ -798,7 +998,8 @@ inline int v2_negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth,
         for (const auto& item : moves) {
             Move m = item.second;
             board[m.r][m.c] = p;
-            int value = -v2_negamax(board, sz, op, 0, -beta, -alpha, m, p, style, quiet_depth - 1);
+            int value = -v2_negamax(board, sz, op, 0, -beta, -alpha, m, p, style,
+                                    quiet_depth - 1, cancel);
             board[m.r][m.c] = 0;
             best = std::max(best, value);
             alpha = std::max(alpha, value);
@@ -817,7 +1018,7 @@ inline int v2_negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth,
         Move m = item.second;
         board[m.r][m.c] = p;
         int value = -v2_negamax(board, sz, op, depth - 1, -beta, -alpha,
-                                m, p, style, quiet_depth);
+                                m, p, style, quiet_depth, cancel);
         board[m.r][m.c] = 0;
         best = std::max(best, value);
         alpha = std::max(alpha, value);
@@ -827,7 +1028,9 @@ inline int v2_negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth,
 }
 
 inline Move v2_choose_move(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth,
-                           const OpponentStyle* style) {
+                           const OpponentStyle* style,
+                           const std::atomic<bool>* cancel = nullptr) {
+    if (cancel && cancel->load()) return {-1, -1};
     int op = 3 - p;
     Move win = find_immediate_win(board, sz, p);
     if (win.r != -1) return win;
@@ -837,9 +1040,11 @@ inline Move v2_choose_move(int board[kMaxBoard][kMaxBoard], int sz, int p, int d
     Move best{-1, -1};
     int root_width = stone_count(board, sz) >= 30 ? 20 : 18;
     for (const auto& item : v2_ranked_candidates(board, sz, p, root_width, style)) {
+        if (cancel && cancel->load()) return {-1, -1};
         Move m = item.second;
         board[m.r][m.c] = p;
-        int value = -v2_negamax(board, sz, op, depth, -210000000, 210000000, m, p, style, 2);
+        int value = -v2_negamax(board, sz, op, depth, -210000000, 210000000, m, p,
+                                style, 2, cancel);
         board[m.r][m.c] = 0;
         value += item.first / 20;
         if (value > best_score) {
@@ -852,14 +1057,15 @@ inline Move v2_choose_move(int board[kMaxBoard][kMaxBoard], int sz, int p, int d
 
 inline Move choose_versioned_move(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth,
                                   EngineVersion version, const OpponentStyle* style = nullptr,
-                                  int max_threads = 0, Move last_own = {-1, -1}) {
+                                  int max_threads = 0, Move last_own = {-1, -1},
+                                  const std::atomic<bool>* cancel = nullptr) {
     switch (version) {
         case EngineVersion::LegacyV1:
-            return legacy_choose_move(board, sz, p, depth);
+            return legacy_choose_move(board, sz, p, depth, cancel);
         case EngineVersion::StrengthenedV2:
-            return v2_choose_move(board, sz, p, depth, style);
+            return v2_choose_move(board, sz, p, depth, style, cancel);
         case EngineVersion::CurrentV3:
-            return choose_ai_move(board, sz, p, depth, style, max_threads, last_own);
+            return choose_ai_move(board, sz, p, depth, style, max_threads, last_own, cancel);
         case EngineVersion::CarbonClassic:
         case EngineVersion::Rapfi2025:
         case EngineVersion::AlphaGomoku2026:

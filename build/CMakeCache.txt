@@ -22,7 +22,7 @@ CMAKE_AR:FILEPATH=/usr/bin/ar
 
 //Choose the type of build, options are: None Debug Release RelWithDebInfo
 // MinSizeRel ...
-CMAKE_BUILD_TYPE:STRING=
+CMAKE_BUILD_TYPE:STRING=Release
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
@@ -235,10 +235,10 @@ X11_XRes_INCLUDE_PATH:PATH=X11_XRes_INCLUDE_PATH-NOTFOUND
 X11_XRes_LIB:FILEPATH=X11_XRes_LIB-NOTFOUND
 
 //Path to a file.
-X11_XShm_INCLUDE_PATH:PATH=X11_XShm_INCLUDE_PATH-NOTFOUND
+X11_XShm_INCLUDE_PATH:PATH=/usr/include
 
 //Path to a file.
-X11_XSync_INCLUDE_PATH:PATH=X11_XSync_INCLUDE_PATH-NOTFOUND
+X11_XSync_INCLUDE_PATH:PATH=/usr/include
 
 //Path to a file.
 X11_Xaccessrules_INCLUDE_PATH:PATH=X11_Xaccessrules_INCLUDE_PATH-NOTFOUND
@@ -277,7 +277,7 @@ X11_Xdamage_INCLUDE_PATH:PATH=X11_Xdamage_INCLUDE_PATH-NOTFOUND
 X11_Xdamage_LIB:FILEPATH=X11_Xdamage_LIB-NOTFOUND
 
 //Path to a file.
-X11_Xdbe_INCLUDE_PATH:PATH=X11_Xdbe_INCLUDE_PATH-NOTFOUND
+X11_Xdbe_INCLUDE_PATH:PATH=/usr/include
 
 //Path to a file.
 X11_Xdmcp_INCLUDE_PATH:PATH=/usr/include
@@ -286,16 +286,16 @@ X11_Xdmcp_INCLUDE_PATH:PATH=/usr/include
 X11_Xdmcp_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libXdmcp.so
 
 //Path to a file.
-X11_Xext_INCLUDE_PATH:PATH=X11_Xext_INCLUDE_PATH-NOTFOUND
+X11_Xext_INCLUDE_PATH:PATH=/usr/include
 
 //Path to a library.
-X11_Xext_LIB:FILEPATH=X11_Xext_LIB-NOTFOUND
+X11_Xext_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libXext.so
 
 //Path to a file.
-X11_Xfixes_INCLUDE_PATH:PATH=X11_Xfixes_INCLUDE_PATH-NOTFOUND
+X11_Xfixes_INCLUDE_PATH:PATH=/usr/include
 
 //Path to a library.
-X11_Xfixes_LIB:FILEPATH=X11_Xfixes_LIB-NOTFOUND
+X11_Xfixes_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libXfixes.so
 
 //Path to a file.
 X11_Xft_INCLUDE_PATH:PATH=X11_Xft_INCLUDE_PATH-NOTFOUND
@@ -304,10 +304,10 @@ X11_Xft_INCLUDE_PATH:PATH=X11_Xft_INCLUDE_PATH-NOTFOUND
 X11_Xft_LIB:FILEPATH=X11_Xft_LIB-NOTFOUND
 
 //Path to a file.
-X11_Xi_INCLUDE_PATH:PATH=X11_Xi_INCLUDE_PATH-NOTFOUND
+X11_Xi_INCLUDE_PATH:PATH=/usr/include
 
 //Path to a library.
-X11_Xi_LIB:FILEPATH=X11_Xi_LIB-NOTFOUND
+X11_Xi_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libXi.so
 
 //Path to a file.
 X11_Xinerama_INCLUDE_PATH:PATH=X11_Xinerama_INCLUDE_PATH-NOTFOUND
@@ -355,7 +355,7 @@ X11_Xrender_INCLUDE_PATH:PATH=X11_Xrender_INCLUDE_PATH-NOTFOUND
 X11_Xrender_LIB:FILEPATH=X11_Xrender_LIB-NOTFOUND
 
 //Path to a file.
-X11_Xshape_INCLUDE_PATH:PATH=X11_Xshape_INCLUDE_PATH-NOTFOUND
+X11_Xshape_INCLUDE_PATH:PATH=/usr/include
 
 //Path to a file.
 X11_Xss_INCLUDE_PATH:PATH=X11_Xss_INCLUDE_PATH-NOTFOUND
@@ -397,7 +397,7 @@ X11_Xxf86vm_INCLUDE_PATH:PATH=X11_Xxf86vm_INCLUDE_PATH-NOTFOUND
 X11_Xxf86vm_LIB:FILEPATH=X11_Xxf86vm_LIB-NOTFOUND
 
 //Path to a file.
-X11_dpms_INCLUDE_PATH:PATH=X11_dpms_INCLUDE_PATH-NOTFOUND
+X11_dpms_INCLUDE_PATH:PATH=/usr/include
 
 //Path to a file.
 X11_xcb_INCLUDE_PATH:PATH=/usr/include

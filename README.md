@@ -9,11 +9,25 @@ The WebUI uses the same C++ AI, Renju forbidden-move rules, heatmap, undo,
 board-size cycle, replay files, and post-game review graph as the native GUI.
 It has no web framework or runtime dependency.
 
+The AI opponent is selectable in-game: seven engines (Legacy v1, Strengthened
+v2, Current v3 MT, Carbon Classic, Rapfi 2025 AVX2, AlphaGomoku MK26,
+XL / Niren) at search levels 1-5. Built-in engines use the level as search
+depth; external engines receive it as their turn time budget. External
+runtimes are auto-detected under `third_party/runtime/` and marked
+`NOT FOUND` in the dropdown when missing; if an external engine fails or
+returns an illegal move mid-game, the built-in engine answers instead so a
+human never gets stranded. Switching engines while the AI thinks cancels the
+pending search and immediately re-asks the newly selected engine.
+
 ```bash
-cmake -S . -B build
-cmake --build build --target gomoku_webui
+scripts/build_all.sh
 ./build/gomoku_webui --host 127.0.0.1 --port 8080 -t 32
 ```
+
+The script configures CMake and builds every default project target. Use
+`--debug`, `--build-dir DIR`, or the environment variables printed by
+`scripts/build_all.sh --help` to customize the build. External Linux engine
+runtimes remain available through the separate `third_party_engines` target.
 
 Open `http://127.0.0.1:8080`. To make it reachable from other devices on the
 network, use `--host 0.0.0.0`. `--port` accepts values from 1 to 65535, and the
@@ -102,9 +116,11 @@ cmake --build build
 
 - Touch or click an empty intersection to place a black stone.
 - `NEW`, `UNDO`, `HEAT OFF/ON`, `SAVE`, and `SIZE` are large touch-friendly buttons.
+- The native GUI adds `ENGINE` and `LEVEL` cycle buttons (one tap per step,
+  unavailable runtimes skipped), mirroring the WebUI dropdowns.
 - Review buttons: `PREV`, `NEXT`, `END`, `SAVE`, `LOAD`, `NEW`.
 - Review files are saved to and loaded from `gomoku_replay.txt`.
-- Keyboard shortcuts: `N` new game, `U` undo, `D` debug heatmap, `S` save log, `L` load replay, `Q` quit.
+- Keyboard shortcuts: `N` new game, `U` undo, `D` debug heatmap, `E` engine, `V` level, `S` save log, `L` load replay, `Q` quit.
 - Review shortcuts: `A` previous move, `D` next move, `E` final move, `S` save replay, `L` load replay.
 - Optional board size argument: `gomoku_gui 19`.
 - Fullscreen/aspect options: `--fullscreen --aspect 4:3 --board 15`.
@@ -120,7 +136,9 @@ Human moves are analyzed online for attack, defense, locality, center, and direc
 
 Search values now take precedence over root move-order heuristics, and low-value continuations whose useful line is blocked at both ends receive an abandonment penalty. This prevents the engine from carrying a dead plan forward after deeper search has rejected it.
 
-After a game, review mode opens automatically with a Chess.com-style black/white win-chance graph. It includes 25/50/75% guides, move-quality markers, and a current-move win-rate tooltip. The graph uses the engine's antisymmetric position evaluation instead of the old empty-point sum.
+After a game, review mode opens automatically with a Chess.com-style black/white win-chance graph. It includes 25/50/75% guides, move-quality markers, and a current-move win-rate tooltip.
+
+The win-chance model mirrors how Chess.com builds its graph. Forced results pin the value at 100/0: a five available right now, an open four (or any double five-point) on the board, and continuous-four (VCF) chains found by a bounded forcing search. Everything else runs through the Chess.com logistic curve, fed by a tempo-aware evaluation — the side to move converts threats first, so an open three answered in time reads ~60% for its owner while the identical threat left unanswered pins the game. The curve never dips to 0% or 100% without a forced result, exactly like mate-in-N behaviour on Chess.com.
 
 Run the tactical, long-evaluation, draw, and style regressions with:
 

@@ -99,6 +99,7 @@ gomoku_gui: CMakeFiles/gomoku_gui.dir/compiler_depend.ts
 gomoku_gui: /usr/lib/x86_64-linux-gnu/libSM.so
 gomoku_gui: /usr/lib/x86_64-linux-gnu/libICE.so
 gomoku_gui: /usr/lib/x86_64-linux-gnu/libX11.so
+gomoku_gui: /usr/lib/x86_64-linux-gnu/libXext.so
 gomoku_gui: CMakeFiles/gomoku_gui.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable gomoku_gui"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/gomoku_gui.dir/link.txt --verbose=$(VERBOSE)

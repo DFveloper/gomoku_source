@@ -6,5 +6,5 @@ CXX_DEFINES = -DGOMOKU_SOURCE_ROOT=\"/mnt/openwebui/gomoku\"
 
 CXX_INCLUDES = 
 
-CXX_FLAGS = -std=c++17
+CXX_FLAGS = -O3 -DNDEBUG -std=c++17
 

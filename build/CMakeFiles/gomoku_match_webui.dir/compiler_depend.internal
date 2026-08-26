@@ -3,6 +3,7 @@
 
 CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /mnt/openwebui/gomoku/Gomoku_Engine_Match_WebUI.cpp
+ /mnt/openwebui/gomoku/engine_adapter.h
  /mnt/openwebui/gomoku/gomoku_core.h
  /usr/include/alloca.h
  /usr/include/arpa/inet.h
@@ -17,9 +18,11 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /usr/include/c++/15/algorithm
  /usr/include/c++/15/array
  /usr/include/c++/15/atomic
+ /usr/include/c++/15/backward/auto_ptr.h
  /usr/include/c++/15/backward/binders.h
  /usr/include/c++/15/bit
  /usr/include/c++/15/bits/algorithmfwd.h
+ /usr/include/c++/15/bits/align.h
  /usr/include/c++/15/bits/alloc_traits.h
  /usr/include/c++/15/bits/allocated_ptr.h
  /usr/include/c++/15/bits/allocator.h
@@ -83,6 +86,7 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /usr/include/c++/15/bits/refwrap.h
  /usr/include/c++/15/bits/requires_hosted.h
  /usr/include/c++/15/bits/shared_ptr.h
+ /usr/include/c++/15/bits/shared_ptr_atomic.h
  /usr/include/c++/15/bits/shared_ptr_base.h
  /usr/include/c++/15/bits/specfun.h
  /usr/include/c++/15/bits/sstream.tcc
@@ -101,6 +105,7 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /usr/include/c++/15/bits/stl_iterator_base_types.h
  /usr/include/c++/15/bits/stl_numeric.h
  /usr/include/c++/15/bits/stl_pair.h
+ /usr/include/c++/15/bits/stl_raw_storage_iter.h
  /usr/include/c++/15/bits/stl_relops.h
  /usr/include/c++/15/bits/stl_tempbuf.h
  /usr/include/c++/15/bits/stl_uninitialized.h
@@ -157,12 +162,14 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /usr/include/c++/15/istream
  /usr/include/c++/15/limits
  /usr/include/c++/15/locale
+ /usr/include/c++/15/memory
  /usr/include/c++/15/mutex
  /usr/include/c++/15/new
  /usr/include/c++/15/numeric
  /usr/include/c++/15/ostream
  /usr/include/c++/15/pstl/execution_defs.h
  /usr/include/c++/15/pstl/glue_algorithm_defs.h
+ /usr/include/c++/15/pstl/glue_memory_defs.h
  /usr/include/c++/15/pstl/glue_numeric_defs.h
  /usr/include/c++/15/pstl/pstl_config.h
  /usr/include/c++/15/random
@@ -246,6 +253,8 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /usr/include/x86_64-linux-gnu/bits/getopt_core.h
  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h
  /usr/include/x86_64-linux-gnu/bits/in.h
+ /usr/include/x86_64-linux-gnu/bits/inet-fortified-decl.h
+ /usr/include/x86_64-linux-gnu/bits/inet-fortified.h
  /usr/include/x86_64-linux-gnu/bits/iscanonical.h
  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h
  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h
@@ -258,12 +267,15 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /usr/include/x86_64-linux-gnu/bits/mathcalls.h
  /usr/include/x86_64-linux-gnu/bits/netdb.h
  /usr/include/x86_64-linux-gnu/bits/poll.h
+ /usr/include/x86_64-linux-gnu/bits/poll2.h
  /usr/include/x86_64-linux-gnu/bits/posix_opt.h
  /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h
  /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h
  /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h
  /usr/include/x86_64-linux-gnu/bits/sched.h
+ /usr/include/x86_64-linux-gnu/bits/select-decl.h
  /usr/include/x86_64-linux-gnu/bits/select.h
+ /usr/include/x86_64-linux-gnu/bits/select2.h
  /usr/include/x86_64-linux-gnu/bits/setjmp.h
  /usr/include/x86_64-linux-gnu/bits/sigaction.h
  /usr/include/x86_64-linux-gnu/bits/sigcontext.h
@@ -279,13 +291,21 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /usr/include/x86_64-linux-gnu/bits/sigthread.h
  /usr/include/x86_64-linux-gnu/bits/sockaddr.h
  /usr/include/x86_64-linux-gnu/bits/socket.h
+ /usr/include/x86_64-linux-gnu/bits/socket2.h
  /usr/include/x86_64-linux-gnu/bits/socket_type.h
  /usr/include/x86_64-linux-gnu/bits/ss_flags.h
  /usr/include/x86_64-linux-gnu/bits/stdint-intn.h
  /usr/include/x86_64-linux-gnu/bits/stdint-least.h
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h
+ /usr/include/x86_64-linux-gnu/bits/stdio.h
+ /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h
+ /usr/include/x86_64-linux-gnu/bits/stdio2.h
  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h
+ /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h
  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h
+ /usr/include/x86_64-linux-gnu/bits/stdlib.h
+ /usr/include/x86_64-linux-gnu/bits/string_fortified.h
+ /usr/include/x86_64-linux-gnu/bits/strings_fortified.h
  /usr/include/x86_64-linux-gnu/bits/struct_mutex.h
  /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h
  /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h
@@ -330,10 +350,14 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
  /usr/include/x86_64-linux-gnu/bits/types/wint_t.h
  /usr/include/x86_64-linux-gnu/bits/typesizes.h
  /usr/include/x86_64-linux-gnu/bits/uintn-identity.h
+ /usr/include/x86_64-linux-gnu/bits/unistd-decl.h
+ /usr/include/x86_64-linux-gnu/bits/unistd.h
  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h
  /usr/include/x86_64-linux-gnu/bits/waitflags.h
  /usr/include/x86_64-linux-gnu/bits/waitstatus.h
  /usr/include/x86_64-linux-gnu/bits/wchar.h
+ /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h
+ /usr/include/x86_64-linux-gnu/bits/wchar2.h
  /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h
  /usr/include/x86_64-linux-gnu/bits/wordsize.h
  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h
