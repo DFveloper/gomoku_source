@@ -1,0 +1,24 @@
+#include "engine_match_resources.h"
+
+IDR_CARBON_ENGINE RCDATA "third_party/carbon-src/pbrain-carbon.exe"
+
+IDR_RAPFI_ENGINE RCDATA "third_party/runtime/rapfi/pbrain-rapfi_avx2.exe"
+IDR_RAPFI_CONFIG RCDATA "third_party/runtime/rapfi/config.toml"
+IDR_RAPFI_MODEL RCDATA "third_party/runtime/rapfi/model210901.bin"
+IDR_RAPFI_FREESTYLE RCDATA "third_party/runtime/rapfi/mix9svqfreestyle_bsmix.bin.lz4"
+IDR_RAPFI_STANDARD RCDATA "third_party/runtime/rapfi/mix9svqstandard_bs15.bin.lz4"
+IDR_RAPFI_RENJU_BLACK RCDATA "third_party/runtime/rapfi/mix9svqrenju_bs15_black.bin.lz4"
+IDR_RAPFI_RENJU_WHITE RCDATA "third_party/runtime/rapfi/mix9svqrenju_bs15_white.bin.lz4"
+IDR_RAPFI_AUTHORS RCDATA "third_party/runtime/rapfi/AUTHORS"
+
+IDR_ALPHA_ENGINE RCDATA "third_party/runtime/alphagomoku/pbrain-AlphaGomoku.exe"
+IDR_ALPHA_CONFIG RCDATA "third_party/runtime/alphagomoku/config.json"
+IDR_ALPHA_SWAP2 RCDATA "third_party/runtime/alphagomoku/swap2_openings.json"
+IDR_ALPHA_RENJU_NETWORK RCDATA "third_party/runtime/alphagomoku/networks/renju_conv_8x128.bin"
+IDR_ALPHA_LIBDL RCDATA "third_party/runtime/alphagomoku/libdl.dll"
+IDR_ALPHA_LIBGCC RCDATA "third_party/runtime/alphagomoku/libgcc_s_seh-1.dll"
+IDR_ALPHA_LIBGOMP RCDATA "third_party/runtime/alphagomoku/libgomp-1.dll"
+IDR_ALPHA_LIBSTDCPP RCDATA "third_party/runtime/alphagomoku/libstdc++-6.dll"
+IDR_ALPHA_LIBWINPTHREAD RCDATA "third_party/runtime/alphagomoku/libwinpthread-1.dll"
+
+IDR_XL_ENGINE RCDATA "third_party/runtime/xl/pbrain-xl.exe"
