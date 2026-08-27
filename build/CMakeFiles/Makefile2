@@ -65,6 +65,7 @@ CMAKE_BINARY_DIR = /mnt/openwebui/gomoku/build
 # The main recursive "all" target.
 all: CMakeFiles/gomoku_gui.dir/all
 all: CMakeFiles/gomoku_cli.dir/all
+all: CMakeFiles/engine_benchmark.dir/all
 all: CMakeFiles/gomoku_webui.dir/all
 all: CMakeFiles/gomoku_match_webui.dir/all
 .PHONY : all
@@ -72,6 +73,7 @@ all: CMakeFiles/gomoku_match_webui.dir/all
 # The main recursive "codegen" target.
 codegen: CMakeFiles/gomoku_gui.dir/codegen
 codegen: CMakeFiles/gomoku_cli.dir/codegen
+codegen: CMakeFiles/engine_benchmark.dir/codegen
 codegen: CMakeFiles/gomoku_webui.dir/codegen
 codegen: CMakeFiles/gomoku_match_webui.dir/codegen
 .PHONY : codegen
@@ -83,6 +85,7 @@ preinstall:
 # The main recursive "clean" target.
 clean: CMakeFiles/gomoku_gui.dir/clean
 clean: CMakeFiles/gomoku_cli.dir/clean
+clean: CMakeFiles/engine_benchmark.dir/clean
 clean: CMakeFiles/gomoku_webui.dir/clean
 clean: CMakeFiles/gomoku_match_webui.dir/clean
 clean: CMakeFiles/third_party_engines.dir/clean
@@ -95,7 +98,7 @@ clean: CMakeFiles/third_party_engines.dir/clean
 CMakeFiles/gomoku_gui.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_gui.dir/build.make CMakeFiles/gomoku_gui.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_gui.dir/build.make CMakeFiles/gomoku_gui.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=3,4 "Built target gomoku_gui"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=5,6 "Built target gomoku_gui"
 .PHONY : CMakeFiles/gomoku_gui.dir/all
 
 # Build rule for subdir invocation for target.
@@ -112,7 +115,7 @@ gomoku_gui: CMakeFiles/gomoku_gui.dir/rule
 # codegen rule for target.
 CMakeFiles/gomoku_gui.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_gui.dir/build.make CMakeFiles/gomoku_gui.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=3,4 "Finished codegen for target gomoku_gui"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=5,6 "Finished codegen for target gomoku_gui"
 .PHONY : CMakeFiles/gomoku_gui.dir/codegen
 
 # clean rule for target.
@@ -127,7 +130,7 @@ CMakeFiles/gomoku_gui.dir/clean:
 CMakeFiles/gomoku_cli.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_cli.dir/build.make CMakeFiles/gomoku_cli.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_cli.dir/build.make CMakeFiles/gomoku_cli.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=1,2 "Built target gomoku_cli"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=3,4 "Built target gomoku_cli"
 .PHONY : CMakeFiles/gomoku_cli.dir/all
 
 # Build rule for subdir invocation for target.
@@ -144,7 +147,7 @@ gomoku_cli: CMakeFiles/gomoku_cli.dir/rule
 # codegen rule for target.
 CMakeFiles/gomoku_cli.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_cli.dir/build.make CMakeFiles/gomoku_cli.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=1,2 "Finished codegen for target gomoku_cli"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=3,4 "Finished codegen for target gomoku_cli"
 .PHONY : CMakeFiles/gomoku_cli.dir/codegen
 
 # clean rule for target.
@@ -153,13 +156,45 @@ CMakeFiles/gomoku_cli.dir/clean:
 .PHONY : CMakeFiles/gomoku_cli.dir/clean
 
 #=============================================================================
+# Target rules for target CMakeFiles/engine_benchmark.dir
+
+# All Build rule for target.
+CMakeFiles/engine_benchmark.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/engine_benchmark.dir/build.make CMakeFiles/engine_benchmark.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/engine_benchmark.dir/build.make CMakeFiles/engine_benchmark.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=1,2 "Built target engine_benchmark"
+.PHONY : CMakeFiles/engine_benchmark.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/engine_benchmark.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/openwebui/gomoku/build/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/engine_benchmark.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/openwebui/gomoku/build/CMakeFiles 0
+.PHONY : CMakeFiles/engine_benchmark.dir/rule
+
+# Convenience name for target.
+engine_benchmark: CMakeFiles/engine_benchmark.dir/rule
+.PHONY : engine_benchmark
+
+# codegen rule for target.
+CMakeFiles/engine_benchmark.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/engine_benchmark.dir/build.make CMakeFiles/engine_benchmark.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=1,2 "Finished codegen for target engine_benchmark"
+.PHONY : CMakeFiles/engine_benchmark.dir/codegen
+
+# clean rule for target.
+CMakeFiles/engine_benchmark.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/engine_benchmark.dir/build.make CMakeFiles/engine_benchmark.dir/clean
+.PHONY : CMakeFiles/engine_benchmark.dir/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/gomoku_webui.dir
 
 # All Build rule for target.
 CMakeFiles/gomoku_webui.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_webui.dir/build.make CMakeFiles/gomoku_webui.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_webui.dir/build.make CMakeFiles/gomoku_webui.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=7,8 "Built target gomoku_webui"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=9,10 "Built target gomoku_webui"
 .PHONY : CMakeFiles/gomoku_webui.dir/all
 
 # Build rule for subdir invocation for target.
@@ -176,7 +211,7 @@ gomoku_webui: CMakeFiles/gomoku_webui.dir/rule
 # codegen rule for target.
 CMakeFiles/gomoku_webui.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_webui.dir/build.make CMakeFiles/gomoku_webui.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=7,8 "Finished codegen for target gomoku_webui"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=9,10 "Finished codegen for target gomoku_webui"
 .PHONY : CMakeFiles/gomoku_webui.dir/codegen
 
 # clean rule for target.
@@ -191,7 +226,7 @@ CMakeFiles/gomoku_webui.dir/clean:
 CMakeFiles/gomoku_match_webui.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_match_webui.dir/build.make CMakeFiles/gomoku_match_webui.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_match_webui.dir/build.make CMakeFiles/gomoku_match_webui.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=5,6 "Built target gomoku_match_webui"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=7,8 "Built target gomoku_match_webui"
 .PHONY : CMakeFiles/gomoku_match_webui.dir/all
 
 # Build rule for subdir invocation for target.
@@ -208,7 +243,7 @@ gomoku_match_webui: CMakeFiles/gomoku_match_webui.dir/rule
 # codegen rule for target.
 CMakeFiles/gomoku_match_webui.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_match_webui.dir/build.make CMakeFiles/gomoku_match_webui.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=5,6 "Finished codegen for target gomoku_match_webui"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=7,8 "Finished codegen for target gomoku_match_webui"
 .PHONY : CMakeFiles/gomoku_match_webui.dir/codegen
 
 # clean rule for target.
@@ -223,7 +258,7 @@ CMakeFiles/gomoku_match_webui.dir/clean:
 CMakeFiles/third_party_engines.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/third_party_engines.dir/build.make CMakeFiles/third_party_engines.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/third_party_engines.dir/build.make CMakeFiles/third_party_engines.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=9 "Built target third_party_engines"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=11 "Built target third_party_engines"
 .PHONY : CMakeFiles/third_party_engines.dir/all
 
 # Build rule for subdir invocation for target.
@@ -240,7 +275,7 @@ third_party_engines: CMakeFiles/third_party_engines.dir/rule
 # codegen rule for target.
 CMakeFiles/third_party_engines.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/third_party_engines.dir/build.make CMakeFiles/third_party_engines.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=9 "Finished codegen for target third_party_engines"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/openwebui/gomoku/build/CMakeFiles --progress-num=11 "Finished codegen for target third_party_engines"
 .PHONY : CMakeFiles/third_party_engines.dir/codegen
 
 # clean rule for target.

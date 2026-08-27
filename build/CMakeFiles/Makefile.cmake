@@ -58,6 +58,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/gomoku_gui.dir/DependInfo.cmake"
   "CMakeFiles/gomoku_cli.dir/DependInfo.cmake"
+  "CMakeFiles/engine_benchmark.dir/DependInfo.cmake"
   "CMakeFiles/gomoku_webui.dir/DependInfo.cmake"
   "CMakeFiles/gomoku_match_webui.dir/DependInfo.cmake"
   "CMakeFiles/third_party_engines.dir/DependInfo.cmake"

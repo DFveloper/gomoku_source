@@ -4,6 +4,7 @@
 CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o: /mnt/openwebui/gomoku/gomoku_cli.cpp \
   /mnt/openwebui/gomoku/engine_adapter.h \
   /mnt/openwebui/gomoku/gomoku_core.h \
+  /mnt/openwebui/gomoku/neural_evaluator.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
@@ -502,6 +503,8 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/ss_flags.h:
 
+/usr/include/x86_64-linux-gnu/bits/sigthread.h:
+
 /usr/include/c++/15/cwchar:
 
 /usr/include/string.h:
@@ -588,8 +591,6 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 
 /usr/include/c++/15/ext/numeric_traits.h:
 
-/usr/include/c++/15/debug/debug.h:
-
 /usr/lib/gcc/x86_64-linux-gnu/15/libgcc_s.so:
 
 /usr/include/c++/15/bits/stl_construct.h:
@@ -609,8 +610,6 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 /usr/include/x86_64-linux-gnu/asm/posix_types.h:
 
 /usr/include/c++/15/bits/parse_numbers.h:
-
-/usr/include/c++/15/bits/node_handle.h:
 
 /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h:
 
@@ -634,6 +633,8 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 
 /usr/include/asm-generic/int-ll64.h:
 
+/usr/include/c++/15/bits/memory_resource.h:
+
 /usr/include/c++/15/bits/chrono.h:
 
 /usr/include/c++/15/bits/atomic_base.h:
@@ -649,6 +650,10 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
 
 /usr/include/asm-generic/errno.h:
+
+/usr/include/c++/15/bits/node_handle.h:
+
+/mnt/openwebui/gomoku/neural_evaluator.h:
 
 /usr/include/c++/15/bits/string_view.tcc:
 
@@ -668,12 +673,6 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 
 /usr/include/c++/15/iomanip:
 
-/usr/include/c++/15/tr1/beta_function.tcc:
-
-/mnt/openwebui/gomoku/engine_adapter.h:
-
-/usr/include/c++/15/bits/char_traits.h:
-
 /usr/lib/x86_64-linux-gnu/libmvec.so.1:
 
 /usr/include/c++/15/bits/stl_iterator_base_types.h:
@@ -690,9 +689,39 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 
 /usr/include/c++/15/typeinfo:
 
+/usr/include/c++/15/tr1/beta_function.tcc:
+
+/mnt/openwebui/gomoku/engine_adapter.h:
+
+/usr/include/c++/15/bits/char_traits.h:
+
 /usr/include/c++/15/bits/stl_iterator.h:
 
 /usr/include/c++/15/vector:
+
+/usr/include/c++/15/bits/basic_ios.tcc:
+
+/usr/include/linux/sched/types.h:
+
+/usr/include/c++/15/bits/nested_exception.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
+
+/usr/include/asm-generic/bitsperlong.h:
+
+/usr/include/asm-generic/types.h:
+
+/usr/include/x86_64-linux-gnu/sys/wait.h:
+
+/usr/include/asm-generic/errno-base.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/libgcc.a:
+
+/usr/include/x86_64-linux-gnu/bits/sigcontext.h:
+
+/usr/include/c++/15/array:
+
+/usr/include/c++/15/tuple:
 
 /usr/include/alloca.h:
 
@@ -714,35 +743,11 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 
 /usr/include/c++/15/bits/alloc_traits.h:
 
+/usr/include/c++/15/bits/stl_tempbuf.h:
+
 /usr/include/c++/15/bits/std_function.h:
 
 /usr/include/c++/15/bits/codecvt.h:
-
-/usr/include/x86_64-linux-gnu/sys/wait.h:
-
-/usr/include/asm-generic/errno-base.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
-
-/usr/include/asm-generic/bitsperlong.h:
-
-/usr/include/asm-generic/types.h:
-
-/usr/include/c++/15/bits/basic_ios.tcc:
-
-/usr/include/linux/sched/types.h:
-
-/usr/include/c++/15/bits/nested_exception.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/15/libgcc.a:
-
-/usr/include/x86_64-linux-gnu/bits/sigcontext.h:
-
-/usr/include/c++/15/array:
-
-/usr/include/c++/15/tuple:
-
-/usr/include/c++/15/bits/stl_tempbuf.h:
 
 /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h:
 
@@ -796,8 +801,6 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 
 /usr/include/pthread.h:
 
-/usr/include/c++/15/bits/memory_resource.h:
-
 /usr/include/c++/15/bits/hashtable.h:
 
 /usr/include/c++/15/bits/locale_facets_nonio.tcc:
@@ -835,6 +838,8 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 /usr/include/c++/15/bits/locale_facets_nonio.h:
 
 /usr/include/c++/15/exception:
+
+/usr/include/c++/15/debug/debug.h:
 
 /usr/include/c++/15/ext/aligned_buffer.h:
 
@@ -1093,5 +1098,3 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o:
 /usr/include/x86_64-linux-gnu/bits/signum-arch.h:
 
 /usr/include/x86_64-linux-gnu/bits/sigstksz.h:
-
-/usr/include/x86_64-linux-gnu/bits/sigthread.h:

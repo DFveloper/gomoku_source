@@ -153,6 +153,19 @@ gomoku_cli/fast:
 .PHONY : gomoku_cli/fast
 
 #=============================================================================
+# Target rules for targets named engine_benchmark
+
+# Build rule for target.
+engine_benchmark: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 engine_benchmark
+.PHONY : engine_benchmark
+
+# fast build rule for target.
+engine_benchmark/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/engine_benchmark.dir/build.make CMakeFiles/engine_benchmark.dir/build
+.PHONY : engine_benchmark/fast
+
+#=============================================================================
 # Target rules for targets named gomoku_webui
 
 # Build rule for target.
@@ -263,6 +276,30 @@ Gomoku_Engine_Match_WebUI.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gomoku_match_webui.dir/build.make CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.s
 .PHONY : Gomoku_Engine_Match_WebUI.cpp.s
 
+engine_benchmark.o: engine_benchmark.cpp.o
+.PHONY : engine_benchmark.o
+
+# target to build an object file
+engine_benchmark.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/engine_benchmark.dir/build.make CMakeFiles/engine_benchmark.dir/engine_benchmark.cpp.o
+.PHONY : engine_benchmark.cpp.o
+
+engine_benchmark.i: engine_benchmark.cpp.i
+.PHONY : engine_benchmark.i
+
+# target to preprocess a source file
+engine_benchmark.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/engine_benchmark.dir/build.make CMakeFiles/engine_benchmark.dir/engine_benchmark.cpp.i
+.PHONY : engine_benchmark.cpp.i
+
+engine_benchmark.s: engine_benchmark.cpp.s
+.PHONY : engine_benchmark.s
+
+# target to generate assembly for a file
+engine_benchmark.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/engine_benchmark.dir/build.make CMakeFiles/engine_benchmark.dir/engine_benchmark.cpp.s
+.PHONY : engine_benchmark.cpp.s
+
 gomoku_cli.o: gomoku_cli.cpp.o
 .PHONY : gomoku_cli.o
 
@@ -297,6 +334,7 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... third_party_engines"
+	@echo "... engine_benchmark"
 	@echo "... gomoku_cli"
 	@echo "... gomoku_gui"
 	@echo "... gomoku_match_webui"
@@ -310,6 +348,9 @@ help:
 	@echo "... Gomoku_Engine_Match_WebUI.o"
 	@echo "... Gomoku_Engine_Match_WebUI.i"
 	@echo "... Gomoku_Engine_Match_WebUI.s"
+	@echo "... engine_benchmark.o"
+	@echo "... engine_benchmark.i"
+	@echo "... engine_benchmark.s"
 	@echo "... gomoku_cli.o"
 	@echo "... gomoku_cli.i"
 	@echo "... gomoku_cli.s"

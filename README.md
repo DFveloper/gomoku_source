@@ -11,8 +11,9 @@ It has no web framework or runtime dependency.
 
 The AI opponent is selectable in-game: seven engines (Legacy v1, Strengthened
 v2, Current v3 MT, Carbon Classic, Rapfi 2025 AVX2, AlphaGomoku MK26,
-XL / Niren) at search levels 1-5. Built-in engines use the level as search
-depth; external engines receive it as their turn time budget. External
+XL / Niren) at search levels 1-5. Legacy and v2 use the level as fixed search
+depth; Current v3 uses one extra ply at levels 1-2 and fixed wall-clock budgets.
+External engines receive the level as their depth/time control. External
 runtimes are auto-detected under `third_party/runtime/` and marked
 `NOT FOUND` in the dropdown when missing; if an external engine fails or
 returns an illegal move mid-game, the built-in engine answers instead so a
@@ -132,6 +133,21 @@ The AI now keeps late-game evaluation stable by scoring the strongest durable op
 
 The default search depth is 4. Root candidates are evaluated in parallel on up to 32 CPU threads, each with an independent board copy. The useful worker count is also bounded by the available CPU concurrency and the number of root candidates. On the included one-stone 15x15 benchmark at depth 3, eight workers reduced search time from 7.4 seconds to 2.1 seconds (3.45x on the development machine).
 
+Current v3 also uses a per-worker Zobrist transposition table, so positions
+reached through different move orders are reused without sharing mutable board
+state between threads. Search levels have hard wall-clock budgets of 1, 2, 4,
+8, and 16 seconds; only fully completed root results are eligible for
+selection when the budget expires. Levels 1 and 2 automatically search one
+extra ply because the transposition table keeps them within the same practical
+time envelope. This prevents a difficult move from running for a minute while
+preserving deterministic completed searches.
+
+Before the normal root search, each candidate also receives a 160-node bounded
+VCF safety probe. A move that hands the opponent a proven continuous-four win
+is discarded without expanding its full tree. The probe is deliberately kept
+out of internal nodes: broader VCT experiments improved some AlphaGomoku lines
+but reduced strength against Rapfi and Carbon.
+
 Human moves are analyzed online for attack, defense, locality, center, and directional preferences. After neutral opening priors, the recent style profile changes which opponent replies are retained and searched first; tactical replies are still evaluated with worst-case negamax rather than assuming the prediction is always correct. At least 75% of each selective reply set comes from the style-free baseline, so a surprising human move is not discarded merely because it does not match the learned profile.
 
 Search values now take precedence over root move-order heuristics, and low-value continuations whose useful line is blocked at both ends receive an abandonment penalty. This prevents the engine from carrying a dead plan forward after deeper search has rejected it.
@@ -144,6 +160,15 @@ Run the tactical, long-evaluation, draw, and style regressions with:
 
 ```powershell
 .\gomoku_cli.exe test
+```
+
+For reproducible paired engine matches (same opening with colors swapped), use
+the benchmark target. External engines are retried exactly like the Match UI:
+
+```bash
+cmake --build build --target engine_benchmark
+# opponent id: 0 Legacy, 1 v2, 3 Carbon, 4 Rapfi, 5 AlphaGomoku, 6 XL
+./build/engine_benchmark 4 3 1 8
 ```
 
 The reproducible legacy-versus-strengthened match results and limitations are in [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md).

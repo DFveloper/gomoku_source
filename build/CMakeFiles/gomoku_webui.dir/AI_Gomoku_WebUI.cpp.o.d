@@ -283,6 +283,7 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o: \
  /usr/include/c++/15/bits/enable_special_members.h \
  /usr/include/c++/15/bits/node_handle.h \
  /usr/include/c++/15/bits/erase_if.h \
+ /mnt/openwebui/gomoku/neural_evaluator.h \
  /mnt/openwebui/gomoku/engine_adapter.h /usr/include/poll.h \
  /usr/include/x86_64-linux-gnu/sys/poll.h \
  /usr/include/x86_64-linux-gnu/bits/poll.h \

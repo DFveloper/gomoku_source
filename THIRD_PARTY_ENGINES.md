@@ -35,9 +35,10 @@ Only the laptop-compatible runtime subset is embedded:
 - AlphaGomoku uses the CPU runtime DLLs and only the Renju network.
 - Carbon and XL are compact standalone executables.
 
-The GUI sends both `INFO max_depth` and a calibrated turn-time budget. Built-in
-engines and the locally patched Carbon profile use an exact fixed depth. Rapfi
-honors its own depth/time controls. AlphaGomoku is MCTS-based and XL is
+The GUI sends both `INFO max_depth` and a calibrated turn-time budget. Legacy,
+v2, and the locally patched Carbon profile use an exact fixed depth. Current v3
+adds one ply at levels 1-2 under hard time budgets; Rapfi honors its own
+depth/time controls. AlphaGomoku is MCTS-based and XL is
 time-managed, so for those two the displayed depth acts as a search level whose
 time budget doubles at each step (250 ms at level 1 through 8 s at level 6).
 

@@ -5,6 +5,7 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o
  /mnt/openwebui/gomoku/gomoku_cli.cpp
  /mnt/openwebui/gomoku/engine_adapter.h
  /mnt/openwebui/gomoku/gomoku_core.h
+ /mnt/openwebui/gomoku/neural_evaluator.h
  /usr/include/alloca.h
  /usr/include/asm-generic/bitsperlong.h
  /usr/include/asm-generic/errno-base.h

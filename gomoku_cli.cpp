@@ -221,6 +221,23 @@ bool run_tests() {
     pass &= parallel_deterministic;
     std::printf("[%s] deterministic root multithreading\n", parallel_deterministic ? "PASS" : "FAIL");
 
+    clear_board();
+    board[7][7] = board[8][8] = 1;
+    board[7][8] = board[8][7] = 2;
+    int uncached_value = gomoku::negamax(board, sz, 1, 1, -210000000, 210000000,
+                                         {-1, -1}, 2);
+    gomoku::TranspositionTable table(1u << 12);
+    std::uint64_t hash = gomoku::position_hash(board, sz, 1);
+    int cached_value = gomoku::negamax(board, sz, 1, 1, -210000000, 210000000,
+                                       {-1, -1}, 2, nullptr, 2, nullptr, nullptr,
+                                       nullptr, hash, &table);
+    int reused_value = gomoku::negamax(board, sz, 1, 1, -210000000, 210000000,
+                                       {-1, -1}, 2, nullptr, 2, nullptr, nullptr,
+                                       nullptr, hash, &table);
+    bool transposition_exact = cached_value == uncached_value && reused_value == cached_value;
+    pass &= transposition_exact;
+    std::printf("[%s] exact transposition-table reuse\n", transposition_exact ? "PASS" : "FAIL");
+
     bool version_catalog = true;
     for (int i = 0; i < static_cast<int>(gomoku::EngineVersion::Count); ++i) {
         const char* name = gomoku::engine_version_name(static_cast<gomoku::EngineVersion>(i));

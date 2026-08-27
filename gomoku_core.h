@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <thread>
@@ -399,7 +401,7 @@ inline int weighted_potential(std::vector<int>& scores) {
 // Use the strongest durable opportunities, rather than summing every empty
 // intersection.  The old sum grew with board clutter and made late-game values
 // noisy.  This evaluation is antisymmetric, which is important for negamax.
-inline int static_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
+inline int heuristic_static_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
     const int op = 3 - p;
     std::vector<int> own_scores, opponent_scores;
     auto candidates = generate_candidates(board, sz, 2);
@@ -413,6 +415,14 @@ inline int static_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
     }
     const int potential = weighted_potential(own_scores) - weighted_potential(opponent_scores);
     return potential + board_shape_score(board, sz, p) - board_shape_score(board, sz, op);
+}
+
+#include "neural_evaluator.h"
+
+inline int static_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
+    // Neural-enhanced evaluation: combines domain-knowledge heuristics
+    // with an embedded MLP to approximate strong strategic evaluation.
+    return neural::neural_static_eval(board, sz, p);
 }
 
 inline int style_move_bonus(int board[kMaxBoard][kMaxBoard], int sz, int p, Move move,
@@ -568,49 +578,127 @@ inline std::vector<std::pair<int, Move>> forcing_candidates(int board[kMaxBoard]
     return forcing;
 }
 
+struct TranspositionEntry {
+    std::uint64_t key = 0;
+    int value = 0;
+    short depth = -1;
+    unsigned char bound = 0;  // 1 exact, 2 lower, 3 upper.
+};
+
+struct TranspositionTable {
+    explicit TranspositionTable(size_t size = 1u << 16) : entries(size) {}
+    std::vector<TranspositionEntry> entries;
+};
+
+inline std::uint64_t mix_hash(std::uint64_t value) {
+    value += 0x9e3779b97f4a7c15ULL;
+    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31);
+}
+
+inline std::uint64_t stone_hash(int r, int c, int p) {
+    return mix_hash(static_cast<std::uint64_t>((r * kMaxBoard + c) * 3 + p));
+}
+
+inline std::uint64_t side_hash(int p) {
+    return mix_hash(0x5a17ULL + static_cast<std::uint64_t>(p));
+}
+
+inline std::uint64_t position_hash(const int board[kMaxBoard][kMaxBoard], int sz, int p) {
+    std::uint64_t hash = side_hash(p);
+    for (int r = 0; r < sz; ++r) for (int c = 0; c < sz; ++c) {
+        if (board[r][c]) hash ^= stone_hash(r, c, board[r][c]);
+    }
+    return hash;
+}
+
+inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, int p,
+                                int max_attacks, int node_budget);
+
 inline int negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth, int alpha, int beta,
                    Move last, int last_p, const OpponentStyle* style = nullptr, int quiet_depth = 2,
-                   const std::atomic<bool>* cancel = nullptr) {
-    if (cancel && cancel->load()) return 0;
+                   const std::atomic<bool>* cancel = nullptr,
+                   const std::chrono::steady_clock::time_point* deadline = nullptr,
+                   bool* timed_out = nullptr, std::uint64_t hash = 0,
+                   TranspositionTable* table = nullptr) {
+    if ((cancel && cancel->load()) ||
+        (deadline && std::chrono::steady_clock::now() >= *deadline)) {
+        if (timed_out && !(cancel && cancel->load())) *timed_out = true;
+        return 0;
+    }
     int op = 3 - p;
     if (last.r != -1 && check_win_at(board, sz, last.r, last.c, last_p)) {
         return last_p == p ? 200000000 + depth : -200000000 - depth;
     }
+    if (hash == 0) hash = position_hash(board, sz, p);
+    const int table_depth = depth * 4 + std::max(0, quiet_depth);
+    const int original_alpha = alpha;
+    const int original_beta = beta;
+    TranspositionEntry* table_entry = nullptr;
+    if (table && !table->entries.empty()) {
+        table_entry = &table->entries[hash & (table->entries.size() - 1)];
+        if (table_entry->key == hash && table_entry->depth >= table_depth) {
+            if (table_entry->bound == 1) return table_entry->value;
+            if (table_entry->bound == 2) alpha = std::max(alpha, table_entry->value);
+            else if (table_entry->bound == 3) beta = std::min(beta, table_entry->value);
+            if (alpha >= beta) return table_entry->value;
+        }
+    }
+    auto save_table = [&](int value) {
+        if (!table_entry || (timed_out && *timed_out) || (cancel && cancel->load())) return value;
+        unsigned char bound = 1;
+        if (value <= original_alpha) bound = 3;
+        else if (value >= original_beta) bound = 2;
+        if (table_entry->key != hash || table_entry->depth <= table_depth || bound == 1) {
+            *table_entry = {hash, value, static_cast<short>(table_depth), bound};
+        }
+        return value;
+    };
     if (depth == 0) {
-        if (quiet_depth == 0) return static_eval(board, sz, p);
+        if (quiet_depth == 0) return save_table(static_eval(board, sz, p));
         auto forcing = forcing_candidates(board, sz, p, 4, style);
-        if (forcing.empty()) return static_eval(board, sz, p);
+        if (forcing.empty()) return save_table(static_eval(board, sz, p));
         int best = -210000000;
         for (const auto& item : forcing) {
             Move m = item.second;
             board[m.r][m.c] = p;
+            const std::uint64_t child_hash = hash ^ stone_hash(m.r, m.c, p) ^
+                                             side_hash(p) ^ side_hash(op);
             int val = -negamax(board, sz, op, 0, -beta, -alpha, m, p, style,
-                               quiet_depth - 1, cancel);
+                               quiet_depth - 1, cancel, deadline, timed_out,
+                               child_hash, table);
             board[m.r][m.c] = 0;
             best = std::max(best, val);
             alpha = std::max(alpha, val);
             if (alpha >= beta) break;
         }
-        return best;
+        return save_table(best);
     }
     const int stones = stone_count(board, sz);
     int width = depth >= 4 ? 8 : (depth == 3 ? 9 : (depth == 2 ? 11 : 8));
     if (stones >= 24) width += 1;
     if (stones >= 40) width += 1;
     auto moves = ranked_candidates(board, sz, p, width, style);
-    if (moves.empty()) return 0;
+    if (moves.empty()) return save_table(0);
     int best = -210000000;
     for (auto item : moves) {
+        if (deadline && std::chrono::steady_clock::now() >= *deadline) {
+            if (timed_out) *timed_out = true;
+            return 0;
+        }
         Move m = item.second;
         board[m.r][m.c] = p;
+        const std::uint64_t child_hash = hash ^ stone_hash(m.r, m.c, p) ^
+                                         side_hash(p) ^ side_hash(op);
         int val = -negamax(board, sz, op, depth - 1, -beta, -alpha, m, p, style,
-                           quiet_depth, cancel);
+                           quiet_depth, cancel, deadline, timed_out, child_hash, table);
         board[m.r][m.c] = 0;
         best = std::max(best, val);
         alpha = std::max(alpha, val);
         if (alpha >= beta) break;
     }
-    return best;
+    return save_table(best);
 }
 
 inline Move find_immediate_win(int board[kMaxBoard][kMaxBoard], int sz, int p) {
@@ -624,10 +712,65 @@ inline Move find_immediate_win(int board[kMaxBoard][kMaxBoard], int sz, int p) {
     return {-1, -1};
 }
 
+inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, int p,
+                                int max_attacks = 6, int node_budget = 900);
+
+// Looks one ordinary reply beyond the VCF horizon.  A setup counts as proven
+// only when one opponent reply leaves VCF after every legal answer, including
+// counter-wins and Renju-specific legal defenses.  Timeout means "unknown",
+// never a loss, so this guard cannot reject a move on incomplete work.
+inline bool opponent_has_unavoidable_vcf_setup(
+        const int board[kMaxBoard][kMaxBoard], int sz, int opponent,
+        const std::chrono::steady_clock::time_point& deadline,
+        int reply_width = 12, int vcf_node_budget = 40) {
+    const int defender = 3 - opponent;
+    int after_reply[kMaxBoard][kMaxBoard];
+    std::memcpy(after_reply, board, sizeof(after_reply));
+    auto replies = ranked_candidates(after_reply, sz, opponent, reply_width, nullptr);
+    for (const auto& item : replies) {
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        const Move reply = item.second;
+        after_reply[reply.r][reply.c] = opponent;
+        if (check_win_at(after_reply, sz, reply.r, reply.c, opponent)) {
+            after_reply[reply.r][reply.c] = 0;
+            return true;
+        }
+
+        bool has_legal_answer = false;
+        bool every_answer_loses = true;
+        for (int r = 0; r < sz && every_answer_loses; ++r) {
+            for (int c = 0; c < sz; ++c) {
+                if (after_reply[r][c] != 0 ||
+                    (defender == 1 && is_forbidden_move(after_reply, sz, r, c))) continue;
+                has_legal_answer = true;
+                after_reply[r][c] = defender;
+                const bool survives = check_win_at(after_reply, sz, r, c, defender) ||
+                    !has_forced_four_win(after_reply, sz, opponent, 4, vcf_node_budget);
+                after_reply[r][c] = 0;
+                if (survives) {
+                    every_answer_loses = false;
+                    break;
+                }
+                if (std::chrono::steady_clock::now() >= deadline) {
+                    after_reply[reply.r][reply.c] = 0;
+                    return false;
+                }
+            }
+        }
+        after_reply[reply.r][reply.c] = 0;
+        if (has_legal_answer && every_answer_loses) return true;
+    }
+    return false;
+}
+
 inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, int depth = 2,
                            const OpponentStyle* style = nullptr, int max_threads = 0,
                            Move last_own = {-1, -1}, const std::atomic<bool>* cancel = nullptr) {
     if (cancel && cancel->load()) return {-1, -1};
+    const int level = std::max(1, std::min(depth, 5));
+    const int time_budget_ms = 1000 * (1 << (level - 1));
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::milliseconds(time_budget_ms);
     int op = 3 - p;
     Move win = find_immediate_win(board, sz, p);
     if (win.r != -1) return win;
@@ -635,9 +778,12 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
     if (block.r != -1 && !(p == 1 && is_forbidden_move(board, sz, block.r, block.c))) return block;
 
     int root_width = stone_count(board, sz) >= 30 ? 20 : 18;
+    const int search_depth = depth <= 2 ? depth + 1 : depth;
     auto roots = ranked_candidates(board, sz, p, root_width, style, last_own);
     if (roots.empty()) return {-1, -1};
     std::vector<int> values(roots.size(), -210000000);
+    std::vector<unsigned char> completed(roots.size(), 0);
+    std::vector<unsigned char> proven_vcf_loss(roots.size(), 0);
     std::atomic<size_t> next{0};
     unsigned int available = std::max(1u, std::thread::hardware_concurrency());
     int worker_count = max_threads > 0 ? max_threads : static_cast<int>(available);
@@ -645,20 +791,30 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
                                               static_cast<int>(roots.size())}));
 
     auto worker = [&]() {
+        TranspositionTable table;
         while (true) {
             if (cancel && cancel->load()) return;
+            if (std::chrono::steady_clock::now() >= deadline) return;
             size_t index = next.fetch_add(1);
             if (index >= roots.size()) return;
             int local[kMaxBoard][kMaxBoard];
             std::memcpy(local, board, sizeof(local));
             Move m = roots[index].second;
             local[m.r][m.c] = p;
+            bool root_timed_out = false;
             if (check_win_at(local, sz, m.r, m.c, p)) {
-                values[index] = 200000000 + depth;
+                values[index] = 200000000 + search_depth;
+            } else if (has_forced_four_win(local, sz, op, 4, 160)) {
+                values[index] = -190000000 - search_depth;
+                proven_vcf_loss[index] = 1;
             } else {
-                values[index] = -negamax(local, sz, op, depth, -210000000, 210000000,
-                                          m, p, style, 2, cancel);
+                const std::uint64_t hash = position_hash(local, sz, op);
+                values[index] = -negamax(local, sz, op, search_depth, -210000000, 210000000,
+                                          m, p, style, 2, cancel, &deadline, &root_timed_out,
+                                          hash, &table);
             }
+            if (!root_timed_out && std::chrono::steady_clock::now() < deadline)
+                completed[index] = 1;
         }
     };
     std::vector<std::thread> workers;
@@ -667,15 +823,29 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
     for (auto& thread : workers) thread.join();
     if (cancel && cancel->load()) return {-1, -1};
 
-    int best_index = 0;
-    for (size_t i = 1; i < roots.size(); ++i) {
-        // Search value is authoritative.  Move-order heuristics only resolve
-        // exact ties, so a stale plan can no longer override deeper evidence.
-        if (values[i] > values[best_index] ||
-            (values[i] == values[best_index] && roots[i].first > roots[best_index].first)) {
-            best_index = static_cast<int>(i);
+    std::vector<size_t> root_order;
+    for (size_t i = 0; i < roots.size(); ++i) if (completed[i]) root_order.push_back(i);
+    std::sort(root_order.begin(), root_order.end(), [&](size_t a, size_t b) {
+        if (values[a] != values[b]) return values[a] > values[b];
+        return roots[a].first > roots[b].first;
+    });
+
+    int best_index = -1;
+    for (size_t index : root_order) {
+        if (proven_vcf_loss[index]) continue;
+        int local[kMaxBoard][kMaxBoard];
+        std::memcpy(local, board, sizeof(local));
+        const Move m = roots[index].second;
+        local[m.r][m.c] = p;
+        if (!opponent_has_unavoidable_vcf_setup(local, sz, op, deadline)) {
+            best_index = static_cast<int>(index);
+            break;
         }
     }
+    // If every completed root is proven lost (or no audit time remains), keep
+    // the search's best delaying line instead of returning an arbitrary move.
+    if (best_index == -1 && !root_order.empty()) best_index = static_cast<int>(root_order[0]);
+    if (best_index == -1) best_index = 0;
     return roots[best_index].second;
 }
 
@@ -723,16 +893,16 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
     struct FourCandidate { Move move; int score; };
     std::vector<FourCandidate> fours;
     for (Move m : generate_candidates(board, sz, 1)) {
+        if (p == 1 && is_forbidden_move(board, sz, m.r, m.c)) continue;
         ThreatInfo info = analyze_move(board, sz, m.r, m.c, p);
         if (info.count[TH_FIVE]) return true;  // Five available right now.
         if (!info.count[TH_OPEN_FOUR] && !info.count[TH_BROKEN_FOUR] &&
             !info.count[TH_CLOSED_FOUR]) continue;
-        if (p == 1 && is_forbidden_move(board, sz, m.r, m.c)) continue;
         fours.push_back({m, info.score});
-        if (fours.size() >= 10) break;
     }
     std::sort(fours.begin(), fours.end(),
               [](const FourCandidate& a, const FourCandidate& b) { return a.score > b.score; });
+    if (fours.size() > 10) fours.resize(10);
 
     static const int dr[] = {0, 1, 1, 1};
     static const int dc[] = {1, 0, 1, -1};
@@ -746,6 +916,7 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
         for (int rr = std::max(0, f.r - 4); rr <= std::min(sz - 1, f.r + 4) && !double_threat; ++rr) {
             for (int cc = std::max(0, f.c - 4); cc <= std::min(sz - 1, f.c + 4); ++cc) {
                 if (board[rr][cc] != 0) continue;
+                if (p == 1 && is_forbidden_move(board, sz, rr, cc)) continue;
                 bool completes = false;
                 for (int d = 0; d < 4 && !completes; ++d)
                     completes = count_line(board, sz, rr, cc, dr[d], dc[d], p) >= 5;
@@ -774,10 +945,10 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
 }
 
 inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, int p,
-                                int max_attacks = 6) {
+                                int max_attacks, int node_budget) {
     int local[kMaxBoard][kMaxBoard];
     std::memcpy(local, board, sizeof(local));
-    int budget = 900;
+    int budget = node_budget;
     return forced_four_search(local, sz, p, max_attacks, budget);
 }
 

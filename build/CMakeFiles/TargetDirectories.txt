@@ -1,5 +1,6 @@
 /mnt/openwebui/gomoku/build/CMakeFiles/gomoku_gui.dir
 /mnt/openwebui/gomoku/build/CMakeFiles/gomoku_cli.dir
+/mnt/openwebui/gomoku/build/CMakeFiles/engine_benchmark.dir
 /mnt/openwebui/gomoku/build/CMakeFiles/gomoku_webui.dir
 /mnt/openwebui/gomoku/build/CMakeFiles/gomoku_match_webui.dir
 /mnt/openwebui/gomoku/build/CMakeFiles/third_party_engines.dir

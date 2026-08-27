@@ -9,6 +9,7 @@ add_executable(gomoku_gui AI_Gomoku_GUI.cpp)
 target_compile_definitions(gomoku_gui PRIVATE
     GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 add_executable(gomoku_cli gomoku_cli.cpp)
+add_executable(engine_benchmark engine_benchmark.cpp)
 add_executable(gomoku_webui AI_Gomoku_WebUI.cpp)
 add_executable(gomoku_match_webui Gomoku_Engine_Match_WebUI.cpp)
 
@@ -21,6 +22,9 @@ target_compile_definitions(gomoku_match_webui PRIVATE
 find_package(Threads REQUIRED)
 target_link_libraries(gomoku_gui PRIVATE Threads::Threads)
 target_link_libraries(gomoku_cli PRIVATE Threads::Threads)
+target_link_libraries(engine_benchmark PRIVATE Threads::Threads)
+target_compile_definitions(engine_benchmark PRIVATE
+    GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(gomoku_webui PRIVATE Threads::Threads)
 target_link_libraries(gomoku_match_webui PRIVATE Threads::Threads)
 
