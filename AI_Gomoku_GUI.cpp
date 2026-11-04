@@ -409,7 +409,15 @@ void start_ai_turn() {
             }
         };
         gomoku::Move m{-1, -1};
-        if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
+        if (engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
+            string error;
+            int local_board[kMaxBoard][kMaxBoard];
+            restore_board(local_board);
+            m = gomoku::choose_current_neural_vct_move(
+                local_board, local_sz, history, 2, level, 0,
+                engine_runtime_root, error, &ai_cancel);
+            if (m.r < 0 && ai_cancel.load()) return;
+        } else if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
             string error;
             gomoku::ExternalEngineRequest request;
             request.version = static_cast<gomoku::EngineVersion>(engine);

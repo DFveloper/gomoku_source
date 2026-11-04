@@ -36,18 +36,11 @@ Move last_move_for(const std::vector<Move>& moves, int player) {
 Move choose(EngineVersion engine, int board[gomoku::kMaxBoard][gomoku::kMaxBoard],
             const std::vector<Move>& history, int player, int level, int threads,
             const std::filesystem::path& runtime_root, std::string& error,
-            int neural_teacher_level = 0) {
-    if (engine == EngineVersion::CurrentV3 && neural_teacher_level > 0) {
-        gomoku::ExternalEngineRequest request;
-        request.version = EngineVersion::AlphaGomoku2026;
-        request.moves = history;
-        request.player = player;
-        request.level = neural_teacher_level;
-        request.board_size = kSize;
-        request.program = gomoku::external_runtime_path(
-            runtime_root, EngineVersion::AlphaGomoku2026);
-        return gomoku::run_external_engine(request, error);
-    }
+            EngineVersion opponent_engine) {
+    if (engine == EngineVersion::CurrentV3)
+        return gomoku::choose_current_neural_vct_move(
+            board, kSize, history, player, level, threads, runtime_root, error,
+            nullptr, opponent_engine);
     if (engine >= EngineVersion::CarbonClassic) {
         gomoku::ExternalEngineRequest request;
         request.version = engine;
@@ -69,7 +62,7 @@ Move choose(EngineVersion engine, int board[gomoku::kMaxBoard][gomoku::kMaxBoard
 }
 
 GameResult play_game(EngineVersion black, EngineVersion white, int opponent_level,
-                     int lumen_level, int threads, int neural_teacher_level,
+                     int lumen_level, int threads,
                      const std::vector<Move>& opening,
                      const std::filesystem::path& runtime_root) {
     GameResult result;
@@ -88,11 +81,12 @@ GameResult play_game(EngineVersion black, EngineVersion white, int opponent_leve
     while (result.moves.size() < static_cast<size_t>(kSize * kSize)) {
         const int player = result.moves.size() % 2 == 0 ? 1 : 2;
         const EngineVersion engine = player == 1 ? black : white;
+        const EngineVersion opponent_engine = player == 1 ? white : black;
         const int level = engine == EngineVersion::CurrentV3 ? lumen_level : opponent_level;
         std::string error;
         const auto started = std::chrono::steady_clock::now();
         Move move = choose(engine, board, result.moves, player, level, threads,
-                           runtime_root, error, neural_teacher_level);
+                           runtime_root, error, opponent_engine);
         const int elapsed = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - started).count());
         const bool lumen = engine == EngineVersion::CurrentV3;
@@ -133,15 +127,12 @@ int main(int argc, char** argv) {
     const int pairs = argc > 3 ? std::atoi(argv[3]) : 1;
     const int threads = argc > 4 ? std::atoi(argv[4]) : 8;
     const int lumen_level = argc > 5 ? std::atoi(argv[5]) : level;
-    const int neural_teacher_level = argc > 6 ? std::atoi(argv[6]) : 0;
     if (opponent_id < 0 || opponent_id >= static_cast<int>(EngineVersion::Count) ||
         opponent_id == static_cast<int>(EngineVersion::CurrentV3) ||
         level < 1 || level > 5 || lumen_level < 1 || lumen_level > 5 ||
-        neural_teacher_level < 0 || neural_teacher_level > 5 ||
         pairs < 1 || pairs > 4 || threads < 1 || threads > 32) {
         std::fprintf(stderr, "usage: engine_benchmark OPPONENT_ID [OPPONENT_LEVEL=3] "
-                             "[PAIRS=1] [THREADS=8] [LUMEN_LEVEL=OPPONENT_LEVEL] "
-                             "[NEURAL_TEACHER_LEVEL=0]\n");
+                             "[PAIRS=1] [THREADS=8] [LUMEN_LEVEL=OPPONENT_LEVEL]\n");
         return 2;
     }
     const EngineVersion opponent = static_cast<EngineVersion>(opponent_id);
@@ -164,7 +155,7 @@ int main(int argc, char** argv) {
             EngineVersion black = swap == 0 ? EngineVersion::CurrentV3 : opponent;
             EngineVersion white = swap == 0 ? opponent : EngineVersion::CurrentV3;
             GameResult game = play_game(black, white, level, lumen_level, threads,
-                                        neural_teacher_level, openings[pair], runtime_root);
+                                        openings[pair], runtime_root);
             const int lumen_player = swap == 0 ? 1 : 2;
             if (game.winner == lumen_player) ++lumen_wins;
             else if (game.winner == 0) ++draws;
@@ -181,9 +172,9 @@ int main(int argc, char** argv) {
             std::fflush(stdout);
         }
     }
-    std::printf("summary opponent=%s opponent_level=%d lumen_level=%d teacher_level=%d "
+    std::printf("summary opponent=%s opponent_level=%d lumen_level=%d "
                 "lumen=%d opponent=%d draws=%d\n",
                 gomoku::engine_version_name(opponent), level, lumen_level,
-                neural_teacher_level, lumen_wins, opponent_wins, draws);
+                lumen_wins, opponent_wins, draws);
     return opponent_wins == 0 ? 0 : 1;
 }

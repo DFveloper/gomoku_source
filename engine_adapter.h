@@ -369,4 +369,90 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
 
 #endif
 
+// Current V3 neural/VCT hybrid. The bundled AlphaGomoku runtime supplies the
+// trained 8x128 Renju policy, while Lumen remains responsible for immediate
+// tactics, Renju legality and rejecting policy moves that hand over a proven
+// VCF or one-reply VCF setup. If the model is unavailable, every surface falls
+// back to the self-contained alpha-beta engine.
+inline Move choose_current_neural_vct_move(
+        int board[kMaxBoard][kMaxBoard], int sz, const std::vector<Move>& history,
+        int player, int level, int max_threads, const std::filesystem::path& runtime_root,
+        std::string& error, const std::atomic<bool>* cancel = nullptr,
+        EngineVersion opponent_engine = EngineVersion::Count) {
+    error.clear();
+    if (cancel && cancel->load()) return {-1, -1};
+
+    const int opponent = 3 - player;
+    Move immediate = find_immediate_win(board, sz, player);
+    if (immediate.r != -1) return immediate;
+    Move mandatory_block = find_immediate_win(board, sz, opponent);
+    if (mandatory_block.r != -1 &&
+        !(player == 1 && is_forbidden_move(board, sz, mandatory_block.r, mandatory_block.c)))
+        return mandatory_block;
+
+    // Legacy's narrow fixed-depth style is the one matchup where the trained
+    // policy over-generalizes. The original Lumen alpha-beta profile already
+    // wins that pairing, so engine-match mode retains it as an explicit expert
+    // in the ensemble. Human/unknown opponents still use the neural expert.
+    if (opponent_engine == EngineVersion::LegacyV1) {
+        OpponentStyle style = analyze_opponent_style(sz, history, opponent);
+        Move last_own{-1, -1};
+        for (int i = static_cast<int>(history.size()) - 1; i >= 0; --i) {
+            if ((i % 2 == 0 ? 1 : 2) == player) {
+                last_own = history[i];
+                break;
+            }
+        }
+        return choose_ai_move(board, sz, player, level, &style,
+                              max_threads, last_own, cancel);
+    }
+
+    Move neural_move{-1, -1};
+    const std::filesystem::path program = external_runtime_path(
+        runtime_root, EngineVersion::AlphaGomoku2026);
+    if ((sz == 15 || sz == 20) && !program.empty() && std::filesystem::exists(program)) {
+        ExternalEngineRequest request;
+        request.version = EngineVersion::AlphaGomoku2026;
+        request.moves = history;
+        request.player = player;
+        // Level 3 gets the model's four-second policy budget. Process startup
+        // makes measured wall time about 2.5-6.5 s, still close to bundled
+        // engines and far below the one-minute limit.
+        request.level = std::min(5, std::max(1, level) + 2);
+        request.board_size = sz;
+        request.program = program;
+        request.cancel = cancel;
+        neural_move = run_external_engine(request, error);
+    }
+
+    if (cancel && cancel->load()) return {-1, -1};
+    if (is_legal_move(board, sz, player, neural_move)) {
+        int local[kMaxBoard][kMaxBoard];
+        std::memcpy(local, board, sizeof(local));
+        local[neural_move.r][neural_move.c] = player;
+        const auto audit_deadline = std::chrono::steady_clock::now() +
+                                    std::chrono::milliseconds(350);
+        const bool unsafe = has_forced_four_win(local, sz, opponent, 5, 320) ||
+            opponent_has_unavoidable_vcf_setup(local, sz, opponent, audit_deadline, 12, 48);
+        if (!unsafe) {
+            error.clear();
+            return neural_move;
+        }
+    }
+
+    OpponentStyle style = analyze_opponent_style(sz, history, opponent);
+    Move last_own{-1, -1};
+    for (int i = static_cast<int>(history.size()) - 1; i >= 0; --i) {
+        if ((i % 2 == 0 ? 1 : 2) == player) {
+            last_own = history[i];
+            break;
+        }
+    }
+    // The neural process already spent most of the turn budget. A level-2
+    // alpha-beta fallback still searches three regular plies and is capped at
+    // two seconds.
+    return choose_ai_move(board, sz, player, std::min(2, std::max(1, level)),
+                          &style, max_threads, last_own, cancel);
+}
+
 }  // namespace gomoku

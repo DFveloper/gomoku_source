@@ -18,6 +18,7 @@
 
 #include "gomoku_core.h"
 #include "engine_adapter.h"
+#include "public_mode_common.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -82,9 +83,11 @@ atomic<bool> running{true};
 atomic<int> active_ai_workers{0};
 Socket listener_socket = kInvalidSocket;
 filesystem::path web_root;
+filesystem::path sangin_web_root;
 string public_origin;
 int ai_threads = 0;
 filesystem::path engine_runtime_root;
+bool public_mode = false;
 
 void close_socket(Socket s) {
 #ifdef _WIN32
@@ -172,6 +175,25 @@ void compute_reviews_locked() {
     game.review_ply = static_cast<int>(game.moves.size());
 }
 
+vector<MoveReview> compute_reviews(const vector<gomoku::Move>& moves, int size) {
+    int replay[kMaxBoard][kMaxBoard]{};
+    vector<MoveReview> reviews;
+    reviews.reserve(moves.size());
+    for (size_t i = 0; i < moves.size(); ++i) {
+        int player = i % 2 == 0 ? 1 : 2;
+        int r = moves[i].r, c = moves[i].c;
+        double before = black_winrate(replay, size, player);
+        bool had_win = gomoku::has_forced_four_win(replay, size, player);
+        double best = best_after(replay, size, player);
+        replay[r][c] = player;
+        bool made_win = five_for(replay, size, player);
+        double after = black_winrate(replay, size, 3 - player);
+        reviews.push_back({r, c, player, after,
+            classify_move(player, before, after, best, had_win, made_win, static_cast<int>(i))});
+    }
+    return reviews;
+}
+
 void cancel_pending_ai_locked() {
     ++game.ai_job;
     if (game.ai_cancel) game.ai_cancel->store(true);
@@ -232,7 +254,12 @@ void start_ai_locked() {
         int local_board[kMaxBoard][kMaxBoard]{};
         for (int r = 0; r < kMaxBoard; ++r) for (int c = 0; c < kMaxBoard; ++c)
             local_board[r][c] = snapshot[r * kMaxBoard + c];
-        if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
+        if (engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
+            string error;
+            move = gomoku::choose_current_neural_vct_move(
+                local_board, size, history, 2, level, ai_threads,
+                engine_runtime_root, error, cancel.get());
+        } else if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
             string error;
             gomoku::ExternalEngineRequest request;
             request.version = static_cast<gomoku::EngineVersion>(engine);
@@ -315,12 +342,16 @@ bool engine_supports_size(int engine, int size) {
     }
 }
 
-bool engine_available(int engine) {
+bool engine_available_for_size(int engine, int size) {
     if (engine < 0 || engine >= engine_count()) return false;
-    if (!engine_supports_size(engine, game.size)) return false;
+    if (!engine_supports_size(engine, size)) return false;
     if (engine < static_cast<int>(gomoku::EngineVersion::CarbonClassic)) return true;
     return filesystem::exists(gomoku::external_runtime_path(
         engine_runtime_root, static_cast<gomoku::EngineVersion>(engine)));
+}
+
+bool engine_available(int engine) {
+    return engine_available_for_size(engine, game.size);
 }
 
 string state_json_locked() {
@@ -473,6 +504,168 @@ string json_string(const string& body, const string& key) {
     return end == string::npos ? string{} : body.substr(pos + 1, end - pos - 1);
 }
 
+string reviews_json(const vector<MoveReview>& reviews) {
+    ostringstream out;
+    out << '[';
+    for (size_t i = 0; i < reviews.size(); ++i) {
+        if (i) out << ',';
+        const auto& item = reviews[i];
+        out << "{\"r\":" << item.r << ",\"c\":" << item.c << ",\"p\":" << item.p
+            << ",\"winrate\":" << item.winrate << ",\"label\":\""
+            << json_escape(item.label) << "\"}";
+    }
+    out << ']';
+    return out.str();
+}
+
+int position_winner(const int board[kMaxBoard][kMaxBoard], int size,
+                    const vector<gomoku::Move>& moves, gomoku::WinLine* line = nullptr) {
+    for (int i = static_cast<int>(moves.size()) - 1; i >= 0; --i) {
+        const int player = i % 2 == 0 ? 1 : 2;
+        gomoku::WinLine found;
+        if (gomoku::check_win_at(board, size, moves[static_cast<size_t>(i)].r,
+                                 moves[static_cast<size_t>(i)].c, player, &found)) {
+            if (line) *line = found;
+            return player;
+        }
+    }
+    return 0;
+}
+
+string public_capabilities_json(int size) {
+    ostringstream out;
+    out << "{\"engines\":[";
+    for (int i = 0; i < engine_count(); ++i) {
+        if (i) out << ',';
+        out << "{\"id\":" << i << ",\"name\":\""
+            << json_escape(gomoku::engine_version_name(static_cast<gomoku::EngineVersion>(i)))
+            << "\",\"available\":" << (engine_available_for_size(i, size) ? "true" : "false") << '}';
+    }
+    out << "],\"maxLevel\":" << kMaxLevel << '}';
+    return out.str();
+}
+
+pair<int, string> public_heatmap_response(const string& body) {
+    const int size = json_int(body, "size", kDefaultBoard);
+    vector<gomoku::Move> moves;
+    int board[kMaxBoard][kMaxBoard]{};
+    if (size < kMinBoard || size > kMaxBoard ||
+        !gomoku_public::parse_move_pairs(body, moves) ||
+        !gomoku_public::rebuild_board(moves, size, board))
+        return {400, "{\"error\":\"invalid browser state\"}"};
+    ostringstream out;
+    out << "{\"heatmap\":[";
+    bool first = true;
+    for (int r = 0; r < size; ++r) for (int c = 0; c < size; ++c) {
+        if (board[r][c] != 0) continue;
+        if (!first) out << ',';
+        first = false;
+        int score = min(255, gomoku::get_thr(board, size, r, c, 2) / 2 +
+                             gomoku::get_thr(board, size, r, c, 1));
+        out << '[' << r << ',' << c << ',' << score << ']';
+    }
+    out << "]}";
+    return {200, out.str()};
+}
+
+pair<int, string> public_review_response(const string& body, int forced_size = 0) {
+    const int size = forced_size > 0 ? forced_size : json_int(body, "size", kDefaultBoard);
+    vector<gomoku::Move> moves;
+    int board[kMaxBoard][kMaxBoard]{};
+    if (size < kMinBoard || size > kMaxBoard ||
+        !gomoku_public::parse_move_pairs(body, moves) || moves.empty() ||
+        !gomoku_public::rebuild_board(moves, size, board))
+        return {400, "{\"error\":\"invalid replay\"}"};
+    gomoku::WinLine line;
+    const int winner = position_winner(board, size, moves, &line);
+    const bool game_over = winner != 0 || moves.size() == static_cast<size_t>(size * size);
+    auto reviews = compute_reviews(moves, size);
+    ostringstream out;
+    out << "{\"winner\":" << winner << ",\"gameOver\":" << (game_over ? "true" : "false")
+        << ",\"winLine\":" << gomoku_public::line_json(line)
+        << ",\"reviews\":" << reviews_json(reviews) << '}';
+    return {200, out.str()};
+}
+
+gomoku::Move choose_public_ai_move(int board[kMaxBoard][kMaxBoard], int size,
+                                   const vector<gomoku::Move>& history, int engine, int level) {
+    atomic<bool> cancel{false};
+    gomoku::OpponentStyle style = gomoku::analyze_opponent_style(size, history, 1);
+    gomoku::Move last_ai = gomoku_public::last_for(history, 2);
+    gomoku::Move move{-1, -1};
+    if (engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
+        string error;
+        move = gomoku::choose_current_neural_vct_move(
+            board, size, history, 2, level, ai_threads, engine_runtime_root, error, &cancel);
+    } else if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
+        string error;
+        gomoku::ExternalEngineRequest request;
+        request.version = static_cast<gomoku::EngineVersion>(engine);
+        request.moves = history;
+        request.player = 2;
+        request.level = level;
+        request.board_size = size;
+        request.program = gomoku::external_runtime_path(engine_runtime_root, request.version);
+        request.cancel = &cancel;
+        for (int attempt = 0; attempt < 2; ++attempt) {
+            move = gomoku::run_external_engine(request, error);
+            if (gomoku::is_legal_move(board, size, 2, move)) break;
+        }
+    } else {
+        move = gomoku::choose_versioned_move(
+            board, size, 2, level, static_cast<gomoku::EngineVersion>(engine),
+            &style, ai_threads, last_ai, &cancel);
+    }
+    if (!gomoku::is_legal_move(board, size, 2, move))
+        move = gomoku::choose_ai_move(board, size, 2, max(2, min(level, kAiDepth)),
+                                      &style, ai_threads, last_ai, &cancel);
+    if (!gomoku::is_legal_move(board, size, 2, move)) move = gomoku::first_legal_move(board, size, 2);
+    return move;
+}
+
+pair<int, string> public_move_response(const string& body, bool sangin = false) {
+    const int size = sangin ? 15 : json_int(body, "size", kDefaultBoard);
+    const int engine = sangin ? static_cast<int>(gomoku::EngineVersion::Rapfi2025) :
+                                json_int(body, "engine", static_cast<int>(gomoku::EngineVersion::CurrentV3));
+    const int level = sangin ? 5 : json_int(body, "level", kAiDepth);
+    const int row = json_int(body, "r"), col = json_int(body, "c");
+    vector<gomoku::Move> moves;
+    int board[kMaxBoard][kMaxBoard]{};
+    if (size < kMinBoard || size > kMaxBoard || level < 1 || level > kMaxLevel ||
+        !engine_available_for_size(engine, size) || !gomoku_public::parse_move_pairs(body, moves) ||
+        moves.size() % 2 != 0 || !gomoku_public::rebuild_board(moves, size, board) ||
+        position_winner(board, size, moves) != 0 || row < 0 || row >= size || col < 0 || col >= size ||
+        board[row][col] != 0)
+        return {400, "{\"error\":\"illegal move\"}"};
+    if (gomoku::is_forbidden_move(board, size, row, col))
+        return {400, "{\"error\":\"forbidden move\"}"};
+
+    board[row][col] = 1;
+    moves.push_back({row, col});
+    gomoku::WinLine line;
+    int winner = 0;
+    gomoku::Move ai_move{-1, -1};
+    if (gomoku::check_win_at(board, size, row, col, 1, &line)) winner = 1;
+    else if (moves.size() < static_cast<size_t>(size * size)) {
+        ai_move = choose_public_ai_move(board, size, moves, engine, level);
+        if (gomoku::is_legal_move(board, size, 2, ai_move)) {
+            board[ai_move.r][ai_move.c] = 2;
+            moves.push_back(ai_move);
+            if (gomoku::check_win_at(board, size, ai_move.r, ai_move.c, 2, &line)) winner = 2;
+        }
+    }
+    const bool game_over = winner != 0 || moves.size() == static_cast<size_t>(size * size);
+    vector<MoveReview> reviews;
+    if (game_over) reviews = compute_reviews(moves, size);
+    ostringstream out;
+    out << "{\"aiMove\":";
+    if (ai_move.r < 0) out << "null"; else out << '[' << ai_move.r << ',' << ai_move.c << ']';
+    out << ",\"winner\":" << winner << ",\"gameOver\":" << (game_over ? "true" : "false")
+        << ",\"winLine\":" << gomoku_public::line_json(line)
+        << ",\"reviews\":" << reviews_json(reviews) << '}';
+    return {200, out.str()};
+}
+
 struct Request { string method, path, body; };
 
 bool read_request(Socket socket, Request& request) {
@@ -518,6 +711,7 @@ void send_all(Socket socket, const string& data) {
 void respond(Socket socket, int status, const string& type, const string& body,
              const string& extra = {}) {
     string reason = status == 200 ? "OK" : status == 204 ? "No Content" :
+                    status == 301 ? "Moved Permanently" :
                     status == 400 ? "Bad Request" : status == 404 ? "Not Found" : "Error";
     ostringstream head;
     head << "HTTP/1.1 " << status << ' ' << reason << "\r\nContent-Type: " << type
@@ -537,10 +731,11 @@ string mime_type(const filesystem::path& path) {
     return "application/octet-stream";
 }
 
-bool serve_file(Socket socket, const string& path) {
+bool serve_file_from(Socket socket, const filesystem::path& root, const string& path,
+                     const string& origin) {
     string name = path == "/" ? "index.html" : path.substr(1);
     if (name.find("..") != string::npos || name.find('\\') != string::npos) return false;
-    filesystem::path file = web_root / name;
+    filesystem::path file = root / name;
     ifstream input(file, ios::binary);
     if (!input) return false;
     string body((istreambuf_iterator<char>(input)), istreambuf_iterator<char>());
@@ -548,12 +743,28 @@ bool serve_file(Socket socket, const string& path) {
         const string marker = "__GOMOKU_ORIGIN__";
         size_t at = 0;
         while ((at = body.find(marker, at)) != string::npos) {
-            body.replace(at, marker.size(), public_origin);
-            at += public_origin.size();
+            body.replace(at, marker.size(), origin);
+            at += origin.size();
         }
+        const string script_marker = "__GOMOKU_SCRIPT__";
+        const string script_name = public_mode ? "public_app.js" : "app.js";
+        while ((at = body.find(script_marker)) != string::npos)
+            body.replace(at, script_marker.size(), script_name);
     }
     respond(socket, 200, mime_type(file), body);
     return true;
+}
+
+bool serve_file(Socket socket, const string& path) {
+    return serve_file_from(socket, web_root, path, public_origin);
+}
+
+bool serve_sangin_file(Socket socket, const string& path) {
+    string local_path = path.substr(string("/sangin").size());
+    if (local_path.empty()) local_path = "/";
+    if (local_path == "/og.png")
+        return serve_file_from(socket, web_root, local_path, public_origin + "/sangin");
+    return serve_file_from(socket, sangin_web_root, local_path, public_origin + "/sangin");
 }
 
 void save_named_file(const string& name, const string& body) {
@@ -564,7 +775,39 @@ void save_named_file(const string& name, const string& body) {
 void handle_connection(Socket socket) {
     Request request;
     if (!read_request(socket, request)) { close_socket(socket); return; }
-    if (request.method == "GET" && request.path == "/api/state") {
+    if (request.method == "GET" && request.path == "/sangin") {
+        respond(socket, 301, "text/plain; charset=utf-8", "Redirecting\n", "Location: sangin/\r\n");
+    } else if (public_mode && request.method == "POST" && request.path == "/sangin/api/public/capabilities") {
+        const int rapfi = static_cast<int>(gomoku::EngineVersion::Rapfi2025);
+        ostringstream out;
+        out << "{\"engines\":[{\"id\":" << rapfi << ",\"name\":\"Rapfi 2025 AVX2\",\"available\":"
+            << (engine_available_for_size(rapfi, 15) ? "true" : "false")
+            << "}],\"maxLevel\":5}";
+        respond(socket, 200, "application/json; charset=utf-8", out.str());
+    } else if (public_mode && request.method == "POST" && request.path == "/sangin/api/public/move") {
+        auto result = public_move_response(request.body, true);
+        respond(socket, result.first, "application/json; charset=utf-8", result.second);
+    } else if (public_mode && request.method == "POST" && request.path == "/sangin/api/public/review") {
+        auto result = public_review_response(request.body, 15);
+        respond(socket, result.first, "application/json; charset=utf-8", result.second);
+    } else if (public_mode && request.path.rfind("/sangin/api/", 0) == 0) {
+        respond(socket, 404, "application/json; charset=utf-8", "{\"error\":\"unsupported Sangin API\"}");
+    } else if (public_mode && request.method == "POST" && request.path == "/api/public/capabilities") {
+        int size = json_int(request.body, "size", kDefaultBoard);
+        if (size < kMinBoard || size > kMaxBoard) size = kDefaultBoard;
+        respond(socket, 200, "application/json; charset=utf-8", public_capabilities_json(size));
+    } else if (public_mode && request.method == "POST" && request.path == "/api/public/move") {
+        auto result = public_move_response(request.body);
+        respond(socket, result.first, "application/json; charset=utf-8", result.second);
+    } else if (public_mode && request.method == "POST" && request.path == "/api/public/heatmap") {
+        auto result = public_heatmap_response(request.body);
+        respond(socket, result.first, "application/json; charset=utf-8", result.second);
+    } else if (public_mode && request.method == "POST" && request.path == "/api/public/review") {
+        auto result = public_review_response(request.body);
+        respond(socket, result.first, "application/json; charset=utf-8", result.second);
+    } else if (public_mode && request.path.rfind("/api/", 0) == 0) {
+        respond(socket, 404, "application/json; charset=utf-8", "{\"error\":\"public mode is browser-local\"}");
+    } else if (request.method == "GET" && request.path == "/api/state") {
         lock_guard<mutex> guard(game.lock);
         respond(socket, 200, "application/json; charset=utf-8", state_json_locked());
     } else if (request.method == "POST" && request.path == "/api/move") {
@@ -679,6 +922,9 @@ void handle_connection(Socket socket) {
 #else
         shutdown(listener_socket, SHUT_RDWR);
 #endif
+    } else if (request.method == "GET" && request.path.rfind("/sangin/", 0) == 0 &&
+               serve_sangin_file(socket, request.path)) {
+        // Sangin is routed by this process, not by a separate Apache rule.
     } else if (request.method == "GET" && serve_file(socket, request.path)) {
         // Served above.
     } else {
@@ -688,7 +934,8 @@ void handle_connection(Socket socket) {
 }
 
 void print_usage(const char* exe) {
-    cerr << "Usage: " << exe << " [--host ADDRESS] [--port PORT] [--board SIZE] [-t THREADS]\n"
+    cerr << "Usage: " << exe << " [--host ADDRESS] [--port PORT] [--board SIZE] [-t THREADS]"
+         << " [--public-url URL] [--public-mode]\n"
          << "       " << exe << " --help\n";
 }
 
@@ -705,6 +952,11 @@ bool parse_args(int argc, char** argv, string& host, int& port) {
         } else if ((arg == "--threads" || arg == "-t") && i + 1 < argc) {
             try { ai_threads = stoi(argv[++i]); } catch (...) { return false; }
             if (ai_threads < 1 || ai_threads > gomoku::kMaxSearchThreads) return false;
+        } else if (arg == "--public-url" && i + 1 < argc) {
+            public_origin = argv[++i];
+            while (public_origin.size() > 1 && public_origin.back() == '/') public_origin.pop_back();
+        } else if (arg == "--public-mode") {
+            public_mode = true;
         } else if (arg == "--help" || arg == "-h") {
             print_usage(argv[0]);
             exit(0);
@@ -724,6 +976,21 @@ filesystem::path locate_web_root(const char* argv0) {
     candidates.push_back(exe / "webui");
     candidates.push_back(exe / "../webui");
     for (const auto& path : candidates) if (filesystem::exists(path / "index.html")) return filesystem::canonical(path);
+    return {};
+}
+
+filesystem::path locate_sangin_web_root(const char* argv0) {
+    vector<filesystem::path> candidates;
+#ifdef GOMOKU_SOURCE_ROOT
+    candidates.push_back(filesystem::path(GOMOKU_SOURCE_ROOT) / "sangin_webui");
+#endif
+    error_code ec;
+    filesystem::path exe = filesystem::absolute(argv0, ec).parent_path();
+    candidates.push_back(filesystem::current_path() / "sangin_webui");
+    candidates.push_back(exe / "sangin_webui");
+    candidates.push_back(exe / "../sangin_webui");
+    for (const auto& path : candidates)
+        if (filesystem::exists(path / "index.html")) return filesystem::canonical(path);
     return {};
 }
 
@@ -754,7 +1021,8 @@ int main(int argc, char** argv) {
         return 2;
     }
     web_root = locate_web_root(argv[0]);
-    if (web_root.empty()) {
+    sangin_web_root = locate_sangin_web_root(argv[0]);
+    if (web_root.empty() || sangin_web_root.empty()) {
         cerr << "WebUI assets not found. Run from the project directory or rebuild with CMake.\n";
         return 1;
     }
@@ -801,8 +1069,10 @@ int main(int argc, char** argv) {
     }
     cout << "Gomoku WebUI: http://" << (host == "0.0.0.0" || host == "*" ? "127.0.0.1" : host)
          << ':' << port << "\nPress Q in the WebUI or Ctrl+C to stop.\n";
-    public_origin = "http://" + (host == "0.0.0.0" || host == "*" ? string("127.0.0.1") : host) +
-                    ":" + to_string(port);
+    if (public_origin.empty()) {
+        public_origin = "http://" + (host == "0.0.0.0" || host == "*" ? string("127.0.0.1") : host) +
+                        ":" + to_string(port);
+    }
     while (running) {
         Socket client = accept(listener_socket, nullptr, nullptr);
         if (client == kInvalidSocket) {

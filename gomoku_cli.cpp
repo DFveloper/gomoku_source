@@ -238,6 +238,20 @@ bool run_tests() {
     pass &= transposition_exact;
     std::printf("[%s] exact transposition-table reuse\n", transposition_exact ? "PASS" : "FAIL");
 
+    clear_board();
+    const std::vector<gomoku::Move> vct_horizon = {
+        {7,7},{7,8},{8,7},{6,7},{5,6},{7,6},{5,8},{8,5},{4,7},{6,5},
+        {6,9},{3,6},{5,9},{5,5},{7,5},{4,5},{4,10},{3,5},{2,5}
+    };
+    for (size_t i = 0; i < vct_horizon.size(); ++i)
+        board[vct_horizon[i].r][vct_horizon[i].c] = i % 2 == 0 ? 1 : 2;
+    board[9][4] = 2;
+    auto vct_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    bool vct_setup_detected =
+        gomoku::opponent_has_unavoidable_vcf_setup(board, sz, 1, vct_deadline, 12, 48);
+    pass &= vct_setup_detected;
+    std::printf("[%s] one-reply VCT horizon proof\n", vct_setup_detected ? "PASS" : "FAIL");
+
     bool version_catalog = true;
     for (int i = 0; i < static_cast<int>(gomoku::EngineVersion::Count); ++i) {
         const char* name = gomoku::engine_version_name(static_cast<gomoku::EngineVersion>(i));

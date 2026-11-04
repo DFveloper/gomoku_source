@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko" data-profile="sangin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2a5232">
+  <meta name="description" content="15×15 Renju against Rapfi level 5, with post-game review.">
+  <meta property="og:title" content="Sangin Renju">
+  <meta property="og:description" content="Play 15×15 Renju against Rapfi level 5.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="__GOMOKU_ORIGIN__/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Sangin Renju">
+  <meta name="twitter:description" content="Play 15×15 Renju against Rapfi level 5.">
+  <meta name="twitter:image" content="__GOMOKU_ORIGIN__/og.png">
+  <title>Sangin · Renju</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="sangin.css">
+</head>
+<body>
+  <main class="app" aria-label="Sangin Renju game">
+    <section class="board-shell" aria-label="15 by 15 Renju board">
+      <canvas id="board" role="img" aria-label="15×15 렌주 바둑판. 빈 교차점을 누르면 흑돌을 놓습니다."></canvas>
+    </section>
+    <aside class="panel">
+      <header>
+        <p class="eyebrow">15×15 · RENJU</p>
+        <h1>SANGIN Gomoku</h1>
+        <p class="roles"><span><i class="stone black"></i>나 · 흑</span><span><i class="stone white"></i>RAPFI 5 · 백</span></p>
+      </header>
+      <section class="status-card" aria-live="polite">
+        <div><span class="status" id="status">내 차례</span><span class="spinner" id="spinner" hidden></span></div>
+        <span class="moves" id="moves">0수</span>
+      </section>
+      <section class="fixed-engine" aria-label="고정 대국 설정">
+        <span>AI</span><strong>RAPFI 2025 · LEVEL 5</strong>
+      </section>
+      <div class="actions" id="actions"></div>
+      <section class="review" id="review" hidden>
+        <div class="review-head">
+          <span id="ply">수순 0/0</span>
+          <div class="review-result" id="reviewResult"></div>
+        </div>
+        <canvas id="graph" aria-label="수순별 흑 승률"></canvas>
+      </section>
+      <footer><p>빈 교차점을 누르면 흑돌이 즉시 놓입니다.</p></footer>
+    </aside>
+  </main>
+  <div class="rules-backdrop" id="rulesDialog" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <section class="rules-card">
+      <p class="eyebrow">대국 전 안내</p>
+      <h2 id="rulesTitle">Renju 규칙</h2>
+      <ul>
+        <li>흑이 먼저 두며, 흑은 정확히 5목을 만들면 승리합니다.</li>
+        <li>흑의 장목(6목 이상), 3-3, 4-4는 금수라 둘 수 없습니다.</li>
+        <li>백은 5목 이상을 이으면 승리하며 금수 제한이 없습니다.</li>
+      </ul>
+      <p>15×15 고정 · Rapfi 레벨 5 · 히트맵 없음</p>
+      <button class="rules-start" id="rulesStart" type="button">대국 시작</button>
+    </section>
+  </div>
+  <input id="replayFile" type="file" accept=".txt,text/plain" hidden>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script src="../__GOMOKU_SCRIPT__" defer></script>
+</body>
+</html>

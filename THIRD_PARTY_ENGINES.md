@@ -32,7 +32,10 @@ Only the laptop-compatible runtime subset is embedded:
 
 - Rapfi uses the AVX2 executable, `model210901.bin`, and the required evaluator
   files including the Renju black/white weights.
-- AlphaGomoku uses the CPU runtime DLLs and only the Renju network.
+- AlphaGomoku uses the CPU runtime DLLs and only the Renju network. Current v3
+  also uses this trained 8x128 policy as its optional neural expert, followed
+  by Lumen's independent Renju/VCF/VCT validation; the classical engine remains
+  the automatic fallback when the runtime is absent.
 - Carbon and XL are compact standalone executables.
 
 The GUI sends both `INFO max_depth` and a calibrated turn-time budget. Legacy,

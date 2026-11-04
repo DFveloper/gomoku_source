@@ -5,6 +5,7 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o
  /mnt/openwebui/gomoku/AI_Gomoku_WebUI.cpp
  /mnt/openwebui/gomoku/engine_adapter.h
  /mnt/openwebui/gomoku/gomoku_core.h
+ /mnt/openwebui/gomoku/public_mode_common.h
  /usr/include/alloca.h
  /usr/include/arpa/inet.h
  /usr/include/asm-generic/bitsperlong.h

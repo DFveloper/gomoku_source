@@ -1,0 +1,57 @@
+.fixed-engine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 13px 14px;
+  border: 1px solid rgba(214, 224, 200, .2);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .16);
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+.fixed-engine strong { color: var(--cream); font-size: 14px; text-align: right; }
+.rules-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(10, 20, 12, .78);
+  backdrop-filter: blur(7px);
+}
+.rules-backdrop[hidden] { display: none; }
+.rules-card {
+  width: min(100%, 510px);
+  padding: clamp(26px, 5vw, 42px);
+  border: 1px solid rgba(214, 224, 200, .22);
+  border-radius: 12px;
+  background: var(--green-900);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .42);
+}
+.rules-card h2 { margin: 4px 0 18px; font: 700 clamp(30px, 7vw, 44px)/1 Georgia, serif; }
+.rules-card ul { margin: 0 0 18px; padding-left: 1.25em; color: var(--cream); font-size: 16px; line-height: 1.65; }
+.rules-card p:not(.eyebrow) { color: var(--muted); font-size: 14px; }
+.rules-start {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--lime);
+  color: #182318;
+  font: 900 16px/1 inherit;
+  cursor: pointer;
+}
+.rules-start:focus-visible { outline: 3px solid #f0b536; outline-offset: 3px; }
+
+html[data-profile="sangin"] .actions { grid-template-columns: 1fr; }
+html[data-profile="sangin"] .actions.review-actions { grid-template-columns: repeat(3, 1fr); }
+html[data-profile="sangin"] .action { text-align: center; }
+
+@media (max-width: 850px), (orientation: portrait) {
+  html[data-profile="sangin"] .actions { grid-template-columns: 1fr; }
+}

@@ -4,6 +4,7 @@
 CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o: /mnt/openwebui/gomoku/Gomoku_Engine_Match_WebUI.cpp \
   /mnt/openwebui/gomoku/engine_adapter.h \
   /mnt/openwebui/gomoku/gomoku_core.h \
+  /mnt/openwebui/gomoku/public_mode_common.h \
   /usr/include/alloca.h \
   /usr/include/arpa/inet.h \
   /usr/include/asm-generic/bitsperlong.h \
@@ -556,8 +557,6 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 
 /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h:
 
-/usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h:
-
 /usr/include/x86_64-linux-gnu/bits/siginfo-arch.h:
 
 /usr/include/x86_64-linux-gnu/bits/sigaction.h:
@@ -589,14 +588,6 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 /usr/include/c++/15/pstl/glue_numeric_defs.h:
 
 /usr/include/c++/15/cctype:
-
-/usr/include/x86_64-linux-gnu/bits/types.h:
-
-/usr/include/c++/15/bits/utility.h:
-
-/usr/lib/x86_64-linux-gnu/libgcc_s.so.1:
-
-/usr/include/linux/close_range.h:
 
 /usr/include/c++/15/bits/uniform_int_dist.h:
 
@@ -718,6 +709,12 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 
 /usr/include/c++/15/bits/concept_check.h:
 
+/usr/lib/x86_64-linux-gnu/libm.so.6:
+
+/usr/include/x86_64-linux-gnu/bits/locale.h:
+
+/usr/include/c++/15/bits/basic_ios.h:
+
 /usr/include/c++/15/tr1/modified_bessel_func.tcc:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
@@ -738,6 +735,20 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 
 /usr/include/c++/15/bits/algorithmfwd.h:
 
+/usr/include/x86_64-linux-gnu/bits/types.h:
+
+/usr/include/c++/15/bits/utility.h:
+
+/usr/lib/x86_64-linux-gnu/libgcc_s.so.1:
+
+/usr/include/linux/close_range.h:
+
+/usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h:
+
+/mnt/openwebui/gomoku/public_mode_common.h:
+
+/usr/include/c++/15/tr1/gamma.tcc:
+
 /usr/include/x86_64-linux-gnu/sys/poll.h:
 
 /usr/include/c++/15/bits/std_abs.h:
@@ -749,10 +760,6 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 /usr/include/c++/15/bits/random.tcc:
 
 /usr/include/c++/15/debug/debug.h:
-
-/usr/include/c++/15/bits/quoted_string.h:
-
-/usr/include/asm-generic/socket.h:
 
 /usr/include/c++/15/bits/stl_numeric.h:
 
@@ -787,6 +794,10 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 /usr/include/x86_64-linux-gnu/sys/wait.h:
 
 /usr/include/asm-generic/errno-base.h:
+
+/usr/include/c++/15/bits/quoted_string.h:
+
+/usr/include/asm-generic/socket.h:
 
 /usr/include/x86_64-linux-gnu/asm/types.h:
 
@@ -862,12 +873,6 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 
 /usr/include/c++/15/tr1/poly_hermite.tcc:
 
-/usr/include/c++/15/cmath:
-
-/usr/include/stdint.h:
-
-/usr/include/endian.h:
-
 /usr/include/c++/15/bits/ostream.h:
 
 /usr/include/c++/15/bits/stringfwd.h:
@@ -905,6 +910,14 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 /usr/include/c++/15/bits/allocated_ptr.h:
 
 /usr/include/c++/15/bits/istream.tcc:
+
+/usr/include/c++/15/bits/stl_algo.h:
+
+/usr/include/c++/15/bits/shared_ptr_atomic.h:
+
+/usr/include/c++/15/compare:
+
+/usr/include/c++/15/bits/cxxabi_forced.h:
 
 /usr/include/c++/15/bits/exception_defines.h:
 
@@ -958,13 +971,11 @@ gomoku_match_webui: /lib64/ld-linux-x86-64.so.2 \
 
 /usr/include/wchar.h:
 
-/usr/include/c++/15/bits/stl_algo.h:
+/usr/include/c++/15/cmath:
 
-/usr/include/c++/15/bits/shared_ptr_atomic.h:
+/usr/include/stdint.h:
 
-/usr/include/c++/15/compare:
-
-/usr/include/c++/15/bits/cxxabi_forced.h:
+/usr/include/endian.h:
 
 /usr/include/c++/15/exception:
 
@@ -1085,8 +1096,6 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o:
 /usr/include/x86_64-linux-gnu/sys/cdefs.h:
 
 /usr/include/c++/15/tr1/ell_integral.tcc:
-
-/usr/include/c++/15/tr1/gamma.tcc:
 
 /usr/lib/x86_64-linux-gnu/Scrt1.o:
 
@@ -1209,9 +1218,3 @@ CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o:
 /usr/include/x86_64-linux-gnu/bits/getopt_core.h:
 
 /usr/include/x86_64-linux-gnu/bits/inet-fortified.h:
-
-/usr/lib/x86_64-linux-gnu/libm.so.6:
-
-/usr/include/c++/15/bits/basic_ios.h:
-
-/usr/include/x86_64-linux-gnu/bits/locale.h:

@@ -403,6 +403,7 @@ void start_engine_turn() {
     if (!match_running || game_over || engine_thinking) return;
     int player = current_player();
     EngineConfig config = config_for(player);
+    EngineConfig opponent_config = config_for(3 - player);
     std::array<int, gomoku::kMaxBoard * gomoku::kMaxBoard> snapshot{};
     for (int r = 0; r < kSize; ++r)
         for (int c = 0; c < kSize; ++c) snapshot[r * gomoku::kMaxBoard + c] = board[r][c];
@@ -414,11 +415,44 @@ void start_engine_turn() {
         move_ready = false;
         pending_error.clear();
     }
-    std::thread([snapshot, moves, player, config, job]() {
+    std::thread([snapshot, moves, player, config, opponent_config, job]() {
         auto started = std::chrono::steady_clock::now();
         Move move{-1, -1};
         std::string error;
-        if (static_cast<int>(config.version) >= static_cast<int>(EngineVersion::CarbonClassic)) {
+        if (config.version == EngineVersion::CurrentV3 &&
+            opponent_config.version != EngineVersion::LegacyV1) {
+            int local[gomoku::kMaxBoard][gomoku::kMaxBoard] = {};
+            for (int r = 0; r < kSize; ++r)
+                for (int c = 0; c < kSize; ++c)
+                    local[r][c] = snapshot[r * gomoku::kMaxBoard + c];
+            Move win = gomoku::find_immediate_win(local, kSize, player);
+            Move block = gomoku::find_immediate_win(local, kSize, 3 - player);
+            if (win.r != -1) move = win;
+            else if (block.r != -1 &&
+                     !(player == 1 && gomoku::is_forbidden_move(local, kSize, block.r, block.c)))
+                move = block;
+            else {
+                move = external_best_move(EngineVersion::AlphaGomoku2026, snapshot, moves,
+                                          player, std::min(5, config.depth + 2), job, error);
+                if (gomoku::is_legal_move(local, kSize, player, move)) {
+                    local[move.r][move.c] = player;
+                    const auto deadline = std::chrono::steady_clock::now() +
+                                          std::chrono::milliseconds(350);
+                    const bool unsafe = gomoku::has_forced_four_win(local, kSize, 3 - player, 5, 320) ||
+                        gomoku::opponent_has_unavoidable_vcf_setup(
+                            local, kSize, 3 - player, deadline, 12, 48);
+                    local[move.r][move.c] = 0;
+                    if (unsafe) move = {-1, -1};
+                }
+                if (!gomoku::is_legal_move(local, kSize, player, move)) {
+                    gomoku::OpponentStyle style =
+                        gomoku::analyze_opponent_style(kSize, moves, 3 - player);
+                    move = gomoku::choose_ai_move(local, kSize, player,
+                        std::min(2, config.depth), &style, 0,
+                        last_move_for(moves, player));
+                }
+            }
+        } else if (static_cast<int>(config.version) >= static_cast<int>(EngineVersion::CarbonClassic)) {
             move = external_best_move(config.version, snapshot, moves, player,
                                       config.depth, job, error);
         } else {

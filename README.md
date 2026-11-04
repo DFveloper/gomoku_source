@@ -12,7 +12,8 @@ It has no web framework or runtime dependency.
 The AI opponent is selectable in-game: seven engines (Legacy v1, Strengthened
 v2, Current v3 MT, Carbon Classic, Rapfi 2025 AVX2, AlphaGomoku MK26,
 XL / Niren) at search levels 1-5. Legacy and v2 use the level as fixed search
-depth; Current v3 uses one extra ply at levels 1-2 and fixed wall-clock budgets.
+depth; Current v3's classical fallback uses one extra ply at levels 1-2 and
+fixed wall-clock budgets, while its trained neural policy is time-managed.
 External engines receive the level as their depth/time control. External
 runtimes are auto-detected under `third_party/runtime/` and marked
 `NOT FOUND` in the dropdown when missing; if an external engine fails or
@@ -36,6 +37,46 @@ initial board can be selected with `--board 9..30`.
 Use `-t N` or `--threads N` (`N` = 1-32) to set the AI search thread limit. If omitted, the
 engine selects the worker count automatically (up to its internal maximum).
 
+### aeonthic.com deployment
+
+Build and start both loopback-only WebUIs with:
+
+```bash
+./start_webuis.sh start
+```
+
+The default ports are `18899` for `/gomoku/` and `18900` for
+`/gomoku_match/`. Use `status`, `stop`, `restart`, or `logs` in place of
+`start` for service management. Environment variables such as
+`GOMOKU_THREADS`, `GOMOKU_PORT`, and `GOMOKU_MATCH_PORT` override the defaults.
+The matching Apache reverse-proxy directives are in
+`deploy/apache-gomoku-paths.conf`.
+
+The main Gomoku process also routes the dedicated Sangin page itself at
+`/gomoku/sangin/`; no Sangin-specific Apache rule is needed. Sangin is fixed
+to a 15x15 Renju game against Rapfi at level 5. It has no engine/level or
+board-size selector, heatmap, undo, save/load, or keyboard shortcuts. A short
+Renju notice is shown before each new game, including black's overline,
+double-three, and double-four restrictions. Post-game move review remains
+available. On both public game pages, a valid tap paints the black stone before
+the AI request begins.
+
+To build, register both WebUIs for boot, and start them immediately under
+systemd, run:
+
+```bash
+sudo ./deploy/install_webui_autostart.sh
+```
+
+Defaults can be adjusted later in `/etc/default/aeonthic-gomoku`; restart
+`aeonthic-gomoku.service` and `aeonthic-gomoku-match.service` after edits.
+
+The deployment script starts both services with `--public-mode`. In that mode,
+each browser keeps its game and model-match records in browser IndexedDB (with
+a localStorage fallback and a cookie that marks browser-only storage). The C++
+servers expose stateless move-calculation endpoints only: shared stateful APIs,
+server replay loading, and server log/replay writes return `404`.
+
 ### Model Match WebUI
 
 Build and run the engine-versus-engine spectator UI separately:
@@ -45,8 +86,10 @@ cmake --build build --target gomoku_match_webui
 ./build/gomoku_match_webui --host 127.0.0.1 --port 8081 -t 32
 ```
 
-The included source tree runs Legacy v1, Strengthened v2, and Current v3 MT
-in-process. The four external engines run as child processes through Gomocup
+The included source tree runs Legacy v1 and Strengthened v2 in-process. Current
+v3 MT uses its in-process tactical solver plus the bundled AlphaGomoku Renju
+network as a child-process neural policy when available. The four standalone
+external engines run as child processes through Gomocup
 protocol adapters when their native Linux ports exist under
 `third_party/runtime/` — build them with
 `cmake --build build --target third_party_engines` or
@@ -142,11 +185,21 @@ extra ply because the transposition table keeps them within the same practical
 time envelope. This prevents a difficult move from running for a minute while
 preserving deterministic completed searches.
 
+On 15x15 and 20x20, Current v3 is an adaptive neural/VCT ensemble. It obtains a
+candidate from the bundled trained AlphaGomoku 8x128 Renju convolutional
+network with a policy level two steps above the selected level (capped at 5),
+then applies Lumen's immediate-win, mandatory-defense, forbidden-move, VCF and
+VCT checks. Missing model runtimes fall back automatically to the standalone
+alpha-beta engine. Engine-match mode selects that classical expert directly
+against Legacy, where it is measurably stronger than the neural expert.
+
 Before the normal root search, each candidate also receives a 160-node bounded
 VCF safety probe. A move that hands the opponent a proven continuous-four win
-is discarded without expanding its full tree. The probe is deliberately kept
-out of internal nodes: broader VCT experiments improved some AlphaGomoku lines
-but reduced strength against Rapfi and Carbon.
+is discarded without expanding its full tree. Neural policy moves additionally
+receive a one-reply VCT audit: an opponent setup is rejected only if every legal
+Renju defense still leaves a bounded VCF. Timeout is treated as unknown, never
+as a loss. Broad VCT inside every alpha-beta node remains disabled because it
+reduced strength against Rapfi and Carbon.
 
 Human moves are analyzed online for attack, defense, locality, center, and directional preferences. After neutral opening priors, the recent style profile changes which opponent replies are retained and searched first; tactical replies are still evaluated with worst-case negamax rather than assuming the prediction is always correct. At least 75% of each selective reply set comes from the style-free baseline, so a surprising human move is not discarded merely because it does not match the learned profile.
 
@@ -169,9 +222,15 @@ the benchmark target. External engines are retried exactly like the Match UI:
 cmake --build build --target engine_benchmark
 # opponent id: 0 Legacy, 1 v2, 3 Carbon, 4 Rapfi, 5 AlphaGomoku, 6 XL
 ./build/engine_benchmark 4 3 1 8
+# optional fifth argument sets Current v3's level independently
+./build/engine_benchmark 5 3 1 8 3
 ```
 
 The reproducible legacy-versus-strengthened match results and limitations are in [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md).
+The current neural/VCT profile won all measured paired games: 2-0 against
+Legacy, v2, Carbon, Rapfi and XL, plus 4-0 against Alpha over two openings.
+This is a regression suite, not a solved-game or statistically stable rating
+claim. Level-3 Current v3 peaked at 6.81 seconds per move in that suite.
 
 For scripted style-aware analysis, optional depth and thread limits can be supplied:
 

@@ -13,6 +13,11 @@ const replayFileEl = document.querySelector('#replayFile');
 const toastEl = document.querySelector('#toast');
 const engineSelect = document.querySelector('#engineSelect');
 const levelSelect = document.querySelector('#levelSelect');
+const appBasePath = new URL(document.currentScript.src).pathname.replace(/\/app\.js$/, '');
+
+function appUrl(path) {
+  return `${appBasePath}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 let state = null;
 let fetching = false;
@@ -33,7 +38,7 @@ function toast(message) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(path, options);
+  const response = await fetch(appUrl(path), options);
   const type = response.headers.get('content-type') || '';
   const result = type.includes('json') ? await response.json() : await response.text();
   if (!response.ok) throw new Error(result.error || result || 'Request failed');
@@ -264,18 +269,28 @@ boardCanvas.addEventListener('pointerup', async event => {
   const r = Math.round((event.clientY - rect.top - margin) / cell);
   const x = margin + c * cell, y = margin + r * cell;
   if (r < 0 || c < 0 || r >= state.size || c >= state.size || Math.hypot(event.clientX - rect.left - x, event.clientY - rect.top - y) > Math.max(18, cell / 2)) return;
+  const previous = state;
+  const board = state.board.map(row => row.slice());
+  board[r][c] = 1;
+  state = {...state, board, moves: [...state.moves, [r, c]], last: [r, c], aiThinking: true, status: 'CALCULATING...'};
+  render();
   try {
     const next = await request('/api/move', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({r,c})});
     if (!state || next.revision >= state.revision) { state = next; render(); }
-  } catch (error) { toast(error.message === 'forbidden move' ? 'Forbidden move for black' : error.message); refresh(); }
+  } catch (error) {
+    state = previous;
+    render();
+    toast(error.message === 'forbidden move' ? 'Forbidden move for black' : error.message);
+    refresh();
+  }
 });
 
 actionsEl.addEventListener('click', event => {
   const name = event.target.closest('button')?.dataset.action;
   if (!name) return;
   if (['new','undo','heat','size','prev','next','end'].includes(name)) action(name);
-  else if (name === 'log') window.location.assign('/api/log');
-  else if (name === 'replay') window.location.assign('/api/replay');
+  else if (name === 'log') window.location.assign(appUrl('/api/log'));
+  else if (name === 'replay') window.location.assign(appUrl('/api/replay'));
   else if (name === 'load') replayFileEl.click();
 });
 
@@ -305,12 +320,14 @@ document.addEventListener('keydown', event => {
   const key = event.key.toLowerCase();
   if (state?.reviewMode) {
     if (key === 'a') action('prev'); else if (key === 'd') action('next'); else if (key === 'e') action('end');
-    else if (key === 's') window.location.assign('/api/replay'); else if (key === 'l') replayFileEl.click(); else if (key === 'n') action('new');
+    else if (key === 's') window.location.assign(appUrl('/api/replay')); else if (key === 'l') replayFileEl.click(); else if (key === 'n') action('new');
   } else {
     if (key === 'n') action('new'); else if (key === 'u') action('undo'); else if (key === 'd') action('heat');
-    else if (key === 's') window.location.assign('/api/log'); else if (key === 'l') replayFileEl.click();
+    else if (key === 's') window.location.assign(appUrl('/api/log')); else if (key === 'l') replayFileEl.click();
   }
-  if (key === 'q') request('/api/quit', {method:'POST'}).then(() => { statusEl.textContent = 'SERVER STOPPED'; });
+  if (key === 'q') request('/api/quit', {method:'POST'})
+    .then(() => { statusEl.textContent = 'SERVER STOPPED'; })
+    .catch(error => toast(error.message));
 });
 
 new ResizeObserver(() => { drawBoard(); drawGraph(); }).observe(document.querySelector('.app'));

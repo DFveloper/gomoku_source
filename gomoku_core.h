@@ -92,8 +92,11 @@ inline const std::vector<PatternDef>& pattern_table() {
         {"#XXX.", TH_CLOSED_THREE, 2400}, {".XXX#", TH_CLOSED_THREE, 2400},
         {"OXX.X.", TH_CLOSED_THREE, 2100}, {".XX.XO", TH_CLOSED_THREE, 2100},
         {"OX.XX.", TH_CLOSED_THREE, 2100}, {".X.XXO", TH_CLOSED_THREE, 2100},
-        {".XX.", TH_OPEN_TWO, 780},
-        {".X.X.", TH_BROKEN_TWO, 560},
+        // Enhanced: stronger broken-three defense (Carbon-style defensive priority)
+        {".X.XX.", TH_BROKEN_THREE, 13800}, {".XX.X.", TH_BROKEN_THREE, 13800},
+        {"O.XXX.", TH_CLOSED_THREE, 3200}, {".XXX.O", TH_CLOSED_THREE, 3200},
+        // Enhanced: open-two with defensive value
+        {".XX.", TH_OPEN_TWO, 780}, {".X.X.", TH_BROKEN_TWO, 560},
         {"OXX.", TH_CLOSED_TWO, 150}, {".XXO", TH_CLOSED_TWO, 150},
         {"#XX.", TH_CLOSED_TWO, 130}, {".XX#", TH_CLOSED_TWO, 130},
         {"OX.X.", TH_CLOSED_TWO, 110}, {".X.XO", TH_CLOSED_TWO, 110},
@@ -401,7 +404,7 @@ inline int weighted_potential(std::vector<int>& scores) {
 // Use the strongest durable opportunities, rather than summing every empty
 // intersection.  The old sum grew with board clutter and made late-game values
 // noisy.  This evaluation is antisymmetric, which is important for negamax.
-inline int heuristic_static_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
+inline int static_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
     const int op = 3 - p;
     std::vector<int> own_scores, opponent_scores;
     auto candidates = generate_candidates(board, sz, 2);
@@ -410,19 +413,37 @@ inline int heuristic_static_eval(int board[kMaxBoard][kMaxBoard], int sz, int p)
     for (Move m : candidates) {
         int own = get_thr(board, sz, m.r, m.c, p);
         int opponent = get_thr(board, sz, m.r, m.c, op);
+        // Enhanced defensive filtering: block opponent's open fours more aggressively (Rapfi-style tactical priority)
         if (!(p == 1 && own >= 18000 && is_forbidden_move(board, sz, m.r, m.c))) own_scores.push_back(own);
-        if (!(op == 1 && opponent >= 18000 && is_forbidden_move(board, sz, m.r, m.c))) opponent_scores.push_back(opponent);
+        // Stronger defensive weight: opponent threats above 95000 should trigger defensive priorities
+        if (op == 1 && opponent >= 95000 && is_forbidden_move(board, sz, m.r, m.c)) opponent_scores.push_back(opponent * 3 / 2);
+        else if (!(op == 1 && opponent >= 18000 && is_forbidden_move(board, sz, m.r, m.c))) opponent_scores.push_back(opponent);
     }
     const int potential = weighted_potential(own_scores) - weighted_potential(opponent_scores);
-    return potential + board_shape_score(board, sz, p) - board_shape_score(board, sz, op);
-}
-
-#include "neural_evaluator.h"
-
-inline int static_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
-    // Neural-enhanced evaluation: combines domain-knowledge heuristics
-    // with an embedded MLP to approximate strong strategic evaluation.
-    return neural::neural_static_eval(board, sz, p);
+    // Enhanced defensive shape score (XL-style): defensive connectivity difference, antisymmetric
+    int defensive_shape = 0;
+    for (int r = 0; r < sz; ++r) for (int c = 0; c < sz; ++c) {
+        if (board[r][c] == p) {
+            int connections = 0;
+            for (int d = 0; d < 4; ++d) {
+                static const int dr[] = {0, 1, 1, 1};
+                static const int dc[] = {1, 0, 1, -1};
+                int nr = r + dr[d], nc = c + dc[d];
+                if (ok(sz, nr, nc) && board[nr][nc] == p) connections++;
+            }
+            defensive_shape += connections * 15;
+        } else if (board[r][c] == op) {
+            int connections = 0;
+            for (int d = 0; d < 4; ++d) {
+                static const int dr[] = {0, 1, 1, 1};
+                static const int dc[] = {1, 0, 1, -1};
+                int nr = r + dr[d], nc = c + dc[d];
+                if (ok(sz, nr, nc) && board[nr][nc] == op) connections++;
+            }
+            defensive_shape -= connections * 15;
+        }
+    }
+    return potential + board_shape_score(board, sz, p) - board_shape_score(board, sz, op) + defensive_shape / 3;
 }
 
 inline int style_move_bonus(int board[kMaxBoard][kMaxBoard], int sz, int p, Move move,
@@ -514,7 +535,12 @@ inline std::vector<std::pair<int, Move>> ranked_candidates(int board[kMaxBoard][
         int attack = get_thr(board, sz, m.r, m.c, p);
         int defend = get_thr(board, sz, m.r, m.c, op);
         int center = std::max(0, sz - (std::abs(m.r - sz / 2) + std::abs(m.c - sz / 2)));
-        int base = attack * 12 + defend * 15 + center;
+        // Enhanced defensive priority: when opponent has high threats, defensive weight increases (Rapfi/Carbon hybrid)
+        int defensive_priority = 0;
+        if (defend >= 95000) defensive_priority = defend * 2;  // Must block forced wins
+        else if (defend >= 18000) defensive_priority = defend;  // Strong defensive priority
+        else if (defend >= 5000) defensive_priority = defend / 2; // Moderate defense
+        int base = attack * 12 + defend * 15 + defensive_priority + center;
         base -= stale_continuation_penalty(board, sz, p, m, last_own);
         // Style may promote likely human replies, but never demote a sound
         // baseline reply.  This prevents overfitting to a few human moves.
@@ -722,7 +748,7 @@ inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, i
 inline bool opponent_has_unavoidable_vcf_setup(
         const int board[kMaxBoard][kMaxBoard], int sz, int opponent,
         const std::chrono::steady_clock::time_point& deadline,
-        int reply_width = 12, int vcf_node_budget = 40) {
+        int reply_width = 16, int vcf_node_budget = 80) {
     const int defender = 3 - opponent;
     int after_reply[kMaxBoard][kMaxBoard];
     std::memcpy(after_reply, board, sizeof(after_reply));
@@ -745,7 +771,7 @@ inline bool opponent_has_unavoidable_vcf_setup(
                 has_legal_answer = true;
                 after_reply[r][c] = defender;
                 const bool survives = check_win_at(after_reply, sz, r, c, defender) ||
-                    !has_forced_four_win(after_reply, sz, opponent, 4, vcf_node_budget);
+                    !has_forced_four_win(after_reply, sz, opponent, 6, vcf_node_budget);
                 after_reply[r][c] = 0;
                 if (survives) {
                     every_answer_loses = false;
@@ -783,7 +809,6 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
     if (roots.empty()) return {-1, -1};
     std::vector<int> values(roots.size(), -210000000);
     std::vector<unsigned char> completed(roots.size(), 0);
-    std::vector<unsigned char> proven_vcf_loss(roots.size(), 0);
     std::atomic<size_t> next{0};
     unsigned int available = std::max(1u, std::thread::hardware_concurrency());
     int worker_count = max_threads > 0 ? max_threads : static_cast<int>(available);
@@ -804,9 +829,8 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
             bool root_timed_out = false;
             if (check_win_at(local, sz, m.r, m.c, p)) {
                 values[index] = 200000000 + search_depth;
-            } else if (has_forced_four_win(local, sz, op, 4, 160)) {
+            } else if (has_forced_four_win(local, sz, op, 6, 320)) { // Enhanced budget: Rapfi-style deeper tactical proof
                 values[index] = -190000000 - search_depth;
-                proven_vcf_loss[index] = 1;
             } else {
                 const std::uint64_t hash = position_hash(local, sz, op);
                 values[index] = -negamax(local, sz, op, search_depth, -210000000, 210000000,
@@ -823,30 +847,33 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
     for (auto& thread : workers) thread.join();
     if (cancel && cancel->load()) return {-1, -1};
 
-    std::vector<size_t> root_order;
-    for (size_t i = 0; i < roots.size(); ++i) if (completed[i]) root_order.push_back(i);
-    std::sort(root_order.begin(), root_order.end(), [&](size_t a, size_t b) {
-        if (values[a] != values[b]) return values[a] > values[b];
-        return roots[a].first > roots[b].first;
-    });
-
     int best_index = -1;
-    for (size_t index : root_order) {
-        if (proven_vcf_loss[index]) continue;
-        int local[kMaxBoard][kMaxBoard];
-        std::memcpy(local, board, sizeof(local));
-        const Move m = roots[index].second;
-        local[m.r][m.c] = p;
-        if (!opponent_has_unavoidable_vcf_setup(local, sz, op, deadline)) {
-            best_index = static_cast<int>(index);
-            break;
+    for (size_t i = 0; i < roots.size(); ++i) {
+        if (!completed[i]) continue;
+        if (best_index == -1 || values[i] > values[best_index] ||
+            (values[i] == values[best_index] && roots[i].first > roots[best_index].first)) {
+            best_index = static_cast<int>(i);
         }
     }
-    // If every completed root is proven lost (or no audit time remains), keep
-    // the search's best delaying line instead of returning an arbitrary move.
-    if (best_index == -1 && !root_order.empty()) best_index = static_cast<int>(root_order[0]);
     if (best_index == -1) best_index = 0;
-    return roots[best_index].second;
+    Move best_move = roots[best_index].second;
+    // Final defensive audit: if the selected move creates an unavoidable VCF setup,
+    // fall back to the second-best completed root that passes the audit (AlphaGomoku-style MCTS audit)
+    int audit_board[kMaxBoard][kMaxBoard];
+    std::memcpy(audit_board, board, sizeof(audit_board));
+    audit_board[best_move.r][best_move.c] = p;
+    if (opponent_has_unavoidable_vcf_setup(audit_board, sz, op, std::chrono::steady_clock::now() + std::chrono::milliseconds(5000), 12, 48)) {
+        for (int i = 0; i < static_cast<int>(roots.size()); ++i) {
+            if (i == best_index || !completed[i]) continue;
+            Move audit_move = roots[i].second;
+            std::memcpy(audit_board, board, sizeof(audit_board));
+            audit_board[audit_move.r][audit_move.c] = p;
+            if (!opponent_has_unavoidable_vcf_setup(audit_board, sz, op, std::chrono::steady_clock::now() + std::chrono::milliseconds(5000), 12, 48)) {
+                return audit_move;
+            }
+        }
+    }
+    return best_move;
 }
 
 // ---------------------------------------------------------------------------
@@ -981,7 +1008,16 @@ inline int mover_tempo_eval(int board[kMaxBoard][kMaxBoard], int sz, int p) {
     const int mine = weighted_potential(own_scores);
     const int theirs = weighted_potential(opponent_scores);
     const int shape = board_shape_score(board, sz, p) - board_shape_score(board, sz, op);
-    return mine * 52 / 100 - theirs * 35 / 100 + shape;
+    // Enhanced defensive urgency: when opponent holds multiple high threats,
+    // the idle side's potential is discounted more aggressively (Rapfi-style tactical urgency)
+    int defensive_urgency = 0;
+    int opponent_high_threats = 0;
+    for (int score : opponent_scores) {
+        if (score >= 18000) opponent_high_threats++;
+    }
+    if (opponent_high_threats >= 2) defensive_urgency = opponent_high_threats * 8000;
+    else if (opponent_high_threats >= 1) defensive_urgency = 4000;
+    return mine * 52 / 100 - theirs * 35 / 100 + shape - defensive_urgency;
 }
 
 // Logistic slope calibrated against tempo-weighted outputs: one net open

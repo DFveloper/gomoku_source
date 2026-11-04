@@ -232,7 +232,6 @@ CMakeFiles/gomoku_cli.dir/gomoku_cli.cpp.o: \
  /usr/include/c++/15/bits/unique_ptr.h \
  /usr/include/c++/15/bits/this_thread_sleep.h /usr/include/c++/15/utility \
  /usr/include/c++/15/bits/stl_relops.h \
- /mnt/openwebui/gomoku/neural_evaluator.h \
  /mnt/openwebui/gomoku/engine_adapter.h /usr/include/c++/15/filesystem \
  /usr/include/c++/15/bits/fs_fwd.h /usr/include/c++/15/bits/fs_path.h \
  /usr/include/c++/15/locale \

@@ -4,6 +4,7 @@
 CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o: /mnt/openwebui/gomoku/AI_Gomoku_WebUI.cpp \
   /mnt/openwebui/gomoku/engine_adapter.h \
   /mnt/openwebui/gomoku/gomoku_core.h \
+  /mnt/openwebui/gomoku/public_mode_common.h \
   /usr/include/alloca.h \
   /usr/include/arpa/inet.h \
   /usr/include/asm-generic/bitsperlong.h \
@@ -551,8 +552,6 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h:
 
-/usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h:
-
 /usr/include/x86_64-linux-gnu/bits/siginfo-arch.h:
 
 /usr/include/x86_64-linux-gnu/bits/sigaction.h:
@@ -575,23 +574,13 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/poll.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h:
-
-/usr/include/c++/15/concepts:
+/usr/include/x86_64-linux-gnu/bits/mathcalls.h:
 
 /usr/include/c++/15/bits/stl_algo.h:
 
 /usr/include/c++/15/clocale:
 
 /usr/include/c++/15/cctype:
-
-/usr/include/x86_64-linux-gnu/bits/types.h:
-
-/usr/include/c++/15/bits/utility.h:
-
-/usr/lib/x86_64-linux-gnu/libgcc_s.so.1:
-
-/usr/include/linux/close_range.h:
 
 /usr/include/c++/15/bits/uniform_int_dist.h:
 
@@ -737,15 +726,25 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 
 /usr/include/c++/15/bits/algorithmfwd.h:
 
+/usr/include/x86_64-linux-gnu/bits/types.h:
+
+/usr/include/c++/15/bits/utility.h:
+
+/usr/lib/x86_64-linux-gnu/libgcc_s.so.1:
+
+/usr/include/linux/close_range.h:
+
+/usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h:
+
+/mnt/openwebui/gomoku/public_mode_common.h:
+
+/usr/include/c++/15/tr1/gamma.tcc:
+
 /usr/include/x86_64-linux-gnu/sys/poll.h:
 
 /usr/include/c++/15/bits/std_abs.h:
 
 /usr/include/c++/15/typeinfo:
-
-/usr/include/c++/15/bits/quoted_string.h:
-
-/usr/include/asm-generic/socket.h:
 
 /usr/include/c++/15/bits/stl_iterator.h:
 
@@ -778,6 +777,10 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 /usr/include/x86_64-linux-gnu/sys/wait.h:
 
 /usr/include/asm-generic/errno-base.h:
+
+/usr/include/c++/15/bits/quoted_string.h:
+
+/usr/include/asm-generic/socket.h:
 
 /usr/include/c++/15/bits/locale_classes.tcc:
 
@@ -853,6 +856,10 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 
 /usr/include/c++/15/bits/alloc_traits.h:
 
+/usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h:
+
+/usr/include/c++/15/concepts:
+
 /usr/include/c++/15/bits/std_function.h:
 
 /usr/include/c++/15/bits/codecvt.h:
@@ -878,6 +885,12 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 /usr/include/c++/15/bits/allocated_ptr.h:
 
 /usr/include/c++/15/bits/istream.tcc:
+
+/usr/include/c++/15/bits/shared_ptr_atomic.h:
+
+/usr/include/c++/15/compare:
+
+/usr/include/c++/15/bits/cxxabi_forced.h:
 
 /usr/include/c++/15/bits/exception_defines.h:
 
@@ -932,12 +945,6 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 /usr/include/c++/15/sstream:
 
 /usr/include/wchar.h:
-
-/usr/include/c++/15/bits/shared_ptr_atomic.h:
-
-/usr/include/c++/15/compare:
-
-/usr/include/c++/15/bits/cxxabi_forced.h:
 
 /usr/include/c++/15/exception:
 
@@ -1048,8 +1055,6 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 /usr/include/x86_64-linux-gnu/sys/cdefs.h:
 
 /usr/include/c++/15/tr1/ell_integral.tcc:
-
-/usr/include/c++/15/tr1/gamma.tcc:
 
 /usr/lib/x86_64-linux-gnu/Scrt1.o:
 
@@ -1192,5 +1197,3 @@ CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o:
 /usr/include/c++/15/mutex:
 
 /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h:
-
-/usr/include/x86_64-linux-gnu/bits/mathcalls.h:

@@ -1,3 +1,2 @@
-gomoku_tactical_and_style_regression 5 0
+gomoku_tactical_and_style_regression 13 0.172572
 ---
-gomoku_tactical_and_style_regression

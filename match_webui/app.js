@@ -6,13 +6,15 @@ const randomPlies = $('#randomPlies'), pliesValue = $('#pliesValue');
 const rangeRow = $('#rangeRow'), undoOpening = $('#undoOpening');
 const startButton = $('#start'), resetButton = $('#reset');
 const toastEl = $('#toast');
+const appBasePath = new URL(document.currentScript.src).pathname.replace(/\/app\.js$/, '');
 let state, fetching = false, toastTimer;
 let postQueue = Promise.resolve();
 let configDraft;
 
 function toast(message) { toastEl.textContent = message; toastEl.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.hidden = true, 2000); }
 async function request(path, options = {}) {
-  const response = await fetch(path, options), result = await response.json();
+  const url = `${appBasePath}${path.startsWith('/') ? path : `/${path}`}`;
+  const response = await fetch(url, options), result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Request failed');
   return result;
 }
@@ -92,7 +94,7 @@ document.querySelector('.segmented').addEventListener('click',event=>{const mode
 undoOpening.addEventListener('click',()=>post('/api/match/undo-opening'));startButton.addEventListener('click',()=>post('/api/match/start'));resetButton.addEventListener('click',()=>post('/api/match/reset'));
 board.addEventListener('pointerup',event=>{if(!state||state.phase!=='setup'||state.openingMode!=='custom')return;const {rect,margin,cell}=metrics(),c=Math.round((event.clientX-rect.left-margin)/cell),r=Math.round((event.clientY-rect.top-margin)/cell);if(r>=0&&c>=0&&r<state.size&&c<state.size)post('/api/match/opening',{r,c});});
 board.addEventListener('contextmenu',event=>{event.preventDefault();if(state?.phase==='setup'&&state.openingMode==='custom')post('/api/match/undo-opening');});
-document.addEventListener('keydown',event=>{if(event.target.matches('select,input'))return;const key=event.key.toLowerCase();if(key==='enter'&&state?.phase==='setup')post('/api/match/start');else if(key==='r')post('/api/match/reset');else if(key==='u')post('/api/match/undo-opening');else if(key==='q')request('/api/match/quit',{method:'POST'}).then(()=>$('#status').textContent='SERVER STOPPED');});
+document.addEventListener('keydown',event=>{if(event.target.matches('select,input'))return;const key=event.key.toLowerCase();if(key==='enter'&&state?.phase==='setup')post('/api/match/start');else if(key==='r')post('/api/match/reset');else if(key==='u')post('/api/match/undo-opening');else if(key==='q')request('/api/match/quit',{method:'POST'}).then(()=>$('#status').textContent='SERVER STOPPED').catch(error=>toast(error.message));});
 new ResizeObserver(drawBoard).observe(document.querySelector('.arena'));
 async function refresh(){if(fetching)return;fetching=true;try{const next=await request('/api/match/state');const changed=!state||next.revision>state.revision;if(changed){state=next;render();}}catch{ $('#status').textContent='CONNECTION LOST'; }finally{fetching=false;}}
 refresh();setInterval(refresh,250);

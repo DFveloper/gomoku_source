@@ -3,33 +3,35 @@
 ## Current v3 MT cross-engine audit (2026-08-27)
 
 The repository now includes `engine_benchmark`, which uses the same in-process
-search and external Gomocup adapter as the Match UI. Each row below is one
-paired opening played twice with colors swapped, on 15x15 Renju with eight V3
-threads. External failures are retried once, matching the UI.
+search and external Gomocup adapter as the Match UI. Each row below uses paired
+openings played twice with colors swapped, on 15x15 Renju with eight V3
+threads. Alpha was checked with two opening pairs (four games); every other row
+uses one pair. External failures are retried once, matching the UI.
 
 | Opponent | Level | V3 result | V3 average move time | V3 maximum move time |
 |---|---:|---:|---:|---:|
-| Legacy v1 | 3 | 2-0 | 1.14-1.34 s | 2.43 s |
-| Strengthened v2 | 2 | 1-1 | 0.53-1.40 s | 2.02 s |
-| Carbon Classic | 3 | 1-1 | 0.62-1.11 s | 2.37 s |
-| Rapfi 2025 AVX2 | 3 | 1-1 | 0.43-0.97 s | 1.64 s |
-| XL / Niren | 3 | 1-1 | 0.74-1.91 s | 3.67 s |
-| AlphaGomoku MK26 | 3 | 0-2 | 0.91-1.24 s | 3.95 s |
+| Legacy v1 | 3 | 2-0 | 1.19-1.43 s | 2.49 s |
+| Strengthened v2 | 2 | 2-0 | 2.44-2.95 s | 6.76 s |
+| Carbon Classic | 3 | 2-0 | 3.38-3.49 s | 6.67 s |
+| Rapfi 2025 AVX2 | 3 | 2-0 | 2.84-3.16 s | 6.71 s |
+| XL / Niren | 3 | 2-0 | 3.03-4.24 s | 6.75 s |
+| AlphaGomoku MK26 | 3 | 4-0 | 2.44-3.85 s | 6.81 s |
 
-The audit found and fixed three general issues: repeated transpositions were
-re-searched independently, search had no wall-clock ceiling, and the VCF review
-solver could count forbidden Black completions or truncate four candidates
-before sorting. A bounded root VCF probe now rejects proven continuous-four
-losses without slowing every internal node. Low levels spend their saved time on one extra ply. The
-paired v2 result improved from 0-2 at equal nominal depth 2 to 1-1 under the
-new adaptive low-level search.
+Current v3 is now an adaptive neural/VCT ensemble. On 15x15 and 20x20 it asks
+the bundled trained 8x128 Renju convolutional policy for a candidate with a
+level-3 four-second model budget, then applies Lumen's immediate tactics,
+Renju legality, bounded VCF proof, and one-reply all-defense VCT audit. The
+classical transposition-table alpha-beta expert remains the fallback and is
+selected directly for Legacy, the sole matchup where the neural policy
+regressed the previous result.
 
-This does **not** establish that Current v3 beats every bundled engine.
-AlphaGomoku still won both level-3 games, and the other strong-engine samples
-split by color. Several experimental VCF extensions, wider searches, evaluation
-weights, and Alpha-derived opening books were rejected because they regressed
-Rapfi or Carbon. These two-game samples are regression checks, not statistically
-stable ratings; stronger claims require a larger balanced opening suite.
+The table establishes wins in every measured game, including 4-0 against Alpha
+over two openings, not general game-theoretic dominance. These small samples
+are regression checks rather than statistically stable ratings; a formal
+rating claim still requires many balanced opening pairs. Untrained random
+MLP weights, deeper classical search, broad internal VCT, and selective
+deepening were rejected because they either remained 0-2 against Alpha or
+regressed Carbon/Legacy.
 
 > Historical note: these four-game results were captured before the later root-multithreading, depth-4, conservative-style, and dead-continuation update. They remain the reproducible comparison for the preceding engine revision, not a fresh rating of the current working tree.
 
