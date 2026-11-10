@@ -191,6 +191,109 @@ gate a *change*, not to gate every build.
 
 ---
 
+## Part 1b — Equal-time results against Rapfi (2026-11-09)
+
+The goal for this round was explicit: beat Rapfi, Alpha and the rest **inside
+the same per-move time budget**, bit-exactness not required. This section records
+what was actually measured, because the honest answer is that the goal was not
+reached, and the measurement itself is the most useful thing produced.
+
+### Getting a measuring stick
+
+The bundled external runtimes cannot run on this host: they are linked against
+`GLIBC_2.38`/`GLIBCXX_3.4.32` and the sandbox has glibc 2.36, so every one of
+them exits at load time. That alone invalidates any "beats Rapfi" claim made
+from this checkout — the benchmark would silently report the built-in engine
+playing against nothing.
+
+`tools/build_native_engines.sh` (new) builds the engines for the host instead:
+Rapfi from source with `-DNO_COMMAND_MODULES=ON` and `-march=native`, XL from
+source with the repo's compat header. The native binaries are written beside the
+bundled ones (`.native-<glibc>` suffix, git-ignored) and `tools/duel` prefers
+them. Carbon and AlphaGomoku are not buildable here (Carbon's sources are an
+empty submodule; AlphaGomoku's tree did not build), so **Rapfi is the only
+external opponent with a working, equal-time measuring stick on this machine.**
+
+`tools/duel` (new) is the referee: one persistent engine session per game, both
+sides on the same per-move clock, Renju rules for both, colour-swapped openings,
+and per-colour reporting. Games the opponent forfeits to a crash, timeout or
+protocol error are reported as `VOID` and excluded from the score rather than
+counted as wins — an early run of this tool "won" 2-0 against XL purely because
+XL was mis-parsing the board.
+
+### Results
+
+Per-move budget 1000 ms for both sides, 2 threads, 15x15 Renju:
+
+| Match | Core budget | Result |
+|---|---|---:|
+| vs native Rapfi | 1000 ms | **0-6** |
+| vs native Rapfi | 4000 ms (4x) | **0-2** |
+| vs native Rapfi (after the tactical changes below) | 1000 ms | **0-6** |
+
+Rapfi searches at roughly 130,000 nodes/second to depth 16-31 inside one second.
+Giving the in-tree engine **four times** Rapfi's clock did not win a game, which
+is the important number: the gap is structural, not a tuning deficit. No amount
+of extra time closes it, so "beat Rapfi in equal time" is not reachable by
+speed work.
+
+### What was changed anyway, and what it bought
+
+Two real weaknesses were found by analysing the losses, and both are fixed:
+
+1. **The search had no reserved time for tactics.** The alpha-beta pass ran until
+   the deadline and the safety audits ran *after* it, so their cost was paid out
+   of the *next* move's budget. `choose_ai_move` now reserves
+   `min(400 ms, budget/4)` up front, ends the tree search at
+   `deadline - reserve`, and runs the tactical checks inside the reserve.
+2. **Critical defensive points were not guaranteed to be at the root.** The
+   static ranking scores a square by what it builds and blocks *at that point*,
+   so the squares that stop the opponent from *building* a four look quiet. In
+   the analysed loss the engine attacked while Rapfi completed an open-four
+   diagonal — and an open four cannot be blocked. Every empty point where the
+   opponent would make a four, broken four or open three is now forced into the
+   root candidate list.
+
+A third change was attempted and **removed**: a VCT (three-threat) prover. Its
+first version returned "forced win" in a quiet four-stone position. The cause is
+fundamental to the way it was written: with a bounded node budget a VCT search
+can only approximate the defender's set of replies, and an approximation of "the
+defender has no answer" is unsound in the direction that loses games. A sound
+version needs a defender-reply generator that is complete over the relevant
+threats, plus a proof-number argument, which is a bigger project than this
+round — it is written up in Part 2.3 with that requirement stated. Shipping the
+unsound version would have made the engine worse, not better.
+
+The changes are verified not to regress what already existed: against the frozen
+previous revision, L1 is **4-0** and L2 is **5-0-1** (paired openings, colours
+swapped). The tactical suite (`tools/tactics_suite`, wired into `ctest`) pins the
+four positions that matter — including the exact open-four position from the
+lost Rapfi game — and all four are answered correctly in under a millisecond,
+inside the level budget.
+
+### What this means for the goal
+
+Equal-time victory over Rapfi 2025 is not a tuning target. Rapfi is a mature
+NNUE-guided engine with an opening database and a threat-space search; the
+in-tree engine is a pattern-evaluation alpha-beta searcher whose evaluation
+cannot see a forced win five plies away. The ordering below is therefore
+deliberately different from a "make it 10% faster" list:
+
+1. **A sound threat-space prover** (Part 2.3) — the single biggest gap. It is
+   also what converts "cannot see the loss coming" into "sees it and blocks".
+2. **Completeness of the defender's reply set** — the reason VCT was withdrawn.
+   Without it, every forcing search is a source of fake wins.
+3. **Parallel tree search** (Part 2.1) — still the cheapest real strength, and
+   the only change that closes part of the 4x-time result above.
+4. Everything else in Part 2, in the order given there.
+
+Until item 1 exists, the honest statement about this engine is the narrow one:
+it beats its own previous revision, it answers every tactical test correctly, and
+it loses to Rapfi at equal time.
+
+
+---
+
 ## Part 2 — Roadmap
 
 Ranked by expected strength per unit of risk. The first item is by far the
@@ -295,9 +398,23 @@ cannot see.
   root and out of every node, not to abandon it.
 
 **Verify.** A tactical test suite: positions with a known VCF/VCT win, and
-positions where a specific defence is the only non-losing move. `gomoku_cli test`
-already has this shape and is the right place. Costs nothing at play time when
-it proves nothing.
+positions where a specific defence is the only non-losing move.
+`tools/tactics_suite` is now that place, and it is wired into `ctest`.
+
+**Soundness is the whole difficulty.** An attempt at this during the Rapfi round
+produced a VCT search that announced a forced win in a quiet four-stone position,
+because it bounded the defender's reply set to the 14 most relevant squares. An
+approximation of "the defender has no answer" fails in the direction that loses
+games, so it was withdrawn rather than shipped. A sound version needs:
+
+- a defender-reply generator that is **complete** over one-turn threats (fours,
+  and threes that make a four), not merely "the likely blocks";
+- proof-number or threat-sequence accounting so that a bounded search returns
+  "unknown", never "win";
+- the same Renju legality rules used in play for both sides at every node.
+
+The existing `forced_four_search` already meets all three for fours only, which
+is why it is used and the three-threat version is not.
 
 **Why third.** With 2.1 and 2.2 the general search gets deeper, and deeper
 search finds waiting moves but is still poor at *proofs*. Also: a deterministic,
@@ -411,3 +528,20 @@ that can be done by someone who does not want to touch the search at all.
 | Two-generation transposition table | proposed | — |
 | Line-feature evaluation | proposed | — |
 | Opening book | proposed | — |
+
+### Addendum — the same class of bug, caught again
+
+The tactical audit added in this round initially indexed the search order with
+the *previous* pass's value arrays. `order` is re-permuted between passes, so the
+audit looked up the wrong moves and could replace a correct answer with a worse
+one. `tools/id_soundness` caught it immediately (2 mismatches in 4 positions) —
+the third time this exact index-space mistake has appeared in this engine.
+
+The structural fix is now in place: `absorb_pass` records the ranked **moves**
+that produced the current answer (`best_ranked`), not indices into a mutable
+array, and the audit consumes that list. Any future stage that needs "the moves
+this answer beat" must take the same route.
+
+The lesson worth carrying: when per-root state is spread across several parallel
+arrays, every reordering must move all of them, and anything that outlives an
+iteration must store the entity (the move), never its position.

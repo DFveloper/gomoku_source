@@ -23,8 +23,8 @@ using gomoku::Move;
 // Independent full-window pass, mirroring the engine's root evaluation but with
 // no ordering reuse, no aspiration and a single worker.
 Move ground_truth_move(int board[gomoku::kMaxBoard][gomoku::kMaxBoard], int sz, int p,
-                       int depth, int root_width) {
-    auto roots = gomoku::ranked_candidates(board, sz, p, root_width, nullptr);
+                       int depth) {
+    auto roots = gomoku::build_root_candidates(board, sz, p, nullptr);
     int best_value = -210000000;
     Move best{-1, -1};
     int best_key = -1;
@@ -85,8 +85,13 @@ int main(int argc, char** argv) {
             ++skipped;
             continue;
         }
-        const int root_width = gomoku::stone_count(board, 15) >= 30 ? 20 : 18;
-        const Move expected = ground_truth_move(board, 15, player, stats.search_depth, root_width);
+        if (stats.vcf_win || stats.vhazard_avoided > 0) {
+            std::printf("trial %2d: tactical override applied (vcf=%d avoided=%d) (skip)\n",
+                        trial, stats.vcf_win ? 1 : 0, stats.vhazard_avoided);
+            ++skipped;
+            continue;
+        }
+        const Move expected = ground_truth_move(board, 15, player, stats.search_depth);
         const bool equal = chosen.r == expected.r && chosen.c == expected.c;
         if (equal) ++same; else ++differ;
         std::printf("trial %2d plies=%2d depth=%d engine=(%2d,%2d) argmax=(%2d,%2d) %s\n",

@@ -6,6 +6,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <thread>
@@ -430,6 +432,53 @@ inline std::vector<Move> generate_candidates(const int board[kMaxBoard][kMaxBoar
     out.reserve(sz * sz / 3);
     for (int r = 0; r < sz; r++) for (int c = 0; c < sz; c++) if (mark[r][c]) out.push_back({r, c});
     return out;
+}
+
+// ---------------------------------------------------------------------------
+// Threat extensions.
+//
+// Every threat-space search needs the same two questions answered cheaply:
+// "if I put a stone here, which lines do I threaten along, and how long are
+// they?"  The pattern table answers a much harder question than that, so these
+// helpers work directly on the board and extend one stone at a time.  They are
+// deliberately narrow: one direction, one stone, no pattern scoring.
+// ---------------------------------------------------------------------------
+
+inline int line_five_count(const int board[kMaxBoard][kMaxBoard], int sz, int r, int c,
+                           int dr, int dc, int p) {
+    int count = 1;
+    for (int sign = -1; sign <= 1; sign += 2) {
+        int nr = r + dr * sign, nc = c + dc * sign;
+        while (ok(sz, nr, nc) && board[nr][nc] == p) {
+            ++count;
+            nr += dr * sign;
+            nc += dc * sign;
+        }
+    }
+    return count;
+}
+
+// A line where `p` can complete five by filling exactly one empty square, from
+// the reference point of a stone that was just extended.  Returns the empty
+// square through `completion`, or false.
+inline bool five_completion_through(const int board[kMaxBoard][kMaxBoard], int sz, int r, int c,
+                                    int dr, int dc, int p, Move& completion) {
+    for (int i = -4; i <= 4; ++i) {
+        const int rr = r + dr * i, cc = c + dc * i;
+        if (!ok(sz, rr, cc) || board[rr][cc] != 0) continue;
+        int count = 0;
+        for (int k = -4; k <= 4 && count < 5; ++k) {
+            if (k == 0) { ++count; continue; }
+            const int nr = rr + dr * k, nc = cc + dc * k;
+            if (!ok(sz, nr, nc) || board[nr][nc] != p) continue;
+            ++count;
+        }
+        if (count >= 5) {
+            completion = {rr, cc};
+            return true;
+        }
+    }
+    return false;
 }
 
 inline int board_shape_score(const int board[kMaxBoard][kMaxBoard], int sz, int p) {
@@ -859,7 +908,66 @@ struct SearchStats {
     int roots = 0;
     int roots_completed = 0;
     bool nominal_depth_completed = false;
+    bool vcf_win = false;      // a continuous-four win was proven at the root
+    int vcf_ms = 0;
+    int audits = 0;            // post-search VCF audits run
+    int audit_ms = 0;
+    int vhazard_avoided = 0;   // candidate moves rejected because they lose to VCF
 };
+
+// Defined with the review/win-chance helpers further down, but needed by the
+// root's tactical reserve above it.
+inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
+                               int attacks_left, int& budget);
+
+// Root candidate set: the static ranking, plus a guaranteed defensive floor.
+//
+// Critical defence injection
+// --------------------------
+// The static ranking scores a move by what it builds and what it blocks at that
+// one point.  It systematically underrates the squares that stop the opponent
+// from *building* a four: those squares look quiet to the pattern table because
+// the opponent has not placed the stone yet.  That is how a losing game starts —
+// the engine attacks, the opponent's open three becomes an open four, and an
+// open four cannot be blocked at all.
+//
+// Any empty point where the opponent would make a four or an open three is
+// therefore forced into the root list, ahead of the quiet moves the ranking
+// would have preferred.  Exposed as a function because the independent
+// soundness checker must search exactly the same set.
+inline std::vector<std::pair<int, Move>> build_root_candidates(
+        int board[kMaxBoard][kMaxBoard], int sz, int p, const OpponentStyle* style = nullptr,
+        Move last_own = {-1, -1}) {
+    const int root_width = stone_count(board, sz) >= 30 ? 20 : 18;
+    const int opponent = 3 - p;
+    auto roots = ranked_candidates(board, sz, p, root_width, style, last_own);
+    std::vector<std::pair<int, Move>> critical;
+    for (Move m : generate_candidates(board, sz, 2)) {
+        if (!is_legal_move(board, sz, p, m)) continue;
+        const ThreatInfo theirs = analyze_move(board, sz, m.r, m.c, opponent);
+        const bool their_four = theirs.count[TH_OPEN_FOUR] || theirs.count[TH_BROKEN_FOUR] ||
+                                theirs.count[TH_CLOSED_FOUR];
+        const bool their_three = theirs.count[TH_OPEN_THREE] || theirs.count[TH_BROKEN_THREE];
+        if (!their_four && !their_three) continue;
+        // Rank the block by how much it also helps us, but always keep it.
+        const int weight = (their_four ? 400000 : 40000) + theirs.score / 4;
+        critical.push_back({weight, m});
+    }
+    std::sort(critical.begin(), critical.end(),
+              [](const auto& a, const auto& b) { return a.first > b.first; });
+    if (static_cast<int>(critical.size()) > root_width) critical.resize(root_width);
+    for (const auto& item : critical) {
+        bool present = false;
+        for (const auto& existing : roots) {
+            if (existing.second.r == item.second.r && existing.second.c == item.second.c) {
+                present = true;
+                break;
+            }
+        }
+        if (!present) roots.push_back(item);
+    }
+    return roots;
+}
 
 inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, int depth = 2,
                            const OpponentStyle* style = nullptr, int max_threads = 0,
@@ -891,9 +999,49 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
     Move block = find_immediate_win(board, sz, op);
     if (block.r != -1 && !(p == 1 && is_forbidden_move(board, sz, block.r, block.c))) return block;
 
-    const int root_width = stone_count(board, sz) >= 30 ? 20 : 18;
+    // The tactical checks below run after the tree search.  Reserve their time
+    // up front instead of borrowing it from the next move: the alpha-beta pass
+    // ends at `search_deadline`, and the reserve is what is left for safety.
+    const int reserve_ms = std::min(400, time_budget_ms / 4);
+    const auto search_deadline = deadline - std::chrono::milliseconds(reserve_ms);
+    const auto tactical_deadline = std::chrono::steady_clock::now() +
+                                   std::chrono::milliseconds(time_budget_ms + overrun_ms / 2);
+
+    // Sound VCF prover at the root: if the side to move has a continuous-four
+    // win it is the best move there is.  `forced_four_search` only plays fours
+    // and models the reply exactly, so a true result is a real win; a budget
+    // abort reports false and is treated as "unknown".
+    {
+        const auto vcf_started = std::chrono::steady_clock::now();
+        const int vcf_budget = std::min(40000, 2000 + time_budget_ms * 4);
+        int local[kMaxBoard][kMaxBoard];
+        std::memcpy(local, board, sizeof(local));
+        int budget = vcf_budget;
+        if (forced_four_search(local, sz, p, 16, budget)) {
+            if (stats) {
+                stats->vcf_win = true;
+                stats->vcf_ms = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - vcf_started).count());
+            }
+            // Rebuild the proven first move: the search does not return it, so
+            // pick a four that still proves the win from this position.
+            for (Move candidate : generate_candidates(board, sz, 1)) {
+                if (!is_legal_move(board, sz, p, candidate)) continue;
+                int probe[kMaxBoard][kMaxBoard];
+                std::memcpy(probe, board, sizeof(probe));
+                probe[candidate.r][candidate.c] = p;
+                int after = vcf_budget;
+                if (forced_four_search(probe, sz, p, 16, after)) return candidate;
+                if (after <= 0) break;
+            }
+        }
+    }
+
     const int nominal_depth = depth <= 2 ? depth + 1 : depth;
-    auto roots = ranked_candidates(board, sz, p, root_width, style, last_own);
+    // One definition of "which moves are worth searching", shared with the
+    // soundness checker so that an independent argmax and the engine can never
+    // disagree about the candidate set.
+    auto roots = build_root_candidates(board, sz, p, style, last_own);
     if (roots.empty()) return {-1, -1};
     const int root_count = static_cast<int>(roots.size());
 
@@ -924,6 +1072,11 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
     // never erase the answer of the last pass that actually finished.  Values
     // are only comparable within one depth, so `best_value` is depth-tagged.
     Move best_move{-1, -1};
+    // Moves in the order the pass that produced `best_move` ranked them.
+    // Indices into `order` are not durable: `order` is re-permuted between
+    // passes, so anything that needs the ranking later (the tactical audit)
+    // must keep the moves themselves.
+    std::vector<Move> best_ranked;
     int best_value = -210000000;
     int best_depth = 0;
     bool best_is_complete = false;
@@ -1100,6 +1253,18 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
                 }
             }
             if (best_index >= 0) {
+                std::vector<int> ranked_indices;
+                for (int i = 0; i < root_count; ++i)
+                    if (depth_done[i] && depth_bound[i] != 3) ranked_indices.push_back(i);
+                if (ranked_indices.empty())
+                    for (int i = 0; i < root_count; ++i)
+                        if (depth_done[i]) ranked_indices.push_back(i);
+                std::stable_sort(ranked_indices.begin(), ranked_indices.end(), [&](int a, int b) {
+                    if (depth_value[a] != depth_value[b]) return depth_value[a] > depth_value[b];
+                    return root_key[a] > root_key[b];
+                });
+                best_ranked.clear();
+                for (int i : ranked_indices) best_ranked.push_back(order[i]);
                 best_move = order[best_index];
                 best_value = depth_value[best_index];
                 best_depth = pass_depth;
@@ -1120,6 +1285,10 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
                 improved = i;
         }
         if (improved >= 0) {
+            best_ranked.clear();
+            best_ranked.push_back(order[improved]);
+            for (int i = 0; i < root_count; ++i)
+                if (depth_done[i] && i != improved) best_ranked.push_back(order[i]);
             best_move = order[improved];
             best_value = depth_value[improved];
             best_depth = pass_depth;
@@ -1139,7 +1308,7 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
         const double projected_wall_ms =
             per_root_ms * root_count * growth / std::max(1, worker_count);
         const bool fits_complete = !have_estimate ||
-            projected_wall_ms <= kFitFraction * ms_left(deadline);
+            projected_wall_ms <= kFitFraction * ms_left(search_deadline);
         // The nominal depth is promised by the level, and the very first pass
         // has no estimate to go on, so both are attempted regardless.
         const bool must_try = is_nominal || !have_estimate;
@@ -1227,27 +1396,62 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
         stats->search_depth_complete = best_is_complete;
     }
 
-    // Final defensive audit: if the selected move concedes an unavoidable VCF
-    // setup, fall back to the next-best move that survives the same audit.
-    int audit_board[kMaxBoard][kMaxBoard];
-    std::memcpy(audit_board, board, sizeof(audit_board));
-    audit_board[best_move.r][best_move.c] = p;
-    const auto audit_budget = std::chrono::milliseconds(5000);
-    if (opponent_has_unavoidable_vcf_setup(audit_board, sz, op,
-                                           std::chrono::steady_clock::now() + audit_budget,
-                                           12, 48)) {
-        for (int i = 0; i < root_count; ++i) {
-            const Move audit_move = order[i];
-            if (audit_move.r == best_move.r && audit_move.c == best_move.c) continue;
-            std::memcpy(audit_board, board, sizeof(audit_board));
-            audit_board[audit_move.r][audit_move.c] = p;
-            if (!opponent_has_unavoidable_vcf_setup(audit_board, sz, op,
-                                                    std::chrono::steady_clock::now() + audit_budget,
-                                                    12, 48)) {
-                return audit_move;
+    // Tactical verdict on the chosen move.
+    //
+    // A shallow alpha-beta evaluation cannot see that a move concedes a forced
+    // continuous-four win: the opponent's chain is longer than the horizon and
+    // every leaf looks fine.  That is precisely how the engine was losing games
+    // to Rapfi.  Two sound checks run here, both bounded by the reserve:
+    //
+    //   1. VCF: can the opponent force a win by fours after this move?  The
+    //      prover is exact, so a hit means the move is lost.
+    //   2. Defensive floor: does the opponent already have so many forced
+    //      four-points that no quiet move survives?
+    //
+    // If the chosen move fails, the remaining roots are tried in order.
+    auto move_loses_to_vcf = [&](Move move) {
+        if (std::chrono::steady_clock::now() >= tactical_deadline) return false;  // unknown
+        const auto started = std::chrono::steady_clock::now();
+        const int vcf_budget = std::min(30000, 1500 + time_budget_ms * 3);
+        int local[kMaxBoard][kMaxBoard];
+        std::memcpy(local, board, sizeof(local));
+        local[move.r][move.c] = p;
+        int budget = vcf_budget;
+        const bool loses = forced_four_search(local, sz, op, 16, budget);
+        if (stats) {
+            stats->audits += 1;
+            stats->audit_ms += static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - started).count());
+        }
+        return loses;
+    };
+
+    {
+        // Iterate the ranking produced with `best_move`, not live indices: the
+        // search order is re-permuted between passes by design.
+        std::vector<Move> ranked = best_ranked;
+        if (ranked.empty()) {
+            for (const auto& item : roots) ranked.push_back(item.second);
+        }
+        // Put the engine's own answer first, then try progressively worse
+        // moves until one survives the tactical check.
+        for (size_t k = 0; k < ranked.size(); ++k) {
+            if (ranked[k].r == best_move.r && ranked[k].c == best_move.c) {
+                std::swap(ranked[0], ranked[k]);
+                break;
             }
         }
+        const size_t limit = std::min<size_t>(ranked.size(), 6);
+        for (size_t k = 0; k < limit; ++k) {
+            const Move candidate = ranked[k];
+            if (!move_loses_to_vcf(candidate)) {
+                best_move = candidate;
+                break;
+            }
+            if (stats) stats->vhazard_avoided += 1;
+        }
     }
+
     return best_move;
 }
 

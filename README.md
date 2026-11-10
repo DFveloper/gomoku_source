@@ -275,12 +275,19 @@ can make any edit look good. Two tools answer that question directly.
 scripts/build_tools.sh            # build/tools/{ab_match,id_soundness}
 build/tools/ab_match 2 3 2        # LEVEL PAIRS THREADS
 build/tools/id_soundness 2 8      # LEVEL POSITIONS
+build/tools/tactics_suite 1 2     # LEVEL THREADS
+build/tools/duel rapfi 1000 1 2   # ENGINE BUDGET_MS PAIRS THREADS
 ./build/gomoku_cli selfmatch 3 2 2 2
 ```
 
 `ab_match` plays the working tree against a frozen copy of the previous
 revision (`tools/fixtures/baseline_core.h`) on shared openings with colours
-swapped. `id_soundness` recomputes the pass the engine says it answered from,
+swapped. `duel` plays it against an external Gomocup engine at an identical
+per-move budget (see [ENGINE_STRENGTH_PLAN.md](ENGINE_STRENGTH_PLAN.md) for what
+that measured against Rapfi, and `tools/build_native_engines.sh` for hosts whose
+bundled runtimes need a newer glibc than they have). `tactics_suite` checks
+positions with one known correct answer and that every answer arrives inside the
+level budget. `id_soundness` recomputes the pass the engine says it answered from,
 independently and single-threaded, and requires the returned move to be that
 pass's plain argmax. `gomoku_cli selfmatch` is the portable version of the
 first check (needs no fixture) and is the smoke test for "a higher level still

@@ -1,5 +1,38 @@
 # Legacy vs strengthened engine benchmark
 
+## Equal-time audit against native Rapfi (2026-11-09)
+
+The bundled external runtimes cannot start on this host (`GLIBC_2.38` /
+`GLIBCXX_3.4.32` required, glibc 2.36 available), so a native Rapfi was built
+from upstream with `tools/build_native_engines.sh` and used as the opponent.
+`tools/duel` referees: one persistent session per game, identical per-move clock
+for both sides, Renju rules for both, colour-swapped openings, opponent forfeits
+scored as `VOID` and excluded.
+
+| Core budget | Rapfi budget | Games | Result |
+|---:|---:|---:|---:|
+| 1000 ms | 1000 ms | 6 | **0-6** |
+| 4000 ms | 1000 ms | 2 | **0-2** |
+| 1000 ms (after the tactical fixes below) | 1000 ms | 6 | **0-6** |
+
+Rapfi searches to depth 16-31 at about 130K nodes/s inside one second. Quadrupling
+the in-tree engine's clock did not produce a win, so the gap is structural: the
+engine's evaluation cannot see a forced win beyond its horizon, and it has no
+three-threat proof search. This is recorded as a limit, not a regression.
+
+Analysing the lost games produced two fixes that are kept:
+
+- `choose_ai_move` now reserves `min(400 ms, budget/4)` before the tree search
+  ends, so the post-search tactical audits no longer run past the deadline (they
+  used to be paid out of the next move's budget).
+- Every empty point where the opponent would make a four, broken four or open
+  three is forced into the root candidate list. The static ranking could not see
+  those squares because the opponent has not placed the stone yet.
+
+Against the frozen previous revision the result is unchanged or better: L1
+**4-0**, L2 **5-0-1**. `tools/tactics_suite` (in `ctest`) pins the four tactical
+positions, including the exact open-four position from the first lost Rapfi game.
+
 ## Search-revision A/B audit (2026-11-09)
 
 This entry measures the current revision against the revision it replaced,
