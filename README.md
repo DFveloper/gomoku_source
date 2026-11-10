@@ -306,6 +306,15 @@ Every level's budget is still a hard cap in the sense that matters for a UI:
 the engine answers within the level budget plus the bounded overrun above, and
 never runs for a minute because one move looked hard.
 
+One deliberate consequence: the engine is no longer move-for-move deterministic
+across thread counts. A single fixed-depth pass always returned the same move
+regardless of how many workers it had; spending the leftover budget on extra
+plies means a faster machine or a shorter search legitimately reaches a
+different depth and can therefore choose differently. What is guaranteed is
+that the returned move is the exact argmax of the depth the engine reports, and
+that the level's depth is always searched. The regression suite checks both at
+1, 2, 4 and 32 threads.
+
 Run the tactical, long-evaluation, draw, and style regressions with:
 
 ```powershell

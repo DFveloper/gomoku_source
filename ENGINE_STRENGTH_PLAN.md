@@ -135,6 +135,19 @@ Paired openings, colours swapped, working tree vs the frozen previous revision
 Cross-engine check, new build vs Legacy v1 via the existing `engine_benchmark`:
 2-0 at level 2, 1-0 with one board-full draw at level 3.
 
+**Iterative deepening trades determinism for depth, by design.** The old search
+returned the same move for any thread count and any machine speed, because it
+always searched one fixed depth. That is no longer true and cannot be: the
+whole point is to buy extra plies with whatever time is left, and time differs.
+What still holds is the property that matters — the move is the argmax of the
+pass the engine says it answered from, and the level's depth is always
+delivered. `gomoku_cli test` therefore replaced "same move for every thread
+count" with "the reported depth's true argmax, checked at 1, 2, 4 and 32
+threads", plus a separate check that the level guarantee and the budget bound
+hold. If reproducible move-for-move play is ever needed (a regression fixture, a
+tournament with fixed output), pin one level and one thread count and compare
+those, not two different thread counts.
+
 **Read every Gomoku match result per colour.** Black (the first player) has a
 large structural advantage, so a colour-split pair where one side wins both
 games says much less than it looks like. A level-doubling self-match at L2 vs
@@ -390,6 +403,7 @@ that can be done by someone who does not want to touch the search at all.
 | Packed pattern matcher | done, bit-exact | 3–4× faster evaluation; 0.88 s vs 1.96 s at L3 |
 | Iterative deepening with projected stop | done | +1 ply at L2/L3/L4; uses the whole budget |
 | Root bound/value bookkeeping | done | fixed a 3-game regression; now 8-1-1 |
+| Determinism contract restated | done | argmax-per-reported-depth test replaces "same move for any thread count" |
 | A/B referee, soundness test, self-match | done | `ab_match`, `id_soundness`, `selfmatch` |
 | Parallel tree / young-brothers-wait | next | — |
 | Threat-class move ordering + LMR | proposed | — |

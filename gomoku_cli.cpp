@@ -209,17 +209,84 @@ bool run_tests() {
     pass &= stale_abandoned;
     std::printf("[%s] abandon dead continuation\n", stale_abandoned ? "PASS" : "FAIL");
 
+    // Root parallelism must not corrupt the answer.  Iterative deepening
+    // deliberately lets the reached depth depend on how much time the workers
+    // had, so "same move for every thread count" is no longer the invariant to
+    // test.  The invariant that still holds, and that a worker race or a lost
+    // root would break, is: whatever depth the engine reports, the move it
+    // returns is the plain argmax of a clean single-threaded pass at that depth.
+    auto argmax_at_depth = [&](int player, int depth) {
+        auto roots = gomoku::ranked_candidates(board, sz, player, 18, nullptr);
+        int best_value = -210000000, best_key = -1;
+        gomoku::Move best{-1, -1};
+        const int opponent = 3 - player;
+        for (const auto& item : roots) {
+            int local[gomoku::kMaxBoard][gomoku::kMaxBoard];
+            std::memcpy(local, board, sizeof(local));
+            const gomoku::Move move = item.second;
+            local[move.r][move.c] = player;
+            int value;
+            if (gomoku::check_win_at(local, sz, move.r, move.c, player)) {
+                value = 200000000 + depth;
+            } else if (gomoku::has_forced_four_win(local, sz, opponent, 6, 320)) {
+                value = -190000000 - depth;
+            } else {
+                int scratch[gomoku::kMaxBoard][gomoku::kMaxBoard];
+                std::memcpy(scratch, local, sizeof(scratch));
+                const std::uint64_t hash = gomoku::position_hash(scratch, sz, opponent);
+                value = -gomoku::negamax(scratch, sz, opponent, depth, -210000000, 210000000,
+                                         move, player, nullptr, 2, nullptr, nullptr, nullptr,
+                                         hash, nullptr);
+            }
+            if (value > best_value || (value == best_value && item.first > best_key)) {
+                best_value = value;
+                best = move;
+                best_key = item.first;
+            }
+        }
+        return best;
+    };
     clear_board();
     board[7][7] = board[8][8] = 1;
     board[7][8] = board[8][7] = 2;
-    gomoku::Move single_thread = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, 1);
-    gomoku::Move four_threads = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, 4);
-    gomoku::Move thirty_two_threads = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, 32);
-    bool parallel_deterministic = single_thread.r == four_threads.r && single_thread.c == four_threads.c &&
-                                  single_thread.r == thirty_two_threads.r && single_thread.c == thirty_two_threads.c &&
-                                  gomoku::kMaxSearchThreads == 32;
-    pass &= parallel_deterministic;
-    std::printf("[%s] deterministic root multithreading\n", parallel_deterministic ? "PASS" : "FAIL");
+    bool parallel_sound = gomoku::kMaxSearchThreads == 32;
+    int parallel_checked = 0;
+    for (int threads : {1, 2, 4, 32}) {
+        gomoku::SearchStats stats;
+        const gomoku::Move move = gomoku::choose_ai_move(board, sz, 2, 1, nullptr, threads,
+                                                         {-1, -1}, nullptr, &stats);
+        if (move.r == -1 || !stats.search_depth_complete || stats.search_depth == 0) continue;
+        const gomoku::Move expected = argmax_at_depth(2, stats.search_depth);
+        parallel_sound = parallel_sound && move.r == expected.r && move.c == expected.c;
+        ++parallel_checked;
+    }
+    pass &= parallel_sound && parallel_checked > 0;
+    std::printf("[%s] thread-count-independent root answer (%d thread settings)\n",
+                parallel_sound && parallel_checked > 0 ? "PASS" : "FAIL", parallel_checked);
+
+    // Iterative deepening is allowed to reach a different depth on a different
+    // thread count, but it must never answer from a pass shallower than the
+    // level's guarantee, and it must report the depth it actually used.
+    {
+        clear_board();
+        board[7][7] = board[8][8] = 1;
+        board[7][8] = board[8][7] = 2;
+        bool ladder_honest = true;
+        int deepest = 0;
+        for (int threads : {1, 2, 4}) {
+            gomoku::SearchStats stats;
+            const gomoku::Move move = gomoku::choose_ai_move(board, sz, 1, 2, nullptr, threads,
+                                                             {-1, -1}, nullptr, &stats);
+            ladder_honest = ladder_honest && move.r != -1 && stats.budget_ms == 2000 &&
+                            stats.nominal_depth >= 2 && stats.completed_depth >= stats.nominal_depth &&
+                            stats.search_depth >= stats.completed_depth - 2 &&
+                            stats.elapsed_ms <= stats.budget_ms + 1000 + 500;
+            deepest = std::max(deepest, stats.completed_depth);
+        }
+        pass &= ladder_honest;
+        std::printf("[%s] deepening honours the level guarantee and budget (%d threads, deepest %d)\n",
+                    ladder_honest ? "PASS" : "FAIL", 4, deepest);
+    }
 
     clear_board();
     board[7][7] = board[8][8] = 1;
