@@ -1,1 +1,4 @@
 .run/
+
+# Engine-development tool binaries (scripts/build_tools.sh)
+build/tools/

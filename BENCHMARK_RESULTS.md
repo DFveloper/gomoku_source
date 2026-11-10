@@ -1,5 +1,58 @@
 # Legacy vs strengthened engine benchmark
 
+## Search-revision A/B audit (2026-11-09)
+
+This entry measures the current revision against the revision it replaced,
+rather than against a third engine. Both cores are compiled into one binary
+(`tools/ab_match.cpp` includes the frozen copy as `gomoku_base`), both are
+given the same openings and the same opponent-style model, and colours are
+swapped for every opening. Machine: 2 vCPU, `-O2`, eight V3 threads.
+
+| Match | Level | Games | Working tree | Frozen revision | Draws |
+|---|---|---:|---:|---:|---:|
+| vs frozen baseline | 2 | 6 | **5** | 0 | 1 |
+| vs frozen baseline | 3 | 4 | **3** | 1 | 0 |
+| combined | 2-3 | 10 | **8** | 1 | 1 |
+
+The frozen baseline is the pre-change `gomoku_core.h` kept verbatim in
+`tools/fixtures/baseline_core.h`, so the match is reproducible without checking
+out an old commit. Two caveats apply, exactly as in the cross-engine table
+below: ten paired games are a regression signal, not a rating, and games that
+reach the 225-ply board-full draw are counted as draws rather than adjudicated.
+
+Two changes account for the result, and they were isolated before being
+combined:
+
+- **Table-driven pattern matching.** ~90% of search time was in the
+  character-by-character pattern matcher. Packing each 15-cell line into a
+  32-bit word and matching against pre-shifted `(pattern, alignment)` masks is
+  bit-exact (the regression suite checks it line by line against the old
+  algorithm) and 3-4x faster, measured 808 ns -> 198 ns per line.
+- **Iterative deepening with a projected stop.** The old code ran one
+  fixed-depth pass and returned with 35-94% of the level budget unspent (6-65%
+  used, measured across levels). It now climbs a depth ladder, reorders by the
+  previous pass, and stops climbing when the projected cost of the next pass no
+  longer fits. The reported level stays a guaranteed floor.
+
+Both tools now print per-colour results next to the total, because black has a
+large structural advantage in Gomoku: a 2-2 split in which black won every game
+is not evidence of equal strength. A level-doubling self-match (L2 vs L1) that
+finished 2-2 had black winning all four games and carried no ranking signal at
+all, which is exactly the trap the per-colour columns exist to expose.
+
+Rejected measurement, kept here so it is not retried blindly: compressing the
+dead duplicate rows in `pattern_table()` (roughly halving matcher work) scored
+2-2 against the baseline, versus 5-0-1 for the bit-exact build. Different
+scoring was not stronger scoring.
+
+A supplementary cross-engine check with the new build, using the existing
+`engine_benchmark` target (Legacy v1, one opening pair, two threads):
+
+| Opponent | Level | Result | V3 average move time | V3 maximum move time |
+|---|---:|---:|---:|---:|
+| Legacy v1 | 2 | 2-0 | 1.38-1.49 s | 2.05 s |
+| Legacy v1 | 3 | 1-0 (1 draw) | ~3.0 s | 5.17 s |
+
 ## Current v3 MT cross-engine audit (2026-08-27)
 
 The repository now includes `engine_benchmark`, which uses the same in-process

@@ -300,6 +300,85 @@ bool run_tests() {
     pass &= final_square_draw;
     std::printf("[%s] final-square draw state\n", final_square_draw ? "PASS" : "FAIL");
 
+    // The packed pattern table must reproduce the reference string matcher
+    // exactly.  '.' is a literal empty cell and '#' is off-board, so a matcher
+    // that treats '.' as a wildcard would silently change every score.
+    {
+        auto reference = [](const char line[16]) {
+            gomoku::ThreatInfo info;
+            int run = 0;
+            for (int i = 0; i < 15; ++i) {
+                if (line[i] == 'X') info.longest = std::max(info.longest, ++run);
+                else run = 0;
+            }
+            int best[gomoku::TH_KIND_COUNT] = {};
+            for (const gomoku::PatternDef& pattern : gomoku::pattern_table()) {
+                const int len = static_cast<int>(std::strlen(pattern.pat));
+                for (int i = 0; i + len <= 15; ++i) {
+                    if (i > 7 || i + len <= 7) continue;
+                    bool match = true;
+                    for (int k = 0; k < len && match; ++k)
+                        match = line[i + k] == pattern.pat[k];
+                    if (!match) continue;
+                    info.count[pattern.kind]++;
+                    best[pattern.kind] = std::max(best[pattern.kind], pattern.score);
+                }
+            }
+            for (int i = 0; i < gomoku::TH_KIND_COUNT; ++i) info.score += best[i];
+            return info;
+        };
+        clear_board();
+        board[7][7] = board[7][8] = board[6][6] = 1;
+        board[8][8] = board[5][9] = 2;
+        bool pattern_exact = true;
+        int lines_checked = 0;
+        static const int dr[] = {0, 1, 1, 1};
+        static const int dc[] = {1, 0, 1, -1};
+        for (int r = -1; r <= sz; ++r) {
+            for (int c = -1; c <= sz; ++c) {
+                if (!gomoku::ok(sz, r, c) || board[r][c]) continue;
+                for (int d = 0; d < 4; ++d) {
+                    for (int p = 1; p <= 2; ++p) {
+                        char line[16];
+                        gomoku::encode_line(board, sz, r, c, dr[d], dc[d], p, line);
+                        const gomoku::ThreatInfo expected = reference(line);
+                        const gomoku::ThreatInfo actual = gomoku::evaluate_line(line);
+                        ++lines_checked;
+                        pattern_exact = pattern_exact && expected.score == actual.score &&
+                                        expected.longest == actual.longest;
+                        for (int k = 0; k < gomoku::TH_KIND_COUNT; ++k)
+                            pattern_exact = pattern_exact && expected.count[k] == actual.count[k];
+                    }
+                }
+            }
+        }
+        pass &= pattern_exact && lines_checked > 0;
+        std::printf("[%s] packed pattern matcher matches reference (%d lines)\n",
+                    pattern_exact ? "PASS" : "FAIL", lines_checked);
+    }
+
+    // Iterative deepening must report honestly: the number of roots it claims
+    // completed has to equal the count of finished roots, and extra depth may
+    // only ever be added on top of a completed guaranteed depth.
+    {
+        clear_board();
+        board[7][7] = board[8][8] = 1;
+        board[7][8] = board[8][7] = 2;
+        gomoku::SearchStats stats;
+        const gomoku::Move move = gomoku::choose_ai_move(board, sz, 1, 1, nullptr, 2,
+                                                         {-1, -1}, nullptr, &stats);
+        const bool reported = move.r != -1 && stats.roots > 0 &&
+                              stats.roots_completed >= 0 &&
+                              stats.roots_completed <= stats.roots &&
+                              stats.completed_depth >= 1 &&
+                              stats.completed_depth >= stats.nominal_depth &&  // level is a floor
+                              stats.search_depth >= stats.completed_depth - 2;
+        pass &= reported;
+        std::printf("[%s] iterative-deepening depth report (target %d, completed %d, answered at %d)\n",
+                    reported ? "PASS" : "FAIL", stats.nominal_depth,
+                    stats.completed_depth, stats.search_depth);
+    }
+
     clear_board();
     std::atomic<bool> cancelled{true};
     bool built_in_cancel = true;
@@ -320,6 +399,7 @@ void print_help() {
     std::printf("  play              interactive human black vs AI white\n");
     std::printf("  agent             text protocol for Codex / other LLMs\n");
     std::printf("  genmove           read current board from stdin, print AI move\n");
+    std::printf("  selfmatch [hi] [lo] [pairs] [threads]  level-doubling self-match\n");
     std::printf("  genmove-history [depth] [threads]  style-aware move (defaults: 4, auto)\n");
     std::printf("  test              run tactical regression tests\n");
     std::printf("Agent commands: new [size], play r c, ai, show, state, legal r c, depth n, quit\n");
@@ -349,6 +429,80 @@ int genmove() {
     gomoku::Move m = gomoku::choose_ai_move(board, sz, 2, 4);
     std::printf("%d %d\n", m.r, m.c);
     return 0;
+}
+
+// Level-doubling self-match: the current engine at `hi` against the very same
+// engine at `lo`, colours swapped over the shared openings.  This needs no
+// third-party runtime, so it is the portable smoke test for "did the search
+// get stronger", and it is the check that caught an entire class of
+// bookkeeping bugs during development.
+int self_match(int hi_level, int lo_level, int pairs, int max_threads) {
+    static const std::vector<std::vector<gomoku::Move>> openings = {
+        {{7, 7}, {7, 8}, {8, 7}, {6, 7}},
+        {{7, 7}, {8, 8}, {6, 8}, {8, 6}, {6, 6}, {7, 8}},
+        {{7, 7}, {6, 7}, {8, 8}, {8, 6}, {6, 8}, {7, 6}},
+        {{7, 7}, {8, 7}, {6, 6}, {8, 8}, {6, 8}, {7, 6}},
+        {{7, 7}, {7, 6}, {6, 8}, {8, 8}, {5, 9}, {9, 5}},
+        {{7, 7}, {8, 6}, {6, 6}, {8, 8}, {6, 10}, {8, 10}},
+        {{7, 7}, {6, 8}, {8, 6}, {5, 9}, {9, 5}, {6, 6}},
+        {{7, 7}, {7, 8}, {6, 6}, {8, 8}, {6, 9}, {8, 6}},
+    };
+    int hi_wins = 0, lo_wins = 0, draws = 0;
+    // Black (the first player) has a large structural advantage in Gomoku, so
+    // the raw score of a colour-unsplit match mostly measures the opening, not
+    // the level.  Results are therefore reported per colour as well.
+    int hi_as_black = 0, hi_black_games = 0, hi_as_white = 0, hi_white_games = 0;
+    for (int pair = 0; pair < pairs; ++pair) {
+        for (int swap = 0; swap < 2; ++swap) {
+            const int hi_player = swap == 0 ? 1 : 2;
+            clear_board();
+            std::vector<gomoku::Move> history;
+            for (const gomoku::Move& move : openings[pair % openings.size()]) {
+                board[move.r][move.c] = history.size() % 2 == 0 ? 1 : 2;
+                history.push_back(move);
+            }
+            int result = 0;
+            int plies = static_cast<int>(history.size());
+            while (plies < sz * sz) {
+                const int player = plies % 2 == 0 ? 1 : 2;
+                const int level = player == hi_player ? hi_level : lo_level;
+                gomoku::OpponentStyle style = gomoku::analyze_opponent_style(sz, history, 3 - player);
+                gomoku::Move last{-1, -1};
+                for (int i = static_cast<int>(history.size()) - 1; i >= 0; --i) {
+                    if ((i % 2 == 0 ? 1 : 2) == player) { last = history[i]; break; }
+                }
+                const gomoku::Move move = gomoku::choose_ai_move(board, sz, player, level,
+                                                                 &style, max_threads, last);
+                if (!gomoku::is_legal_move(board, sz, player, move)) {
+                    result = 3 - player;
+                    break;
+                }
+                board[move.r][move.c] = player;
+                history.push_back(move);
+                ++plies;
+                if (gomoku::check_win_at(board, sz, move.r, move.c, player)) {
+                    result = player;
+                    break;
+                }
+            }
+            if (result == hi_player) ++hi_wins;
+            else if (result == 0) ++draws;
+            else ++lo_wins;
+            if (hi_player == 1) { ++hi_black_games; if (result == 1) ++hi_as_black; }
+            else { ++hi_white_games; if (result == 2) ++hi_as_white; }
+            std::printf("game=%d hi=%s winner=%d plies=%d\n",
+                        pair * 2 + swap + 1, hi_player == 1 ? "black" : "white",
+                        result, plies);
+            std::fflush(stdout);
+        }
+    }
+    std::printf("summary hi_level=%d lo_level=%d hi=%d lo=%d draws=%d "
+                "hi_as_black=%d/%d hi_as_white=%d/%d\n",
+                hi_level, lo_level, hi_wins, lo_wins, draws,
+                hi_as_black, hi_black_games, hi_as_white, hi_white_games);
+    // Only a losing overall score is a failure: with 2-4 games per side this is
+    // a smoke test, and a colour-dominated 2-2 says nothing about the level.
+    return hi_wins < lo_wins ? 1 : 0;
 }
 
 int genmove_history(int search_depth, int max_threads) {
@@ -584,6 +738,18 @@ int main(int argc, char** argv) {
         int depth = argc >= 3 ? std::max(1, std::min(6, std::atoi(argv[2]))) : 4;
         int threads = argc >= 4 ? std::max(0, std::min(gomoku::kMaxSearchThreads, std::atoi(argv[3]))) : 0;
         return genmove_history(depth, threads);
+    }
+    if (cmd == "selfmatch") {
+        const int hi = argc >= 3 ? std::max(1, std::min(5, std::atoi(argv[2]))) : 3;
+        const int lo = argc >= 4 ? std::max(1, std::min(5, std::atoi(argv[3]))) : 2;
+        const int pairs = argc >= 5 ? std::max(1, std::min(4, std::atoi(argv[4]))) : 1;
+        const int threads = argc >= 6
+            ? std::max(1, std::min(gomoku::kMaxSearchThreads, std::atoi(argv[5]))) : 2;
+        if (hi == lo) {
+            std::fprintf(stderr, "selfmatch needs two different levels\n");
+            return 2;
+        }
+        return self_match(hi, lo, pairs, threads);
     }
     if (cmd == "play") return play();
     if (cmd == "agent") return agent();
