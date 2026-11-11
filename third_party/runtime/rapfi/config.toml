@@ -10,7 +10,7 @@ reload_config_each_move = false
 clear_hash_after_config_loaded = false
 
 # Default thread number if not specified (0 means use all hardware concurrency)
-default_thread_num = 0
+default_thread_num = 1
 
 # Output message mode (Options are [normal, brief, ucilike, none])
 message_mode = "normal"

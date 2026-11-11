@@ -1,1 +1,8 @@
 .run/
+
+# Engine-development tool binaries (scripts/build_tools.sh)
+build/tools/
+
+# Locally built external engines (tools/build_native_engines.sh). The bundled
+# binaries stay tracked; native builds sit beside them.
+third_party/runtime/*/*.native-*

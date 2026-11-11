@@ -6,6 +6,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <thread>
@@ -139,6 +141,67 @@ inline bool match_at(const char line[16], int pos, const char* pat) {
     return true;
 }
 
+// ---------------------------------------------------------------------------
+// Pattern matching, packed.
+//
+// The reference matcher walks every pattern row at every alignment in the
+// 15-cell window with a per-character compare, which is the single hottest
+// routine in the whole engine (about 90% of search time).  Each line is base-4
+// information, so we pack it into one 32-bit word, two bits per cell, and
+// collect every (pattern, alignment) pair that can cover the centre cell into
+// a flat table of pre-shifted masks.  A match is then one AND plus one compare.
+//
+// Semantics are identical to the reference: '.' is a literal empty cell (not a
+// wildcard), '#' is off-board, and a match is counted only when its window
+// covers the centre position, matching the original `i > 7 || i + len <= 7`
+// skip.  `gomoku_cli test` pins this equivalence with a differential check.
+// ---------------------------------------------------------------------------
+
+inline int cell_code(char ch) {
+    switch (ch) {
+        case 'X': return 1;
+        case 'O': return 2;
+        case '#': return 3;
+        default: return 0;  // '.'
+    }
+}
+
+inline std::uint32_t pack_line(const char line[16]) {
+    std::uint32_t key = 0;
+    for (int i = 0; i < 15; ++i) key |= static_cast<std::uint32_t>(cell_code(line[i])) << (2 * i);
+    return key;
+}
+
+// Pre-shifted (pattern, alignment) pair.  `value` has zero in the wildcard
+// positions where `mask` has zero, so (key & mask) == value means exact match.
+struct PatternArm {
+    std::uint32_t mask;
+    std::uint32_t value;
+    unsigned char kind;
+    int score;
+};
+
+inline const std::vector<PatternArm>& pattern_arms() {
+    static const std::vector<PatternArm> arms = [] {
+        std::vector<PatternArm> built;
+        for (const PatternDef& p : pattern_table()) {
+            const int len = static_cast<int>(std::strlen(p.pat));
+            std::uint32_t local_mask = 0, local_value = 0;
+            for (int i = 0; i < len; ++i) {
+                local_mask |= 3u << (2 * i);
+                local_value |= static_cast<std::uint32_t>(cell_code(p.pat[i])) << (2 * i);
+            }
+            for (int offset = 0; offset + len <= 15; ++offset) {
+                if (offset > 7 || offset + len <= 7) continue;
+                built.push_back({local_mask << (2 * offset), local_value << (2 * offset),
+                                 static_cast<unsigned char>(p.kind), p.score});
+            }
+        }
+        return built;
+    }();
+    return arms;
+}
+
 inline ThreatInfo evaluate_line(const char line[16]) {
     ThreatInfo info;
     int run = 0;
@@ -147,14 +210,11 @@ inline ThreatInfo evaluate_line(const char line[16]) {
         else run = 0;
     }
     int best[TH_KIND_COUNT] = {};
-    for (const PatternDef& p : pattern_table()) {
-        int len = (int)std::strlen(p.pat);
-        for (int i = 0; i + len <= 15; i++) {
-            if (i > 7 || i + len <= 7) continue;
-            if (!match_at(line, i, p.pat)) continue;
-            info.count[p.kind]++;
-            best[p.kind] = std::max(best[p.kind], p.score);
-        }
+    const std::uint32_t key = pack_line(line);
+    for (const PatternArm& arm : pattern_arms()) {
+        if ((key & arm.mask) != arm.value) continue;
+        info.count[arm.kind]++;
+        if (arm.score > best[arm.kind]) best[arm.kind] = arm.score;
     }
     for (int i = 0; i < TH_KIND_COUNT; i++) info.score += best[i];
     return info;
@@ -372,6 +432,53 @@ inline std::vector<Move> generate_candidates(const int board[kMaxBoard][kMaxBoar
     out.reserve(sz * sz / 3);
     for (int r = 0; r < sz; r++) for (int c = 0; c < sz; c++) if (mark[r][c]) out.push_back({r, c});
     return out;
+}
+
+// ---------------------------------------------------------------------------
+// Threat extensions.
+//
+// Every threat-space search needs the same two questions answered cheaply:
+// "if I put a stone here, which lines do I threaten along, and how long are
+// they?"  The pattern table answers a much harder question than that, so these
+// helpers work directly on the board and extend one stone at a time.  They are
+// deliberately narrow: one direction, one stone, no pattern scoring.
+// ---------------------------------------------------------------------------
+
+inline int line_five_count(const int board[kMaxBoard][kMaxBoard], int sz, int r, int c,
+                           int dr, int dc, int p) {
+    int count = 1;
+    for (int sign = -1; sign <= 1; sign += 2) {
+        int nr = r + dr * sign, nc = c + dc * sign;
+        while (ok(sz, nr, nc) && board[nr][nc] == p) {
+            ++count;
+            nr += dr * sign;
+            nc += dc * sign;
+        }
+    }
+    return count;
+}
+
+// A line where `p` can complete five by filling exactly one empty square, from
+// the reference point of a stone that was just extended.  Returns the empty
+// square through `completion`, or false.
+inline bool five_completion_through(const int board[kMaxBoard][kMaxBoard], int sz, int r, int c,
+                                    int dr, int dc, int p, Move& completion) {
+    for (int i = -4; i <= 4; ++i) {
+        const int rr = r + dr * i, cc = c + dc * i;
+        if (!ok(sz, rr, cc) || board[rr][cc] != 0) continue;
+        int count = 0;
+        for (int k = -4; k <= 4 && count < 5; ++k) {
+            if (k == 0) { ++count; continue; }
+            const int nr = rr + dr * k, nc = cc + dc * k;
+            if (!ok(sz, nr, nc) || board[nr][nc] != p) continue;
+            ++count;
+        }
+        if (count >= 5) {
+            completion = {rr, cc};
+            return true;
+        }
+    }
+    return false;
 }
 
 inline int board_shape_score(const int board[kMaxBoard][kMaxBoard], int sz, int p) {
@@ -789,90 +896,558 @@ inline bool opponent_has_unavoidable_vcf_setup(
     return false;
 }
 
+// Optional search instrumentation.  Exposed so benchmarks and the CLI can
+// report what the engine actually reached instead of guessing from wall time.
+struct SearchStats {
+    int budget_ms = 0;
+    int elapsed_ms = 0;
+    int completed_depth = 0;
+    int nominal_depth = 0;
+    int search_depth = 0;
+    bool search_depth_complete = false;
+    int roots = 0;
+    int roots_completed = 0;
+    bool nominal_depth_completed = false;
+    bool vcf_win = false;      // a continuous-four win was proven at the root
+    int vcf_ms = 0;
+    int audits = 0;            // post-search VCF audits run
+    int audit_ms = 0;
+    int vhazard_avoided = 0;   // candidate moves rejected because they lose to VCF
+};
+
+// Defined with the review/win-chance helpers further down, but needed by the
+// root's tactical reserve above it.
+// `first_move`, when not null, receives the forcing move that starts the proven
+// chain. Only the root call asks for it: a caller that wants to *play* the win
+// must know which move actually began it, and re-deriving that by replaying the
+// prover on every candidate is unsound, because the replay leaves the defender
+// without a move and so "proves" chains that begin with a quiet move.
+inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
+                               int attacks_left, int& budget, Move* first_move = nullptr);
+
+// Root candidate set: the static ranking, plus a guaranteed defensive floor.
+//
+// Critical defence injection
+// --------------------------
+// The static ranking scores a move by what it builds and what it blocks at that
+// one point.  It systematically underrates the squares that stop the opponent
+// from *building* a four: those squares look quiet to the pattern table because
+// the opponent has not placed the stone yet.  That is how a losing game starts —
+// the engine attacks, the opponent's open three becomes an open four, and an
+// open four cannot be blocked at all.
+//
+// Any empty point where the opponent would make a four or an open three is
+// therefore forced into the root list, ahead of the quiet moves the ranking
+// would have preferred.  Exposed as a function because the independent
+// soundness checker must search exactly the same set.
+inline std::vector<std::pair<int, Move>> build_root_candidates(
+        int board[kMaxBoard][kMaxBoard], int sz, int p, const OpponentStyle* style = nullptr,
+        Move last_own = {-1, -1}) {
+    const int root_width = stone_count(board, sz) >= 30 ? 20 : 18;
+    const int opponent = 3 - p;
+    auto roots = ranked_candidates(board, sz, p, root_width, style, last_own);
+    std::vector<std::pair<int, Move>> critical;
+    for (Move m : generate_candidates(board, sz, 2)) {
+        if (!is_legal_move(board, sz, p, m)) continue;
+        const ThreatInfo theirs = analyze_move(board, sz, m.r, m.c, opponent);
+        const bool their_four = theirs.count[TH_OPEN_FOUR] || theirs.count[TH_BROKEN_FOUR] ||
+                                theirs.count[TH_CLOSED_FOUR];
+        const bool their_three = theirs.count[TH_OPEN_THREE] || theirs.count[TH_BROKEN_THREE];
+        if (!their_four && !their_three) continue;
+        // Rank the block by how much it also helps us, but always keep it.
+        const int weight = (their_four ? 400000 : 40000) + theirs.score / 4;
+        critical.push_back({weight, m});
+    }
+    std::sort(critical.begin(), critical.end(),
+              [](const auto& a, const auto& b) { return a.first > b.first; });
+    if (static_cast<int>(critical.size()) > root_width) critical.resize(root_width);
+    for (const auto& item : critical) {
+        bool present = false;
+        for (const auto& existing : roots) {
+            if (existing.second.r == item.second.r && existing.second.c == item.second.c) {
+                present = true;
+                break;
+            }
+        }
+        if (!present) roots.push_back(item);
+    }
+    return roots;
+}
+
 inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, int depth = 2,
                            const OpponentStyle* style = nullptr, int max_threads = 0,
-                           Move last_own = {-1, -1}, const std::atomic<bool>* cancel = nullptr) {
+                           Move last_own = {-1, -1}, const std::atomic<bool>* cancel = nullptr,
+                           SearchStats* stats = nullptr) {
     if (cancel && cancel->load()) return {-1, -1};
+    if (stats) *stats = SearchStats{};
+    const auto started = std::chrono::steady_clock::now();
+    auto elapsed_ms = [&]() {
+        return static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - started).count());
+    };
     const int level = std::max(1, std::min(depth, 5));
     const int time_budget_ms = 1000 * (1 << (level - 1));
-    const auto deadline = std::chrono::steady_clock::now() +
-                          std::chrono::milliseconds(time_budget_ms);
-    int op = 3 - p;
+    const auto deadline = started + std::chrono::milliseconds(time_budget_ms);
+    // Iterations that are already running may finish slightly past the soft
+    // deadline; anything still unfinished at the hard stop is discarded.  This
+    // converts "the budget expired mid-search" into "the last complete answer
+    // stands", which is what makes iterative deepening safe here.
+    // Overrun allowance for an iteration that is already running.  Capped so a
+    // documented level budget stays close to its published value.
+    const int overrun_ms = std::min(1000, time_budget_ms / 4 + 250);
+    const auto hard_stop = deadline + std::chrono::milliseconds(overrun_ms);
+    const int op = 3 - p;
+    if (stats) stats->budget_ms = time_budget_ms;
+
     Move win = find_immediate_win(board, sz, p);
     if (win.r != -1) return win;
     Move block = find_immediate_win(board, sz, op);
     if (block.r != -1 && !(p == 1 && is_forbidden_move(board, sz, block.r, block.c))) return block;
 
-    int root_width = stone_count(board, sz) >= 30 ? 20 : 18;
-    const int search_depth = depth <= 2 ? depth + 1 : depth;
-    auto roots = ranked_candidates(board, sz, p, root_width, style, last_own);
+    // The tactical checks below run after the tree search.  Reserve their time
+    // up front instead of borrowing it from the next move: the alpha-beta pass
+    // ends at `search_deadline`, and the reserve is what is left for safety.
+    const int reserve_ms = std::min(400, time_budget_ms / 4);
+    const auto search_deadline = deadline - std::chrono::milliseconds(reserve_ms);
+    const auto tactical_deadline = std::chrono::steady_clock::now() +
+                                   std::chrono::milliseconds(time_budget_ms + overrun_ms / 2);
+
+    // Sound VCF prover at the root: if the side to move has a continuous-four
+    // win it is the best move there is.  `forced_four_search` only plays fours
+    // and models the reply exactly, so a true result is a real win; a budget
+    // abort reports false and is treated as "unknown".
+    {
+        const auto vcf_started = std::chrono::steady_clock::now();
+        const int vcf_budget = std::min(40000, 2000 + time_budget_ms * 4);
+        int local[kMaxBoard][kMaxBoard];
+        std::memcpy(local, board, sizeof(local));
+        int budget = vcf_budget;
+        Move proven{-1, -1};
+        if (forced_four_search(local, sz, p, 16, budget, &proven)) {
+            if (stats) {
+                stats->vcf_win = true;
+                stats->vcf_ms = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - vcf_started).count());
+            }
+            if (proven.r != -1 && is_legal_move(board, sz, p, proven)) return proven;
+        }
+    }
+
+    const int nominal_depth = depth <= 2 ? depth + 1 : depth;
+    // One definition of "which moves are worth searching", shared with the
+    // soundness checker so that an independent argmax and the engine can never
+    // disagree about the candidate set.
+    auto roots = build_root_candidates(board, sz, p, style, last_own);
     if (roots.empty()) return {-1, -1};
-    std::vector<int> values(roots.size(), -210000000);
-    std::vector<unsigned char> completed(roots.size(), 0);
-    std::atomic<size_t> next{0};
+    const int root_count = static_cast<int>(roots.size());
+
     unsigned int available = std::max(1u, std::thread::hardware_concurrency());
     int worker_count = max_threads > 0 ? max_threads : static_cast<int>(available);
-    worker_count = std::max(1, std::min<int>({worker_count, kMaxSearchThreads,
-                                              static_cast<int>(roots.size())}));
+    worker_count = std::max(1, std::min<int>({worker_count, kMaxSearchThreads, root_count}));
 
-    auto worker = [&]() {
-        TranspositionTable table;
-        while (true) {
-            if (cancel && cancel->load()) return;
-            if (std::chrono::steady_clock::now() >= deadline) return;
-            size_t index = next.fetch_add(1);
-            if (index >= roots.size()) return;
-            int local[kMaxBoard][kMaxBoard];
-            std::memcpy(local, board, sizeof(local));
-            Move m = roots[index].second;
-            local[m.r][m.c] = p;
-            bool root_timed_out = false;
-            if (check_win_at(local, sz, m.r, m.c, p)) {
-                values[index] = 200000000 + search_depth;
-            } else if (has_forced_four_win(local, sz, op, 6, 320)) { // Enhanced budget: Rapfi-style deeper tactical proof
-                values[index] = -190000000 - search_depth;
-            } else {
-                const std::uint64_t hash = position_hash(local, sz, op);
-                values[index] = -negamax(local, sz, op, search_depth, -210000000, 210000000,
-                                          m, p, style, 2, cancel, &deadline, &root_timed_out,
-                                          hash, &table);
+    // `order` is the search order for the next iteration and is reshuffled by
+    // every completed iteration, so deeper passes visit the promising moves
+    // first.  `root_key` keeps the static ordering key for deterministic ties.
+    std::vector<Move> order;
+    std::vector<int> root_key;
+    order.reserve(root_count);
+    root_key.reserve(root_count);
+    for (const auto& item : roots) {
+        order.push_back(item.second);
+        root_key.push_back(item.first);
+    }
+
+    // Results of the pass currently running.
+    std::vector<int> depth_value;
+    std::vector<unsigned char> depth_done;
+    // 1 = exact score, 2 = lower bound (a better move was already found),
+    // 3 = upper bound (fail low).  Only exact and lower-bound results carry an
+    // ordering value high enough to be trusted at the root.
+    std::vector<unsigned char> depth_bound;
+    // Durable best-so-far, kept separately so a pass that stops halfway can
+    // never erase the answer of the last pass that actually finished.  Values
+    // are only comparable within one depth, so `best_value` is depth-tagged.
+    Move best_move{-1, -1};
+    // Moves in the order the pass that produced `best_move` ranked them.
+    // Indices into `order` are not durable: `order` is re-permuted between
+    // passes, so anything that needs the ranking later (the tactical audit)
+    // must keep the moves themselves.
+    std::vector<Move> best_ranked;
+    int best_value = -210000000;
+    int best_depth = 0;
+    bool best_is_complete = false;
+    int completed_depth = 0;
+    int completed_count = 0;
+    bool nominal_completed = false;
+    // Sequential (single-worker) cost of the last completed iteration, used to
+    // project what the next depth costs before committing to it.
+    double sequential_ms = 0.0;
+
+    // Depth ladder: every two plies plus a cheap ordering pass.  Odd and even
+    // depths are kept on the same parity as the target because threat chains
+    // alternate sides, so a same-parity ladder reuses the previous ordering.
+    std::vector<int> ladder;
+    for (int d = 1; d <= nominal_depth; ++d) {
+        if (d == nominal_depth || d == 1 || (d % 2) == (nominal_depth % 2)) ladder.push_back(d);
+    }
+
+    auto ms_left = [&](const std::chrono::steady_clock::time_point& until) {
+        return std::chrono::duration<double, std::milli>(
+            until - std::chrono::steady_clock::now()).count();
+    };
+
+    // Analyzes one root move at `search_depth`.  Returns false when the search
+    // hit the stop point, in which case `value_out` is meaningless.
+    auto analyze_root = [&](int index, int search_depth, int alpha, int beta,
+                            const std::chrono::steady_clock::time_point& stop,
+                            TranspositionTable& table, int& value_out) {
+        int local[kMaxBoard][kMaxBoard];
+        std::memcpy(local, board, sizeof(local));
+        const Move m = order[index];
+        local[m.r][m.c] = p;
+        if (check_win_at(local, sz, m.r, m.c, p)) {
+            value_out = 200000000 + search_depth;
+            return true;
+        }
+        if (has_forced_four_win(local, sz, op, 6, 320)) {
+            value_out = -190000000 - search_depth;
+            return true;
+        }
+        bool root_timed_out = false;
+        const std::uint64_t hash = position_hash(local, sz, op);
+        value_out = -negamax(local, sz, op, search_depth, -beta, -alpha, m, p, style, 2,
+                             cancel, &stop, &root_timed_out, hash, &table);
+        return !root_timed_out && !(cancel && cancel->load()) &&
+               std::chrono::steady_clock::now() < stop;
+    };
+
+    // One iteration over all roots.  `aspirate` searches the first move with a
+    // full window and every later move against the best value found so far; a
+    // later move only replaces the leader when it proves strictly better, which
+    // is exactly the comparison the root needs and much cheaper than a full
+    // window.  A partial, aspirated pass is therefore still decisive.
+    auto run_iteration = [&](int search_depth, bool aspirate,
+                             const std::chrono::steady_clock::time_point& stop,
+                             bool require_complete, double& sequential_out,
+                             bool& fully_completed) {
+        depth_value.assign(root_count, -210000000);
+        depth_done.assign(root_count, 0);
+        depth_bound.assign(root_count, 0);
+        sequential_out = 0.0;
+        fully_completed = false;
+        std::atomic<size_t> next{0};
+        std::atomic<int> leader{-210000000};
+        std::atomic<long long> sequential_us{0};
+        std::atomic<bool> aborted{false};
+        auto worker = [&]() {
+            // One table per worker, kept across roots so positions reached by
+            // different move orders are reused (same policy as before).
+            TranspositionTable table;
+            while (true) {
+                if (cancel && cancel->load()) { aborted = true; return; }
+                if (aborted.load()) return;
+                if (aspirate && std::chrono::steady_clock::now() >= stop) return;
+                const size_t index = next.fetch_add(1);
+                if (index >= static_cast<size_t>(root_count)) return;
+                const int alpha = aspirate ? leader.load() : -210000000;
+                const auto root_started = std::chrono::steady_clock::now();
+                int value = 0;
+                const bool ok = analyze_root(static_cast<int>(index), search_depth,
+                                             alpha, 210000000, stop, table, value);
+                sequential_us += static_cast<long long>(
+                    std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now() - root_started).count());
+                if (!ok) {
+                    if (require_complete) aborted = true;
+                    return;
+                }
+                depth_value[index] = value;
+                depth_done[index] = 1;
+                depth_bound[index] = aspirate && value <= alpha ? 3 : (alpha > -210000000 ? 2 : 1);
+                if (aspirate) {
+                    int current = leader.load();
+                    while (value > current && !leader.compare_exchange_weak(current, value)) {}
+                }
             }
-            if (!root_timed_out && std::chrono::steady_clock::now() < deadline)
-                completed[index] = 1;
+        };
+        std::vector<std::thread> workers;
+        workers.reserve(worker_count);
+        for (int i = 0; i < worker_count; ++i) workers.emplace_back(worker);
+        for (auto& thread : workers) thread.join();
+        sequential_out = static_cast<double>(sequential_us.load()) / 1000.0;
+        if (aborted.load()) {
+            depth_done.assign(root_count, 0);
+            depth_bound.assign(root_count, 0);
+            return false;
+        }
+        fully_completed = true;
+        for (unsigned char flag : depth_done) fully_completed = fully_completed && flag;
+        return fully_completed;
+    };
+
+    // Reorders the next iteration by the values just found (PV-first search).
+    // Only `order` and the static keys are permuted: the per-root value arrays
+    // belong to the pass that produced them and are consumed by absorb_pass
+    // before the next pass reuses those buffers.
+    auto adopt_ordering = [&](bool require_complete) {
+        std::vector<int> index_order(root_count);
+        for (int i = 0; i < root_count; ++i) index_order[i] = i;
+        std::stable_sort(index_order.begin(), index_order.end(), [&](int a, int b) {
+            if (!require_complete) {
+                const bool da = depth_done[a] != 0, db = depth_done[b] != 0;
+                if (da != db) return da;
+            }
+            if (depth_value[a] != depth_value[b]) return depth_value[a] > depth_value[b];
+            return root_key[a] > root_key[b];
+        });
+        std::vector<Move> reordered;
+        std::vector<int> reordered_key;
+        reordered.reserve(root_count);
+        reordered_key.reserve(root_count);
+        for (int i : index_order) {
+            reordered.push_back(order[i]);
+            reordered_key.push_back(root_key[i]);
+        }
+        order.swap(reordered);
+        root_key.swap(reordered_key);
+    };
+
+    // Iterative deepening.  The selected level is a guarantee: every pass up
+    // to the nominal depth is attempted (a pass that starts may overrun the
+    // soft deadline slightly so its result stays usable).  Anything left over
+    // is spent on extra plies, one level at a time, until a pass no longer
+    // fits.  Before starting a pass, the previous pass's measured cost is
+    // projected forward, so the engine does not begin work it cannot finish.
+    constexpr double kNodeGrowthPerPly = 2.4;  // calibrated on this search
+    constexpr double kFitFraction = 0.75;      // leave headroom for jitter
+    constexpr int kMaxExtraDepth = 2;
+    std::vector<int> plan = ladder;
+    for (int extra = 1; extra <= kMaxExtraDepth && nominal_depth + extra <= 12; ++extra)
+        plan.push_back(nominal_depth + extra);
+
+    // Folds the finished pass into the durable record.  A complete pass always
+    // wins; a partial pass only ever replaces a lower-depth (or equally deep but
+    // incomplete) record, and only with a move that proved a strictly better
+    // value than the standing answer.
+    auto absorb_pass = [&](int pass_depth, bool complete) {
+        if (complete) {
+            int best_index = -1;
+            for (int i = 0; i < root_count; ++i) {
+                if (!depth_done[i]) continue;
+                if (depth_bound[i] == 3) continue;  // fail low: no usable score
+                if (best_index == -1 || depth_value[i] > depth_value[best_index] ||
+                    (depth_value[i] == depth_value[best_index] &&
+                     root_key[i] > root_key[best_index])) {
+                    best_index = i;
+                }
+            }
+            if (best_index == -1) {  // every root failed low; fall back to any result
+                for (int i = 0; i < root_count; ++i) {
+                    if (!depth_done[i]) continue;
+                    if (best_index == -1 || depth_value[i] > depth_value[best_index])
+                        best_index = i;
+                }
+            }
+            if (best_index >= 0) {
+                std::vector<int> ranked_indices;
+                for (int i = 0; i < root_count; ++i)
+                    if (depth_done[i] && depth_bound[i] != 3) ranked_indices.push_back(i);
+                if (ranked_indices.empty())
+                    for (int i = 0; i < root_count; ++i)
+                        if (depth_done[i]) ranked_indices.push_back(i);
+                std::stable_sort(ranked_indices.begin(), ranked_indices.end(), [&](int a, int b) {
+                    if (depth_value[a] != depth_value[b]) return depth_value[a] > depth_value[b];
+                    return root_key[a] > root_key[b];
+                });
+                best_ranked.clear();
+                for (int i : ranked_indices) best_ranked.push_back(order[i]);
+                best_move = order[best_index];
+                best_value = depth_value[best_index];
+                best_depth = pass_depth;
+                best_is_complete = true;
+            }
+            return;
+        }
+        // Partial pass: only trust a strictly better, non-fail-low result at a
+        // depth that is at least as deep as the standing record, and keep the
+        // best of them rather than whichever happened to finish last.
+        int improved = -1;
+        for (int i = 0; i < root_count; ++i) {
+            if (!depth_done[i] || depth_bound[i] == 3) continue;
+            if (pass_depth < best_depth) continue;
+            if (best_value != -210000000 && depth_value[i] <= best_value) continue;
+            if (improved == -1 || depth_value[i] > depth_value[improved] ||
+                (depth_value[i] == depth_value[improved] && root_key[i] > root_key[improved]))
+                improved = i;
+        }
+        if (improved >= 0) {
+            best_ranked.clear();
+            best_ranked.push_back(order[improved]);
+            for (int i = 0; i < root_count; ++i)
+                if (depth_done[i] && i != improved) best_ranked.push_back(order[i]);
+            best_move = order[improved];
+            best_value = depth_value[improved];
+            best_depth = pass_depth;
+            best_is_complete = false;
         }
     };
-    std::vector<std::thread> workers;
-    workers.reserve(worker_count);
-    for (int i = 0; i < worker_count; ++i) workers.emplace_back(worker);
-    for (auto& thread : workers) thread.join();
-    if (cancel && cancel->load()) return {-1, -1};
 
-    int best_index = -1;
-    for (size_t i = 0; i < roots.size(); ++i) {
-        if (!completed[i]) continue;
-        if (best_index == -1 || values[i] > values[best_index] ||
-            (values[i] == values[best_index] && roots[i].first > roots[best_index].first)) {
-            best_index = static_cast<int>(i);
+    for (size_t step = 0; step < plan.size() && !(cancel && cancel->load()); ++step) {
+        const int candidate_depth = plan[step];
+        const bool is_nominal = candidate_depth == nominal_depth;
+        const bool is_extra = candidate_depth > nominal_depth;
+        const bool have_estimate = completed_depth > 0;
+        const double per_root_ms = have_estimate
+            ? sequential_ms / std::max(1, completed_count) : 0.0;
+        const double growth = have_estimate && candidate_depth > completed_depth
+            ? std::pow(kNodeGrowthPerPly, candidate_depth - completed_depth) : 1.0;
+        const double projected_wall_ms =
+            per_root_ms * root_count * growth / std::max(1, worker_count);
+        const bool fits_complete = !have_estimate ||
+            projected_wall_ms <= kFitFraction * ms_left(search_deadline);
+        // The nominal depth is promised by the level, and the very first pass
+        // has no estimate to go on, so both are attempted regardless.
+        const bool must_try = is_nominal || !have_estimate;
+
+        if (fits_complete) {
+            double measured = 0.0;
+            bool complete = false;
+            run_iteration(candidate_depth, false, hard_stop, true, measured, complete);
+            if (!complete) break;
+            absorb_pass(candidate_depth, true);
+            adopt_ordering(true);
+            sequential_ms = measured;
+            completed_count = root_count;
+            completed_depth = candidate_depth;
+            if (is_nominal || is_extra) nominal_completed = true;
+        } else if (must_try) {
+            // Out of comfortable time but this depth was promised.  Try a clean
+            // pass inside the hard stop; otherwise fall back to an aspirated
+            // pass bounded by the soft deadline, then stop climbing.
+            double measured = 0.0;
+            bool complete = false;
+            run_iteration(candidate_depth, false, hard_stop, true, measured, complete);
+            if (complete) {
+                absorb_pass(candidate_depth, true);
+                adopt_ordering(true);
+                sequential_ms = measured;
+                completed_count = root_count;
+                completed_depth = candidate_depth;
+                if (is_nominal) nominal_completed = true;
+            } else {
+                // The full pass was discarded, so the ordering still reflects
+                // the previous pass; keep it and search with aspiration.
+                complete = false;
+                run_iteration(candidate_depth, true, deadline, false, measured, complete);
+                absorb_pass(candidate_depth, false);
+                if (complete) {
+                    adopt_ordering(false);
+                    completed_count = 0;
+                    for (unsigned char flag : depth_done) completed_count += flag ? 1 : 0;
+                }
+                break;
+            }
+        } else if (is_extra) {
+            // Only a partial pass fits.  Searching the ordered candidates with
+            // aspiration is safe: a move displaces the leader only by proving a
+            // strictly better value, and the last complete answer is the floor.
+            double measured = 0.0;
+            bool complete = false;
+            run_iteration(candidate_depth, true, deadline, false, measured, complete);
+            absorb_pass(candidate_depth, false);
+            if (complete) {
+                adopt_ordering(false);
+                completed_depth = candidate_depth;
+                completed_count = 0;
+                for (unsigned char flag : depth_done) completed_count += flag ? 1 : 0;
+            }
+            break;
+        } else {
+            // Pruned intermediate pass that does not fit; skip it and let the
+            // next (deeper, promised) pass use the time.
+            continue;
         }
     }
-    if (best_index == -1) best_index = 0;
-    Move best_move = roots[best_index].second;
-    // Final defensive audit: if the selected move creates an unavoidable VCF setup,
-    // fall back to the second-best completed root that passes the audit (AlphaGomoku-style MCTS audit)
-    int audit_board[kMaxBoard][kMaxBoard];
-    std::memcpy(audit_board, board, sizeof(audit_board));
-    audit_board[best_move.r][best_move.c] = p;
-    if (opponent_has_unavoidable_vcf_setup(audit_board, sz, op, std::chrono::steady_clock::now() + std::chrono::milliseconds(5000), 12, 48)) {
-        for (int i = 0; i < static_cast<int>(roots.size()); ++i) {
-            if (i == best_index || !completed[i]) continue;
-            Move audit_move = roots[i].second;
-            std::memcpy(audit_board, board, sizeof(audit_board));
-            audit_board[audit_move.r][audit_move.c] = p;
-            if (!opponent_has_unavoidable_vcf_setup(audit_board, sz, op, std::chrono::steady_clock::now() + std::chrono::milliseconds(5000), 12, 48)) {
-                return audit_move;
+
+    if (stats) {
+        stats->completed_depth = completed_depth;  // last pass that fully finished
+        stats->nominal_depth = nominal_depth;
+        stats->roots = root_count;
+        stats->roots_completed = completed_count;
+        stats->nominal_depth_completed = nominal_completed;
+        stats->elapsed_ms = elapsed_ms();
+    }
+    // Fall back to the static ordering only if no pass produced any result
+    // (every pass was cancelled), so a move is always returned.
+    if (best_move.r == -1) {
+        for (int i = 0; i < root_count; ++i) {
+            if (!depth_done[i]) continue;
+            best_move = order[i];
+            break;
+        }
+    }
+    if (best_move.r == -1) best_move = order[0];
+    if (stats) {
+        stats->search_depth = best_depth;       // depth that produced the answer
+        stats->search_depth_complete = best_is_complete;
+    }
+
+    // Tactical verdict on the chosen move.
+    //
+    // A shallow alpha-beta evaluation cannot see that a move concedes a forced
+    // continuous-four win: the opponent's chain is longer than the horizon and
+    // every leaf looks fine.  That is precisely how the engine was losing games
+    // to Rapfi.  Two sound checks run here, both bounded by the reserve:
+    //
+    //   1. VCF: can the opponent force a win by fours after this move?  The
+    //      prover is exact, so a hit means the move is lost.
+    //   2. Defensive floor: does the opponent already have so many forced
+    //      four-points that no quiet move survives?
+    //
+    // If the chosen move fails, the remaining roots are tried in order.
+    auto move_loses_to_vcf = [&](Move move) {
+        if (std::chrono::steady_clock::now() >= tactical_deadline) return false;  // unknown
+        const auto started = std::chrono::steady_clock::now();
+        const int vcf_budget = std::min(30000, 1500 + time_budget_ms * 3);
+        int local[kMaxBoard][kMaxBoard];
+        std::memcpy(local, board, sizeof(local));
+        local[move.r][move.c] = p;
+        int budget = vcf_budget;
+        const bool loses = forced_four_search(local, sz, op, 16, budget);
+        if (stats) {
+            stats->audits += 1;
+            stats->audit_ms += static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - started).count());
+        }
+        return loses;
+    };
+
+    {
+        // Iterate the ranking produced with `best_move`, not live indices: the
+        // search order is re-permuted between passes by design.
+        std::vector<Move> ranked = best_ranked;
+        if (ranked.empty()) {
+            for (const auto& item : roots) ranked.push_back(item.second);
+        }
+        // Put the engine's own answer first, then try progressively worse
+        // moves until one survives the tactical check.
+        for (size_t k = 0; k < ranked.size(); ++k) {
+            if (ranked[k].r == best_move.r && ranked[k].c == best_move.c) {
+                std::swap(ranked[0], ranked[k]);
+                break;
             }
         }
+        const size_t limit = std::min<size_t>(ranked.size(), 6);
+        for (size_t k = 0; k < limit; ++k) {
+            const Move candidate = ranked[k];
+            if (!move_loses_to_vcf(candidate)) {
+                best_move = candidate;
+                break;
+            }
+            if (stats) stats->vhazard_avoided += 1;
+        }
     }
+
     return best_move;
 }
 
@@ -910,7 +1485,7 @@ inline int five_completion_squares(int board[kMaxBoard][kMaxBoard], int sz,
 // of their own; callers guarantee that never happens.  Attack and node
 // budgets bound the worst case for post-game replay loops.
 inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
-                               int attacks_left, int& budget) {
+                               int attacks_left, int& budget, Move* first_move) {
     if (attacks_left <= 0 || budget <= 0) return false;
     --budget;
     const int op = 3 - p;
@@ -922,7 +1497,10 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
     for (Move m : generate_candidates(board, sz, 1)) {
         if (p == 1 && is_forbidden_move(board, sz, m.r, m.c)) continue;
         ThreatInfo info = analyze_move(board, sz, m.r, m.c, p);
-        if (info.count[TH_FIVE]) return true;  // Five available right now.
+        if (info.count[TH_FIVE]) {  // Five available right now.
+            if (first_move) *first_move = m;
+            return true;
+        }
         if (!info.count[TH_OPEN_FOUR] && !info.count[TH_BROKEN_FOUR] &&
             !info.count[TH_CLOSED_FOUR]) continue;
         fours.push_back({m, info.score});
@@ -965,7 +1543,10 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
             }
         }
         board[f.r][f.c] = 0;
-        if (won) return true;
+        if (won) {
+            if (first_move) *first_move = f;
+            return true;
+        }
         if (budget <= 0) break;
     }
     return false;
