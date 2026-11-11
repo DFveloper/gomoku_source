@@ -9,7 +9,8 @@ usage() {
     cat <<'EOF'
 Usage: scripts/build_all.sh [options]
 
-Configure the project and build all default CMake targets.
+Configure the project and build all default CMake targets, including the
+engine-development tools (build/tools/ab_match, build/tools/id_soundness).
 
 Options:
   --debug           Build with CMAKE_BUILD_TYPE=Debug

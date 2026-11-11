@@ -5,7 +5,7 @@
   "always_ponder": false,
   "swap2_openings_file": "swap2_openings.json",
   "conv_networks": {
-    "freestyle": "freestyle_conv_8x128.bin",
+    "freestyle": "renju_conv_8x128.bin",
     "freestyle_15": "freestyle_conv_8x128_15x15.bin",
     "standard": "standard_conv_8x128.bin",
     "renju": "renju_conv_8x128.bin",
@@ -21,23 +21,23 @@
     "caro6": ""
   },
   "use_symmetries": true,
-  "search_threads": 16,
+  "search_threads": 1,
   "devices": [
     {
       "device": "CPU",
-      "batch_size": 32
+      "batch_size": 8
     }
   ],
   "search_config": {
-    "max_batch_size": 32,
+    "max_batch_size": 8,
     "early_stopping": 0.995,
     "time_fraction_15x15": 0.885,
     "time_fraction_20x20": 0.912,
     "tree_config": {
       "information_leak_threshold": 0.01,
-      "initial_node_cache_size": 65536,
-      "edge_bucket_size": 200000,
-      "node_bucket_size": 10000
+      "initial_node_cache_size": 16384,
+      "edge_bucket_size": 20000,
+      "node_bucket_size": 2000
     },
     "mcts_config": {
       "edge_selector_config": {
@@ -55,7 +55,7 @@
     "tss_config": {
       "mode": 2,
       "max_positions": 1000,
-      "hash_table_size": 4194304
+      "hash_table_size": 1048576
     }
   }
 }
