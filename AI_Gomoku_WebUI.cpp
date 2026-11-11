@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "gomoku_core.h"
-#include "engine_adapter.h"
+#include "engine_strength.h"
 #include "public_mode_common.h"
 
 #ifdef _WIN32
@@ -88,6 +88,7 @@ string public_origin;
 int ai_threads = 0;
 filesystem::path engine_runtime_root;
 bool public_mode = false;
+bool sangin_candidate = false;
 
 void close_socket(Socket s) {
 #ifdef _WIN32
@@ -256,7 +257,7 @@ void start_ai_locked() {
             local_board[r][c] = snapshot[r * kMaxBoard + c];
         if (engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
             string error;
-            move = gomoku::choose_current_neural_vct_move(
+            move = gomoku::choose_strong_move(
                 local_board, size, history, 2, level, ai_threads,
                 engine_runtime_root, error, cancel.get());
         } else if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
@@ -588,14 +589,14 @@ pair<int, string> public_review_response(const string& body, int forced_size = 0
 }
 
 gomoku::Move choose_public_ai_move(int board[kMaxBoard][kMaxBoard], int size,
-                                   const vector<gomoku::Move>& history, int engine, int level) {
+                                   const vector<gomoku::Move>& history, int engine, int level, bool strong_sangin = false, bool sangin_profile = false) {
     atomic<bool> cancel{false};
     gomoku::OpponentStyle style = gomoku::analyze_opponent_style(size, history, 1);
     gomoku::Move last_ai = gomoku_public::last_for(history, 2);
     gomoku::Move move{-1, -1};
-    if (engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
+    if (strong_sangin || engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
         string error;
-        move = gomoku::choose_current_neural_vct_move(
+        move = gomoku::choose_strong_move(
             board, size, history, 2, level, ai_threads, engine_runtime_root, error, &cancel);
     } else if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
         string error;
@@ -604,6 +605,7 @@ gomoku::Move choose_public_ai_move(int board[kMaxBoard][kMaxBoard], int size,
         request.moves = history;
         request.player = 2;
         request.level = level;
+        if (sangin_profile) request.turn_time_ms = 5000;
         request.board_size = size;
         request.program = gomoku::external_runtime_path(engine_runtime_root, request.version);
         request.cancel = &cancel;
@@ -647,7 +649,7 @@ pair<int, string> public_move_response(const string& body, bool sangin = false) 
     gomoku::Move ai_move{-1, -1};
     if (gomoku::check_win_at(board, size, row, col, 1, &line)) winner = 1;
     else if (moves.size() < static_cast<size_t>(size * size)) {
-        ai_move = choose_public_ai_move(board, size, moves, engine, level);
+        ai_move = choose_public_ai_move(board, size, moves, engine, level, sangin && sangin_candidate, sangin);
         if (gomoku::is_legal_move(board, size, 2, ai_move)) {
             board[ai_move.r][ai_move.c] = 2;
             moves.push_back(ai_move);
@@ -748,6 +750,10 @@ bool serve_file_from(Socket socket, const filesystem::path& root, const string& 
         }
         const string script_marker = "__GOMOKU_SCRIPT__";
         const bool sangin = root == sangin_web_root;
+        if (sangin && sangin_candidate) {
+            size_t label = body.find("RAPFI 2025");
+            if (label != string::npos) body.replace(label, 10, "RAPFI + ALPHA");
+        }
         const string script_name = (public_mode || sangin) ? "public_app.js" : "app.js";
         while ((at = body.find(script_marker)) != string::npos)
             body.replace(at, script_marker.size(), script_name);
@@ -956,6 +962,8 @@ bool parse_args(int argc, char** argv, string& host, int& port) {
         } else if (arg == "--public-url" && i + 1 < argc) {
             public_origin = argv[++i];
             while (public_origin.size() > 1 && public_origin.back() == '/') public_origin.pop_back();
+        } else if (arg == "--sangin-candidate") {
+            sangin_candidate = true;
         } else if (arg == "--public-mode") {
             public_mode = true;
         } else if (arg == "--help" || arg == "-h") {

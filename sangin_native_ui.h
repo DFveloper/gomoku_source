@@ -76,7 +76,7 @@ void draw_sangin_scene(HDC hdc) {
     SolidBrush black(Color(20,21,20)),white(Color(242,238,225));
     g.FillEllipse(&black,x,top+143,14,14); g.FillEllipse(&white,x+91,top+143,14,14);
     label(L"나 · 흑",{x+21,top+140,65,22},12,muted,true);
-    label(L"RAPFI 5 · 백",{x+112,top+140,width-112,22},12,muted,true);
+    label(sangin_candidate?L"RAPFI + ALPHA · 백":L"RAPFI 5 · 백",{x+112,top+140,width-112,22},12,muted,true);
     Pen divider(Color(41,214,224,200),1);
     g.DrawLine(&divider,x,top+181,x+width,top+181);
     g.DrawLine(&divider,x,top+235,x+width,top+235);
@@ -85,7 +85,7 @@ void draw_sangin_scene(HDC hdc) {
     label(std::to_wstring(log_v.size())+L"수",{x+width-52,top+198,52,25},11,muted,true,true);
     box({x,top+253,width,42},Color(31,60,38),6);
     label(L"AI",{x+14,top+265,24,22},12,muted);
-    label(L"RAPFI 2025 · LEVEL 5",{x+42,top+265,width-49,22},14,cream,true);
+    label(sangin_candidate?L"RAPFI + ALPHA · 5":L"RAPFI 2025 · LEVEL 5",{x+42,top+265,width-49,22},14,cream,true);
     // Match the WebUI's 14px gap between fixed engine and action controls.
 
     for(int i : {0,1,2,5}) {
@@ -125,7 +125,7 @@ void draw_sangin_scene(HDC hdc) {
               L"• 흑의 장목(6목 이상), 3-3, 4-4는 금수라 둘 수 없습니다.\n"
               L"• 백은 5목 이상을 이으면 승리하며 금수 제한이 없습니다.",
               {cx,cy+90,426,130},16,cream);
-        label(L"15×15 고정 · Rapfi 레벨 5 · 히트맵 없음",{cx,cy+222,426,25},14,muted);
+        label(sangin_candidate?L"15×15 고정 · Rapfi + Alpha · 히트맵 없음":L"15×15 고정 · Rapfi 레벨 5 · 히트맵 없음",{cx,cy+222,426,25},14,muted);
         SanginRect start=sangin_rules_button(); box(start,lime,6);
         label(L"대국 시작",start,16,Color(24,35,24),true,true);
     }

@@ -1,4 +1,4 @@
-param([string]$BuildDir = '.run/build-windows')
+param([string]$BuildDir = '.run/build-windows', [switch]$Candidate)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 if (-not [IO.Path]::IsPathRooted($BuildDir)) { $BuildDir = Join-Path $root $BuildDir }
@@ -6,7 +6,9 @@ $listener = New-Object System.Net.Sockets.TcpListener([Net.IPAddress]::Loopback,
 $listener.Start()
 $port = $listener.LocalEndpoint.Port
 $listener.Stop()
-$server = Start-Process -FilePath (Join-Path $BuildDir 'gomoku_webui.exe') -ArgumentList @('--host','127.0.0.1','--port',"$port") -PassThru -WindowStyle Hidden
+$serverArgs = @('--host','127.0.0.1','--port',"$port")
+if ($Candidate) { $serverArgs += '--sangin-candidate' }
+$server = Start-Process -FilePath (Join-Path $BuildDir 'gomoku_webui.exe') -ArgumentList $serverArgs -PassThru -WindowStyle Hidden
 $base = "http://127.0.0.1:$port"
 try {
     $page = $null

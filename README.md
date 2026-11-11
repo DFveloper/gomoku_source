@@ -147,7 +147,7 @@ Use `-ToolchainBin C:/path/to/bin` for another MinGW toolchain. The script uses
 `.run/build-windows` to avoid reusing Linux CMake caches in `build/`.
 Sangin is a native Win32/GDI+ window matching the Sangin WebUI's layout,
 Korean labels, rule overlay, controls and review flow. It runs directly with
-15x15 Renju and Rapfi level 5. Engine/level/size controls,
+15x15 Renju and the established Rapfi default at level 5. Engine/level/size controls,
 undo, heatmap, file controls and gameplay shortcuts are disabled there.
 The Windows build copies `third_party/runtime` beside the executable and uses
 `config.windows.toml` for the bundled Windows Rapfi (its evaluator type differs
@@ -428,3 +428,42 @@ The external runtimes, model files and dependent DLLs are embedded in the one
 GUI executable and extracted to a process-specific temporary directory at
 startup. See [THIRD_PARTY_ENGINES.md](THIRD_PARTY_ENGINES.md) for algorithms,
 runtime subsets, source locations and license notes.
+
+## Windows strength candidate
+
+PR #1 is merged. Current v3 in the native game, native match, both WebUIs and
+benchmark can use the verified Rapfi + AlphaGomoku council. Sangin retains Rapfi
+as its default until the candidate passes playing-strength validation.
+
+The candidate uses a **5000 ms nominal design budget**, with no forced cutoff at
+5000 ms. Startup, finishing an iteration and tactical verification can extend the
+actual response time; benchmark output reports maximum and average wall time.
+Rapfi, Alpha and the local search propose candidates. Agreement ranks the
+candidates, then tactical proofs reject moves that permit a proven loss.
+Immediate wins and forced blocks take precedence. Missing experts fall back to
+local search, and expired or cancelled workers are joined before returning.
+
+Build into a separate folder while the festival app is running:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_windows.ps1 -BuildDir .run/build-strength -Test
+.\.run\build-strength\strength_check.exe .run/build-strength/third_party/runtime
+.\.run\build-strength\gomoku_sangin.exe --sangin-candidate --fullscreen
+```
+
+The integration check requires legal replies from both Rapfi and AlphaGomoku,
+then checks cancellation and immediate-win precedence. It needs enough logical
+cores to host two experts. The candidate can also be previewed in the browser
+with `gomoku_webui.exe --sangin-candidate` at `/sangin/`.
+
+Measure the candidate against standalone Rapfi with the same nominal 5-second
+protocol budget, four openings and swapped colours (eight games):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate_strength.ps1
+```
+
+The gate rejects any candidate loss or invalid game and saves raw results to
+`rapfi-strength-validation.log` in the build directory. It does not change Sangin's
+default automatically. No finite opening suite can prove no losses in every
+possible position; historical Linux results above are not Windows validation.

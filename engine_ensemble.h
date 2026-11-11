@@ -123,6 +123,8 @@ struct EnsembleExpert {
 };
 
 struct EnsembleConfig {
+    int nominal_budget_ms = 0; // Design budget, not a forced five-second cutoff.
+    int completion_grace_ms = 200;
     EnsemblePolicy policy = EnsemblePolicy::Verified;
     // Fraction of the move budget handed to each external expert. All experts
     // run concurrently with the local search, so this is a CPU split, not a
@@ -176,8 +178,8 @@ namespace detail {
 // only be a council member on a machine that has cores to spare.
 inline int external_threads(EngineVersion version) {
     switch (version) {
-        case EngineVersion::AlphaGomoku2026: return 4;
-        case EngineVersion::XLNiren: return 4;
+        case EngineVersion::AlphaGomoku2026: return 1;
+        case EngineVersion::XLNiren: return 1;
         default: return 1;
     }
 }
@@ -215,8 +217,11 @@ inline EnsembleStats choose_ensemble_move(
         EngineVersion expert = EngineVersion::Rapfi2025,
         const std::atomic<bool>* cancel = nullptr) {
     EnsembleStats stats;
+    if ((cancel && cancel->load()) || first_legal_move(board, sz, player).r < 0)
+        return stats;
     const auto started = std::chrono::steady_clock::now();
-    const int time_budget_ms = 1000 * (1 << std::max(0, std::min(level, 5) - 1));
+    const int time_budget_ms = config.nominal_budget_ms > 0 ? config.nominal_budget_ms :
+        1000 * (1 << std::max(0, std::min(level, 5) - 1));
     const int opponent = 3 - player;
 
     // --- Decisions that need no search at all -------------------------------
@@ -254,13 +259,12 @@ inline EnsembleStats choose_ensemble_move(
         if (stats.experts_skipped < 0) stats.experts_skipped = 0;
     }
 
-    // A slot outlives this call whenever an expert had to be detached (a hung
-    // child must not stall the UI). It is therefore shared with its thread: a
-    // detached thread that wrote into memory owned by this stack frame corrupted
-    // the heap in testing, and it would have done so in the UI as well.
+    // Each slot owns its cancellation flag. All workers are stopped and joined
+    // before returning, so UI resets cannot leave dangling cancellation pointers.
     struct ExpertSlot {
         std::thread thread;
         std::atomic<bool> done{false};
+        std::atomic<bool> stop{false};
         std::atomic<int> row{-1};
         std::atomic<int> column{-1};
         std::string error;  // written before `done` is raised
@@ -303,6 +307,8 @@ inline EnsembleStats choose_ensemble_move(
             }
             spare_threads -= needs;
             auto slot = std::make_shared<ExpertSlot>();
+            request.turn_time_ms = expert_budget_ms;
+            request.cancel = &slot->stop;
             slot->launched = true;
             slot->thread = std::thread([slot, request]() {
                 const Move move = run_external_engine(request, slot->error);
@@ -337,12 +343,12 @@ inline EnsembleStats choose_ensemble_move(
         std::thread local_thread([&]() {
             local_move = choose_ai_move(board, sz, player, level, &style,
                                         config.local_threads, last_own, &local_stop,
-                                        &local_stats);
+                                        &local_stats, config.nominal_budget_ms);
         });
         // Watch the experts; as soon as every one of them has answered, the
         // local search has nothing left to buy and is stopped early.
         const auto local_hard_stop =
-            local_started + std::chrono::milliseconds(time_budget_ms + 200);
+            local_started + std::chrono::milliseconds(time_budget_ms + config.completion_grace_ms);
         for (;;) {
             bool all_done = true;
             for (auto& slot : slots) all_done = all_done && slot->done.load();
@@ -355,7 +361,7 @@ inline EnsembleStats choose_ensemble_move(
         local_thread.join();
     } else {
         local_move = choose_ai_move(board, sz, player, level, &style, 0, last_own,
-                                    cancel, &local_stats);
+                                    cancel, &local_stats, config.nominal_budget_ms);
     }
     stats.local_depth = local_stats.search_depth;
     stats.local_proved_win = local_stats.vcf_win;
@@ -366,7 +372,7 @@ inline EnsembleStats choose_ensemble_move(
     if (!slots.empty()) {
         // Never wait past the budget: a hung child must not stall the UI, and an
         // over-subscribed machine must not turn the mixture into a time forfeit.
-        const auto hard_stop = started + std::chrono::milliseconds(time_budget_ms + 200);
+        const auto hard_stop = started + std::chrono::milliseconds(time_budget_ms + config.completion_grace_ms);
         for (auto& slot : slots) {
             while (!slot->done.load() && std::chrono::steady_clock::now() < hard_stop) {
                 if (cancel && cancel->load()) break;
@@ -376,7 +382,8 @@ inline EnsembleStats choose_ensemble_move(
                 slot->thread.join();
             } else {
                 ++stats.experts_timeout;
-                slot->thread.detach();  // shared_ptr keeps the slot alive
+                slot->stop = true;
+                slot->thread.join(); // Never leave a child using a caller's cancellation pointer.
             }
         }
     }
@@ -431,6 +438,7 @@ inline EnsembleStats choose_ensemble_move(
                          slot->error.empty() ? "ok" : "error: ", slot->error.c_str());
     }
     add_proposal(local_move);
+    if (proposals.empty()) return finish({-1,-1}, EnsembleSource::LocalSearch);
     if (config.policy == EnsemblePolicy::Trusting) {
         // No verification at all: the most trusted member that answered wins.
         for (auto& slot : slots) {

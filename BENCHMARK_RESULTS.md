@@ -175,3 +175,37 @@ Six bugs were found and fixed on the way here; see
 (`INFO max_depth` capping the expert at depth 3, and an unsound VCF move
 extractor that "proved" a win for all 23 legal moves) were misreporting the
 engine's real behaviour in every earlier measurement.
+
+## Windows integration validation (2026-11-10)
+
+Host: Intel Core m3-8100Y, Windows, w64devkit GNU C++ 16.2.0, bundled Windows
+Rapfi AVX2 and AlphaGomoku CPU runtimes. The candidate and standalone Rapfi
+receive the same 5000 ms nominal protocol budget; process startup, finishing
+search and verification are measured, rather than forcibly cut off at 5000 ms.
+
+- New local search vs frozen baseline, one opening with colours swapped:
+  **1 win, 1 draw**, no illegal moves. This small sample ran alongside a build,
+  so it is a smoke measurement rather than a controlled strength estimate.
+- Rapfi-primary council vs standalone Rapfi, one opening with colours swapped:
+  **1 win, 1 loss**, no engine errors. Candidate as black won in 35 plies;
+  candidate as white lost in 35 plies. Candidate average times were 3504 / 3303 ms,
+  maximum times 5887 / 6661 ms; Rapfi maximum times 5550 / 5555 ms.
+- Both expert processes returned legal moves in the integration check. Tactical,
+  iterative-root soundness, forced-win precedence and missing-expert regression
+  checks passed.
+
+The Rapfi-primary candidate failed the undefeated gate. Sangin's default remains
+Rapfi. These results do not establish an Elo gain or universal dominance.
+Two follow-up variants were measured on the same colour-swapped opening:
+
+| Candidate | As black | As white | Overall | Maximum response |
+|---|---|---|---|---|
+| Rapfi primary | Win, 35 plies | Loss, 35 plies | 1-1 | 6661 ms |
+| Verified consensus | Win, 55 plies | Loss, 35 plies | 1-1 | 6674 ms |
+| Consensus + counter-four prover repair | Win, 55 plies | Loss, 35 plies | 1-1 | 7072 ms |
+
+The repair fixes a real false negative: blocking the opponent's five can itself
+create an open four. The new regression directly proves that case. It did not
+change the outcome of the measured match, so it is not presented as evidence of
+Rapfi dominance. The final candidate remains opt-in, and Sangin still defaults
+to Rapfi. Raw games and timing records are in `tools/results/windows_5s_*.txt`.

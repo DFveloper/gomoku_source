@@ -43,6 +43,24 @@ const std::vector<Move> kForcedPosition = {
 }  // namespace
 
 int main(int argc, char** argv) {
+    {
+        // Black must block White's five at (12,10), which simultaneously makes
+        // Black's open four. The old prover rejected the position immediately.
+        int counter[kMaxBoard][kMaxBoard]{};
+        counter[10][10]=counter[11][10]=counter[13][10]=1;
+        counter[12][7]=counter[12][8]=counter[12][9]=counter[12][11]=2;
+        int nodes=6000;
+        Move first{-1,-1};
+        check(forced_four_search(counter,kSize,1,16,nodes,&first) && first.r==12 && first.c==10,
+              "blocking a five can simultaneously force an open-four win");
+    }
+    {
+        int full[kMaxBoard][kMaxBoard]{};
+        for (int r=0;r<kSize;++r) for (int c=0;c<kSize;++c) full[r][c]=2;
+        auto result=choose_ensemble_move(full,kSize,{},2,1,{});
+        check(result.move.r<0 && result.experts_launched==0,
+              "full board returns no move without launching experts");
+    }
     const std::filesystem::path root =
 #ifdef GOMOKU_SOURCE_ROOT
         std::filesystem::path(GOMOKU_SOURCE_ROOT);

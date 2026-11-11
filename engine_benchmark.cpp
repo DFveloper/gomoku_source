@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "engine_adapter.h"
+#include "engine_strength.h"
 
 namespace {
 
@@ -38,7 +38,7 @@ Move choose(EngineVersion engine, int board[gomoku::kMaxBoard][gomoku::kMaxBoard
             const std::filesystem::path& runtime_root, std::string& error,
             EngineVersion opponent_engine) {
     if (engine == EngineVersion::CurrentV3)
-        return gomoku::choose_current_neural_vct_move(
+        return gomoku::choose_strong_move(
             board, kSize, history, player, level, threads, runtime_root, error,
             nullptr, opponent_engine);
     if (engine >= EngineVersion::CarbonClassic) {
@@ -47,6 +47,7 @@ Move choose(EngineVersion engine, int board[gomoku::kMaxBoard][gomoku::kMaxBoard
         request.moves = history;
         request.player = player;
         request.level = level;
+        request.turn_time_ms = 5000;
         request.board_size = kSize;
         request.program = gomoku::external_runtime_path(runtime_root, engine);
         Move move{-1, -1};
@@ -137,11 +138,13 @@ int main(int argc, char** argv) {
     }
     const EngineVersion opponent = static_cast<EngineVersion>(opponent_id);
 #ifdef GOMOKU_SOURCE_ROOT
-    const std::filesystem::path runtime_root =
+    std::filesystem::path runtime_root =
         std::filesystem::path(GOMOKU_SOURCE_ROOT) / "third_party" / "runtime";
 #else
-    const std::filesystem::path runtime_root = "third_party/runtime";
+    std::filesystem::path runtime_root = "third_party/runtime";
 #endif
+    const auto adjacent = std::filesystem::absolute(argv[0]).parent_path() / "third_party/runtime";
+    if (std::filesystem::exists(adjacent)) runtime_root = adjacent;
     const std::vector<std::vector<Move>> openings = {
         {{7, 7}, {7, 8}, {8, 7}, {6, 7}},
         {{7, 7}, {8, 8}, {6, 8}, {8, 6}, {6, 6}, {7, 8}},
@@ -149,13 +152,14 @@ int main(int argc, char** argv) {
         {{7, 7}, {8, 7}, {6, 6}, {8, 8}, {6, 8}, {7, 6}},
     };
 
-    int lumen_wins = 0, opponent_wins = 0, draws = 0;
+    int lumen_wins = 0, opponent_wins = 0, draws = 0, errors = 0;
     for (int pair = 0; pair < pairs; ++pair) {
         for (int swap = 0; swap < 2; ++swap) {
             EngineVersion black = swap == 0 ? EngineVersion::CurrentV3 : opponent;
             EngineVersion white = swap == 0 ? opponent : EngineVersion::CurrentV3;
             GameResult game = play_game(black, white, level, lumen_level, threads,
                                         openings[pair], runtime_root);
+            if (!game.error.empty()) ++errors;
             const int lumen_player = swap == 0 ? 1 : 2;
             if (game.winner == lumen_player) ++lumen_wins;
             else if (game.winner == 0) ++draws;
@@ -176,5 +180,5 @@ int main(int argc, char** argv) {
                 "lumen=%d opponent=%d draws=%d\n",
                 gomoku::engine_version_name(opponent), level, lumen_level,
                 lumen_wins, opponent_wins, draws);
-    return opponent_wins == 0 ? 0 : 1;
+    return opponent_wins == 0 && errors == 0 ? 0 : 1;
 }

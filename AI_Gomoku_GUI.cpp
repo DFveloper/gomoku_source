@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "gomoku_core.h"
-#include "engine_adapter.h"
+#include "engine_strength.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -50,6 +50,7 @@ constexpr bool sangin_mode = true;
 constexpr bool sangin_mode = false;
 #endif
 bool sangin_rules_visible = false;
+bool sangin_candidate = false;
 atomic<bool> sangin_external_reply{false};
 
 int sz = kDefaultBoard;
@@ -134,7 +135,8 @@ double parse_aspect_value(const char* value) {
 
 void parse_args(int argc, char** argv) {
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--fullscreen") == 0 || strcmp(argv[i], "-f") == 0) {
+        if (strcmp(argv[i], "--sangin-candidate") == 0) { sangin_candidate = true; }
+        else if (strcmp(argv[i], "--fullscreen") == 0 || strcmp(argv[i], "-f") == 0) {
             fullscreen = true;
         } else if ((strcmp(argv[i], "--aspect") == 0 || strcmp(argv[i], "-a") == 0) && i + 1 < argc) {
             target_aspect = parse_aspect_value(argv[++i]);
@@ -421,13 +423,16 @@ void start_ai_turn() {
             }
         };
         gomoku::Move m{-1, -1};
-        if (engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
+        if ((sangin_mode && sangin_candidate) || engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
             string error;
             int local_board[kMaxBoard][kMaxBoard];
             restore_board(local_board);
-            m = gomoku::choose_current_neural_vct_move(
+            gomoku::EnsembleStats report;
+            m = gomoku::choose_strong_move(
                 local_board, local_sz, history, 2, level, 0,
-                engine_runtime_root, error, &ai_cancel);
+                engine_runtime_root, error, &ai_cancel, gomoku::EngineVersion::CurrentV3, &report);
+            if (sangin_mode) sangin_external_reply.store(report.experts_answered > 0);
+            fprintf(stdout, "[strong] experts=%d/%d source=%s depth=%d ms=%d\n", report.experts_answered, report.experts_launched, gomoku::ensemble_source_name(report.source), report.local_depth, report.total_ms);
             if (m.r < 0 && ai_cancel.load()) return;
         } else if (engine >= static_cast<int>(gomoku::EngineVersion::CarbonClassic)) {
             string error;
@@ -436,6 +441,7 @@ void start_ai_turn() {
             request.moves = history;
             request.player = 2;
             request.level = level;
+            if (sangin_mode) request.turn_time_ms = 5000;
             request.board_size = local_sz;
             request.program = gomoku::external_runtime_path(engine_runtime_root, request.version);
             request.cancel = &ai_cancel;

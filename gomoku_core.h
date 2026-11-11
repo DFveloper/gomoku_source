@@ -977,7 +977,7 @@ inline std::vector<std::pair<int, Move>> build_root_candidates(
 inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, int depth = 2,
                            const OpponentStyle* style = nullptr, int max_threads = 0,
                            Move last_own = {-1, -1}, const std::atomic<bool>* cancel = nullptr,
-                           SearchStats* stats = nullptr) {
+                           SearchStats* stats = nullptr, int nominal_budget_ms = 0) {
     if (cancel && cancel->load()) return {-1, -1};
     if (stats) *stats = SearchStats{};
     const auto started = std::chrono::steady_clock::now();
@@ -986,7 +986,7 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
             std::chrono::steady_clock::now() - started).count());
     };
     const int level = std::max(1, std::min(depth, 5));
-    const int time_budget_ms = 1000 * (1 << (level - 1));
+    const int time_budget_ms = nominal_budget_ms > 0 ? nominal_budget_ms : 1000 * (1 << (level - 1));
     const auto deadline = started + std::chrono::milliseconds(time_budget_ms);
     // Iterations that are already running may finish slightly past the soft
     // deadline; anything still unfinished at the hard stop is discarded.  This
@@ -1499,20 +1499,29 @@ inline int five_completion_squares(int board[kMaxBoard][kMaxBoard], int sz,
 
 // Continuous-four (VCF) probe.  The attacker only plays four threats, every
 // one forcing the reply, so the branching factor stays tiny.  The defender
-// model always blocks, which is exact unless the defender holds a five point
-// of their own; callers guarantee that never happens.  Attack and node
+// model checks counter-wins and requires a forcing attacker move to block
+// them when necessary. Attack and node
 // budgets bound the worst case for post-game replay loops.
 inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
                                int attacks_left, int& budget, Move* first_move) {
     if (attacks_left <= 0 || budget <= 0) return false;
     --budget;
     const int op = 3 - p;
-    // The defender would simply convert their own five instead of blocking.
-    if (find_immediate_win(board, sz, op).r != -1) return false;
+    // A forcing move can simultaneously block the defender's five and create
+    // an open four. Rejecting every position with a defender five misses this
+    // counterattack (observed in the Windows Rapfi loss).
+    Move immediate = find_immediate_win(board, sz, p);
+    if (immediate.r != -1) {
+        if (first_move) *first_move = immediate;
+        return true;
+    }
+    Move required_block = find_immediate_win(board, sz, op);
 
     struct FourCandidate { Move move; int score; };
     std::vector<FourCandidate> fours;
     for (Move m : generate_candidates(board, sz, 1)) {
+        if (required_block.r != -1 &&
+            (m.r != required_block.r || m.c != required_block.c)) continue;
         if (p == 1 && is_forbidden_move(board, sz, m.r, m.c)) continue;
         ThreatInfo info = analyze_move(board, sz, m.r, m.c, p);
         if (info.count[TH_FIVE]) {  // Five available right now.
@@ -1532,6 +1541,10 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
     for (const auto& item : fours) {
         Move f = item.move;
         board[f.r][f.c] = p;
+        if (find_immediate_win(board, sz, op).r != -1) {
+            board[f.r][f.c] = 0;
+            continue; // A second defender five was not covered by this move.
+        }
         // Squares that would finish five after this four; two at once is
         // unstoppable, one must be blocked before anything else matters.
         Move block{-1, -1};

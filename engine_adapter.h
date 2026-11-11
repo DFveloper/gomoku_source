@@ -63,6 +63,7 @@ struct ExternalEngineRequest {
     // member. Zero means "no depth hint", which is what a time-controlled
     // opponent should always send.
     int max_depth_hint = 0;
+    int turn_time_ms = 0; // Explicit shared-clock budget; zero uses the level mapping.
     std::filesystem::path program;
     const std::atomic<bool>* cancel = nullptr;
 };
@@ -154,7 +155,7 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
         return fail("process launch failed");
     }
 
-    int turn_time_ms = external_turn_time_ms(request.version, request.level);
+    int turn_time_ms = request.turn_time_ms > 0 ? request.turn_time_ms : external_turn_time_ms(request.version, request.level);
     std::string input = "START " + std::to_string(request.board_size) +
                         "\nINFO timeout_turn " + std::to_string(turn_time_ms) +
                         "\nINFO timeout_match 1800000\n";
@@ -292,7 +293,7 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
     close(to_child[0]);
     close(from_child[1]);
 
-    int turn_time_ms = external_turn_time_ms(request.version, request.level);
+    int turn_time_ms = request.turn_time_ms > 0 ? request.turn_time_ms : external_turn_time_ms(request.version, request.level);
     std::string input = "START " + std::to_string(request.board_size) +
                         "\nINFO timeout_turn " + std::to_string(turn_time_ms) +
                         "\nINFO timeout_match 1800000\n";

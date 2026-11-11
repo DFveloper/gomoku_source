@@ -16,7 +16,7 @@
 #include <windowsx.h>
 
 #include "engine_match_resources.h"
-#include "gomoku_core.h"
+#include "engine_strength.h"
 
 namespace {
 
@@ -419,39 +419,22 @@ void start_engine_turn() {
         auto started = std::chrono::steady_clock::now();
         Move move{-1, -1};
         std::string error;
-        if (config.version == EngineVersion::CurrentV3 &&
-            opponent_config.version != EngineVersion::LegacyV1) {
+        if (config.version == EngineVersion::CurrentV3) {
             int local[gomoku::kMaxBoard][gomoku::kMaxBoard] = {};
             for (int r = 0; r < kSize; ++r)
                 for (int c = 0; c < kSize; ++c)
                     local[r][c] = snapshot[r * gomoku::kMaxBoard + c];
-            Move win = gomoku::find_immediate_win(local, kSize, player);
-            Move block = gomoku::find_immediate_win(local, kSize, 3 - player);
-            if (win.r != -1) move = win;
-            else if (block.r != -1 &&
-                     !(player == 1 && gomoku::is_forbidden_move(local, kSize, block.r, block.c)))
-                move = block;
-            else {
-                move = external_best_move(EngineVersion::AlphaGomoku2026, snapshot, moves,
-                                          player, std::min(5, config.depth + 2), job, error);
-                if (gomoku::is_legal_move(local, kSize, player, move)) {
-                    local[move.r][move.c] = player;
-                    const auto deadline = std::chrono::steady_clock::now() +
-                                          std::chrono::milliseconds(350);
-                    const bool unsafe = gomoku::has_forced_four_win(local, kSize, 3 - player, 5, 320) ||
-                        gomoku::opponent_has_unavoidable_vcf_setup(
-                            local, kSize, 3 - player, deadline, 12, 48);
-                    local[move.r][move.c] = 0;
-                    if (unsafe) move = {-1, -1};
-                }
-                if (!gomoku::is_legal_move(local, kSize, player, move)) {
-                    gomoku::OpponentStyle style =
-                        gomoku::analyze_opponent_style(kSize, moves, 3 - player);
-                    move = gomoku::choose_ai_move(local, kSize, player,
-                        std::min(2, config.depth), &style, 0,
-                        last_move_for(moves, player));
-                }
-            }
+            gomoku::EnsembleConfig council;
+            council.nominal_budget_ms = 5000;
+            council.completion_grace_ms = 2000;
+            council.expert_budget_fraction = 1.0;
+            council.expert_startup_ms = 0;
+            council.prefer_consensus = true;
+            council.expert_program = external_engine_paths[static_cast<int>(EngineVersion::Rapfi2025)];
+            council.extra_experts.push_back({EngineVersion::AlphaGomoku2026,
+                external_engine_paths[static_cast<int>(EngineVersion::AlphaGomoku2026)]});
+            move = gomoku::choose_ensemble_move(local, kSize, moves, player,
+                config.depth, {}, council).move;
         } else if (static_cast<int>(config.version) >= static_cast<int>(EngineVersion::CarbonClassic)) {
             move = external_best_move(config.version, snapshot, moves, player,
                                       config.depth, job, error);

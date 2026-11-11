@@ -28,6 +28,8 @@ add_executable(id_soundness tools/id_soundness.cpp)
 add_executable(tactics_suite tools/tactics_suite.cpp)
 add_executable(duel tools/duel.cpp)
 add_executable(ensemble_invariants tools/ensemble_invariants.cpp)
+add_executable(strength_check tools/strength_check.cpp)
+target_include_directories(strength_check PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(duel PRIVATE
     GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(ensemble_invariants PRIVATE
@@ -45,6 +47,7 @@ target_compile_definitions(gomoku_match_webui PRIVATE
     GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 
 find_package(Threads REQUIRED)
+target_link_libraries(strength_check PRIVATE Threads::Threads)
 target_link_libraries(gomoku_gui PRIVATE Threads::Threads)
 target_link_libraries(gomoku_sangin PRIVATE Threads::Threads)
 target_link_libraries(gomoku_cli PRIVATE Threads::Threads)

@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "gomoku_core.h"
-#include "engine_adapter.h"
+#include "engine_strength.h"
 #include "public_mode_common.h"
 
 #ifdef _WIN32
@@ -240,7 +240,7 @@ pair<int, string> public_match_move_response(const string& body) {
     bool recovered = false;
     const auto started = chrono::steady_clock::now();
     if (engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
-        move = gomoku::choose_current_neural_vct_move(
+        move = gomoku::choose_strong_move(
             board, kBoardSize, moves, player, level, search_threads,
             engine_runtime_root, engine_error, &cancel,
             static_cast<gomoku::EngineVersion>(opponent_engine));
@@ -439,7 +439,7 @@ void run_match(int job) {
         string engine_error;
         bool recovered = false;
         if (engine == static_cast<int>(gomoku::EngineVersion::CurrentV3)) {
-            move = gomoku::choose_current_neural_vct_move(
+            move = gomoku::choose_strong_move(
                 snapshot, kBoardSize, history, player, depth, search_threads,
                 engine_runtime_root, engine_error, cancel.get(),
                 static_cast<gomoku::EngineVersion>(opponent_engine));
