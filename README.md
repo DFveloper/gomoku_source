@@ -216,12 +216,10 @@ The default search depth is 4. Root candidates are evaluated in parallel on up t
 
 Current v3 also uses a per-worker Zobrist transposition table, so positions
 reached through different move orders are reused without sharing mutable board
-state between threads. Search levels have hard wall-clock budgets of 1, 2, 4,
-8, and 16 seconds; only fully completed root results are eligible for
-selection when the budget expires. Levels 1 and 2 automatically search one
-extra ply because the transposition table keeps them within the same practical
-time envelope. This prevents a difficult move from running for a minute while
-preserving deterministic completed searches.
+state between threads. Search levels are wall-clock budgets of 1, 2, 4, 8, and
+16 seconds, and the level number doubles as a depth guarantee (levels 1 and 2
+search one extra ply). Iterative deepening then spends whatever the budget has
+left: see [Search strategy](#search-strategy) below.
 
 On 15x15 and 20x20, Current v3 is an adaptive neural/VCT ensemble. It obtains a
 candidate from the bundled trained AlphaGomoku 8x128 Renju convolutional
@@ -247,6 +245,133 @@ After a game, review mode opens automatically with a Chess.com-style black/white
 
 The win-chance model mirrors how Chess.com builds its graph. Forced results pin the value at 100/0: a five available right now, an open four (or any double five-point) on the board, and continuous-four (VCF) chains found by a bounded forcing search. Everything else runs through the Chess.com logistic curve, fed by a tempo-aware evaluation — the side to move converts threats first, so an open three answered in time reads ~60% for its owner while the identical threat left unanswered pins the game. The curve never dips to 0% or 100% without a forced result, exactly like mate-in-N behaviour on Chess.com.
 
+## Search strategy
+
+The engine is a selective alpha-beta searcher whose evaluation is built from
+pattern matches, so its strength is governed by three things: how fast it can
+score a position, how deep it can look inside the level's budget, and whether
+the value it reports for a move is trustworthy. The current revision attacks
+all three.
+
+**Pattern matching is table-driven.** Every threat score the engine has is a
+function of one 15-cell line seen from one empty intersection. That line is
+base-4 information, so `evaluate_line` packs it into one 32-bit word (two bits
+per cell) and matches it against a pre-shifted table of every
+`(pattern, alignment)` pair that can cover the centre cell. A match is one AND
+plus one compare instead of a per-character loop over 44 pattern rows. This
+was the single hottest routine in the profile (about 90% of search time); the
+table form measured 808 ns -> 198 ns per line on the development machine,
+which is the same 3-4x speedup end to end on real searches. The semantics are
+identical, including the fact that `.` is a literal empty cell (not a
+wildcard) and that a match only counts when its window covers the centre. The
+regression suite compares the packed matcher against a literal transcription of
+the old string matcher on every line of a test position, and the two agree
+exactly.
+
+**Iterative deepening spends the whole budget.** A single fixed-depth pass left
+1 s of a level-1 budget and 16 s of a level-5 budget unused: on a mid-game
+position the engine used 6-65% of its allowance and then returned. The search
+now runs a depth ladder (`1, 3, .., nominal` plus whatever extra plies still
+fit), keeps the best move of the last pass that *finished*, and reorders the
+next pass by the values it just found. Two consequences matter:
+
+- Before starting a pass, the previous pass's measured (sequential) cost is
+  projected forward with a calibrated branching factor. The engine therefore
+  does not start work it cannot finish, and it stops climbing when the next
+  depth will not fit.
+- An iteration that is already running may overrun the soft deadline by at most
+  `min(1000 ms, budget/4 + 250 ms)` so its result stays usable. Anything still
+  unfinished at that stop is discarded, and the last complete answer stands.
+  The level number is a guarantee: the nominal depth is always attempted.
+
+Measured on two cores with the depth the engine actually reached in brackets:
+
+| Position | L1 | L2 | L3 | L4 | L5 |
+|---|---|---|---|---|---|
+| opening (8 plies) | 0.7 s [3] | 2.0 s [3] | 4.0 s [4] | 7.3 s [5] | 16.0 s [5] |
+| midgame (16 plies) | 1.0 s [3] | 2.0 s [4] | 2.9 s [5] | 7.1 s [6] | 16.0 s [6] |
+
+The same positions under the previous fixed-depth pass reached depth 2, 3, 3,
+4, 5 and returned having spent only 6-65% of the same budgets.
+
+**Root selection only trusts real values.** With aspiration the first move is
+searched with a full window and later moves are compared against the leader, so
+every move except the leader carries a bound rather than an exact score. Those
+bounds are recorded, fail-low results are never allowed to win a tie, and the
+answer is kept in a durable record that a half-finished pass cannot overwrite.
+That last detail is what the A/B referee was built to catch: an earlier draft
+had the reordering permute the move order but not the per-root values, so
+scores were attributed to the wrong move.
+
+### Measuring a strength change
+
+Cross-engine tables answer "does v3 beat engine X", which is not the same
+question as "did this change make the search better": a lower opponent level
+can make any edit look good. Two tools answer that question directly.
+
+```bash
+scripts/build_tools.sh            # build/tools/{ab_match,id_soundness,tactics_suite,duel}
+build/tools/ab_match 2 3 2        # LEVEL PAIRS THREADS
+build/tools/id_soundness 2 8      # LEVEL POSITIONS
+build/tools/tactics_suite 1 2     # LEVEL THREADS
+build/tools/duel rapfi 1000 1 2   # ENGINE BUDGET_MS PAIRS THREADS
+./build/gomoku_cli selfmatch 3 2 2 2
+
+# Expert mixture (engine_ensemble.h). The referee plays the mixture; the
+# opponent and the consulted experts come from the environment.
+DUEL_OPPONENT=rapfi DUEL_MIX_COUNCIL=alpha build/tools/duel mixture 1000 2 2
+DUEL_MIX_DICTATOR=1 build/tools/duel mixture 1000 2 2   # first member decides
+DUEL_ENSEMBLE=verified build/tools/duel rapfi 1000 1 2  # per-position report
+build/tools/expert_strength RAPFI_BINARY ALPHA_BINARY  # each member alone
+build/tools/ensemble_invariants [RAPFI_BINARY]         # mixture guarantees
+```
+
+`ensemble_invariants` checks the two properties that make delegation safe to
+ship: with no expert available the mixture returns *exactly* the local engine's
+move, and a proven win can never be overridden by an expert. It runs in `ctest`.
+
+`ab_match` plays the working tree against a frozen copy of the previous
+revision (`tools/fixtures/baseline_core.h`) on shared openings with colours
+swapped. `duel` plays it against an external Gomocup engine at an identical
+per-move budget (see [ENGINE_STRENGTH_PLAN.md](ENGINE_STRENGTH_PLAN.md) for what
+that measured against Rapfi, and `tools/build_native_engines.sh` for hosts whose
+bundled runtimes need a newer glibc than they have). `tactics_suite` checks
+positions with one known correct answer and that every answer arrives inside the
+level budget. `id_soundness` recomputes the pass the engine says it answered from,
+independently and single-threaded, and requires the returned move to be that
+pass's plain argmax. `gomoku_cli selfmatch` is the portable version of the
+first check (needs no fixture) and is the smoke test for "a higher level still
+beats a lower one".
+
+Results for this revision, paired openings with colours swapped, two cores,
+eight V3 threads:
+
+| Match | Level | Result |
+|---|---|---|
+| working tree vs frozen baseline | 2 | **5-0-1** |
+| working tree vs frozen baseline | 3 | **3-1-0** |
+| combined | 2-3 | **8-1-1** |
+
+The same development matches also produced one clear negative result, which is
+why the pattern table's dead rows are still in it. Compressing the unreachable
+duplicate rows in `pattern_table()` (only `max score per kind` survives into
+`ThreatInfo.score`) roughly halves the matcher's work, and measured 2-2 against
+the baseline, versus 5-0-1 for the bit-exact build. Cheap-but-different scoring
+was not a strength gain, so the scoring semantics stayed exactly as they were.
+
+Every level's budget is still a hard cap in the sense that matters for a UI:
+the engine answers within the level budget plus the bounded overrun above, and
+never runs for a minute because one move looked hard.
+
+One deliberate consequence: the engine is no longer move-for-move deterministic
+across thread counts. A single fixed-depth pass always returned the same move
+regardless of how many workers it had; spending the leftover budget on extra
+plies means a faster machine or a shorter search legitimately reaches a
+different depth and can therefore choose differently. What is guaranteed is
+that the returned move is the exact argmax of the depth the engine reports, and
+that the level's depth is always searched. The regression suite checks both at
+1, 2, 4 and 32 threads.
+
 Run the tactical, long-evaluation, draw, and style regressions with:
 
 ```powershell
@@ -265,6 +390,9 @@ cmake --build build --target engine_benchmark
 ```
 
 The reproducible legacy-versus-strengthened match results and limitations are in [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md).
+The design review of where the engine's remaining strength comes from, the
+roadmap for the next changes, and the tools used to measure them are in
+[ENGINE_STRENGTH_PLAN.md](ENGINE_STRENGTH_PLAN.md).
 The current neural/VCT profile won all measured paired games: 2-0 against
 Legacy, v2, Carbon, Rapfi and XL, plus 4-0 against Alpha over two openings.
 This is a regression suite, not a solved-game or statistically stable rating

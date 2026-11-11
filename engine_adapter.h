@@ -57,6 +57,12 @@ struct ExternalEngineRequest {
     int player = 2;
     int level = 3;
     int board_size = 15;
+    // `max_depth` is a Gomocup hint. Sending our level's number as a depth cap
+    // silently crippled every expert: Rapfi then answered in a quarter of the
+    // clock it was given and the mixture was measurably weaker than its own
+    // member. Zero means "no depth hint", which is what a time-controlled
+    // opponent should always send.
+    int max_depth_hint = 0;
     std::filesystem::path program;
     const std::atomic<bool>* cancel = nullptr;
 };
@@ -152,7 +158,10 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
     std::string input = "START " + std::to_string(request.board_size) +
                         "\nINFO timeout_turn " + std::to_string(turn_time_ms) +
                         "\nINFO timeout_match 1800000\n";
-    input += "INFO rule 4\nINFO max_depth " + std::to_string(request.level) + "\nBOARD\n";
+    input += "INFO rule 4\n";
+    if (request.max_depth_hint > 0)
+        input += "INFO max_depth " + std::to_string(request.max_depth_hint) + "\n";
+    input += "BOARD\n";
     for (size_t i = 0; i < request.moves.size(); ++i) {
         Move m = request.moves[i];
         int absolute_stone = static_cast<int>(i) % 2 == 0 ? 1 : 2;
@@ -254,8 +263,14 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
         return fail("pipe creation failed");
     }
 
-    std::string program_string = request.program.string();
-    std::string working_dir = request.program.parent_path().string();
+    // Resolve before the fork: the child changes into the engine's own directory
+    // (so it finds its config and networks), which would make a relative path
+    // unusable by the time `execl` runs.
+    std::error_code path_error;
+    std::filesystem::path absolute_program = std::filesystem::absolute(request.program, path_error);
+    if (path_error) absolute_program = request.program;
+    std::string program_string = absolute_program.string();
+    std::string working_dir = absolute_program.parent_path().string();
     pid_t pid = fork();
     if (pid < 0) {
         for (int fd : {to_child[0], to_child[1], from_child[0], from_child[1]}) close(fd);
@@ -281,7 +296,10 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
     std::string input = "START " + std::to_string(request.board_size) +
                         "\nINFO timeout_turn " + std::to_string(turn_time_ms) +
                         "\nINFO timeout_match 1800000\n";
-    input += "INFO rule 4\nINFO max_depth " + std::to_string(request.level) + "\nBOARD\n";
+    input += "INFO rule 4\n";
+    if (request.max_depth_hint > 0)
+        input += "INFO max_depth " + std::to_string(request.max_depth_hint) + "\n";
+    input += "BOARD\n";
     for (size_t i = 0; i < request.moves.size(); ++i) {
         Move m = request.moves[i];
         int absolute_stone = static_cast<int>(i) % 2 == 0 ? 1 : 2;
