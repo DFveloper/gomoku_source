@@ -3,7 +3,7 @@
 IDR_CARBON_ENGINE RCDATA "third_party/carbon-src/pbrain-carbon.exe"
 
 IDR_RAPFI_ENGINE RCDATA "third_party/runtime/rapfi/pbrain-rapfi_avx2.exe"
-IDR_RAPFI_CONFIG RCDATA "third_party/runtime/rapfi/config.toml"
+IDR_RAPFI_CONFIG RCDATA "third_party/runtime/rapfi/config.windows.toml"
 IDR_RAPFI_MODEL RCDATA "third_party/runtime/rapfi/model210901.bin"
 IDR_RAPFI_FREESTYLE RCDATA "third_party/runtime/rapfi/mix9svqfreestyle_bsmix.bin.lz4"
 IDR_RAPFI_STANDARD RCDATA "third_party/runtime/rapfi/mix9svqstandard_bs15.bin.lz4"

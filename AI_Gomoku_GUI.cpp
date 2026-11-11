@@ -21,6 +21,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <windowsx.h>
+#include <objidl.h>
+#include <gdiplus.h>
 #else
 #include <X11/keysym.h>
 #include <X11/extensions/XInput2.h>
@@ -47,6 +49,9 @@ constexpr bool sangin_mode = true;
 #else
 constexpr bool sangin_mode = false;
 #endif
+bool sangin_rules_visible = false;
+atomic<bool> sangin_external_reply{false};
+
 int sz = kDefaultBoard;
 int brd[kMaxBoard][kMaxBoard];
 bool dbg = false;
@@ -174,6 +179,7 @@ void locate_engine_runtime_root() {
     }
 #endif
     vector<filesystem::path> candidates;
+    candidates.push_back(exe_dir / "third_party" / "runtime");
 #ifdef GOMOKU_SOURCE_ROOT
     candidates.push_back(filesystem::path(GOMOKU_SOURCE_ROOT) / "third_party" / "runtime");
 #endif
@@ -434,6 +440,7 @@ void start_ai_turn() {
             request.program = gomoku::external_runtime_path(engine_runtime_root, request.version);
             request.cancel = &ai_cancel;
             m = gomoku::run_external_engine(request, error);
+            if (sangin_mode) sangin_external_reply.store(m.r >= 0 && m.c >= 0);
             if (m.r < 0 && ai_cancel.load()) return;  // Game reset while thinking.
             if (m.r < 0 || m.c < 0) {
                 // Never strand the human: fall back to the built-in engine.
@@ -619,6 +626,24 @@ bool load_replay(const char* filename) {
 }
 
 void layout() {
+    if (sangin_mode) {
+        int panel = clamp(ui.w * 27 / 100, 310, 420);
+        int side = min({ui.w - panel - 72, ui.h - 56, 900});
+        ui.margin = max(18, side * 55 / 1000);
+        ui.cell = max(1, (side - ui.margin * 2) / 14);
+        side = ui.cell * 14 + ui.margin * 2;
+        ui.board = {(ui.w - panel - side) / 2, (ui.h - side) / 2, side, side};
+        int px = ui.w - panel + clamp(ui.w * 25 / 1000, 24, 38);
+        int bw = ui.w - px - clamp(ui.w * 25 / 1000, 24, 38);
+        for (auto& button : ui.buttons) button = {-1, -1, 0, 0};
+        int top = clamp(ui.h * 4 / 100, 30, 48) + 309;
+        if (review_mode) {
+            int col = (bw - 20) / 3;
+            for (int i = 0; i < 3; ++i) ui.buttons[i] = {px + i * (col + 10), top, col, 52};
+            ui.buttons[5] = {px, top + 62, bw, 52};
+        } else ui.buttons[0] = {px, top, bw, 52};
+        return;
+    }
     int panel = max(260, ui.w / 4);
     int board_space_w = ui.w - panel - 64;
     int board_space_h = ui.h - 64;
@@ -654,11 +679,7 @@ bool hit(Rect r, int x, int y) {
 }
 
 void new_game() {
-#ifdef _WIN32
-    if (sangin_mode) MessageBoxA(nullptr,
-        "Renju: black vs Rapfi level 5 on 15x15.\nBlack cannot play overlines, double-threes or double-fours.",
-        "Sangin - Renju rules", MB_OK | MB_ICONINFORMATION);
-#endif
+    if (sangin_mode) sangin_rules_visible = true;
     ++ai_job_seq;
     ai_cancel.store(true);
     ai_thinking = false;
@@ -748,7 +769,13 @@ void cycle_size() {
     new_game();
 }
 
+Rect sangin_rules_button() { return { (ui.w - 426) / 2, (ui.h - 370) / 2 + 274, 426, 54 }; }
+
 void handle_click(int x, int y) {
+    if (sangin_mode && sangin_rules_visible) {
+        if (hit(sangin_rules_button(), x, y)) sangin_rules_visible = false;
+        return;
+    }
     if (sangin_mode && !review_mode && !hit(ui.buttons[0], x, y)) {
         int r, c;
         if (board_from_point(x, y, r, c)) play_human_move(r, c);
@@ -949,7 +976,10 @@ void draw_review_badge(HDC hdc, const string& label, int x, int y) {
     }
 }
 
+#include "sangin_native_ui.h"
+
 void draw_scene(HDC hdc) {
+    if (sangin_mode) { draw_sangin_scene(hdc); return; }
     layout();
     fill(hdc, {0, 0, ui.w, ui.h}, rgb(42, 82, 50));
     round_rect(hdc, ui.board, rgb(235, 187, 114));
@@ -1185,10 +1215,18 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    Gdiplus::GdiplusStartupInput gdiplus_input;
+    ULONG_PTR gdiplus_token = 0;
+    Gdiplus::GdiplusStartup(&gdiplus_token, &gdiplus_input, nullptr);
+#endif
     parse_args(argc, argv);
     locate_engine_runtime_root();
     new_game();
     HINSTANCE inst = GetModuleHandle(nullptr);
+    for (int i=1; i+1<argc; ++i)
+        if (sangin_mode && strcmp(argv[i], "--ui-smoke-test")==0)
+            return sangin_smoke_test(filesystem::path(argv[i+1]));
     WNDCLASSA wc{};
     wc.lpfnWndProc = wnd_proc;
     wc.hInstance = inst;
@@ -1196,6 +1234,7 @@ int main(int argc, char** argv) {
     wc.hCursor = LoadCursor(nullptr, IDC_HAND);
     RegisterClassA(&wc);
     int x = CW_USEDEFAULT, y = CW_USEDEFAULT, w = kMinW, h = kMinH;
+    if (sangin_mode) { w = 1280; h = 900; }
     DWORD style = WS_OVERLAPPEDWINDOW;
     if (fullscreen) {
         RECT mon = selected_monitor_rect();
@@ -1490,6 +1529,7 @@ void enable_touch_events() {
 }
 
 int main(int argc, char** argv) {
+
     parse_args(argc, argv);
     locate_engine_runtime_root();
     new_game();

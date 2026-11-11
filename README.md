@@ -145,16 +145,35 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_windows.ps1 -T
 
 Use `-ToolchainBin C:/path/to/bin` for another MinGW toolchain. The script uses
 `.run/build-windows` to avoid reusing Linux CMake caches in `build/`.
-Sangin is a native Win32/GDI window with 15x15 Renju, Rapfi level 5, a rule
-notice before each game, and post-game review. Engine/level/size controls,
+Sangin is a native Win32/GDI+ window matching the Sangin WebUI's layout,
+Korean labels, rule overlay, controls and review flow. It runs directly with
+15x15 Renju and Rapfi level 5. Engine/level/size controls,
 undo, heatmap, file controls and gameplay shortcuts are disabled there.
-Keep this source tree's `third_party/runtime` directory for Sangin's Rapfi
-runtime. Its bundled AVX2 executable requires an AVX2-capable CPU; engine
+The Windows build copies `third_party/runtime` beside the executable and uses
+`config.windows.toml` for the bundled Windows Rapfi (its evaluator type differs
+from the Linux runtime). Copy the whole build folder to the festival PC.
+Its bundled AVX2 executable requires an AVX2-capable CPU; engine
 failures use the existing built-in fallback. The native match app embeds
 the bundled external engines and can run independently of a browser.
 
+For a festival display, run `gomoku_sangin.exe --fullscreen`. Each new game
+shows the Korean Renju rules and waits for **대국 시작**. The app does not
+require a browser, WebView, a local server or Internet access.
+
+The browser version also works in default local mode: start `gomoku_webui.exe`
+and open `http://localhost:8080/sangin/`. `--public-mode` is not required for
+Sangin. Verify first-move calculation and review with:
+
 ```powershell
-g++ -std=c++17 -O2 AI_Gomoku_GUI.cpp -o gomoku_gui.exe -lgdi32 -luser32
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test_sangin_local.ps1
+.\.run\build-windows\gomoku_sangin.exe --ui-smoke-test .run/sangin-native-smoke
+```
+
+The native smoke check saves rule, ready, first-move, AI-reply and review PNGs,
+and requires an actual external engine reply rather than a fallback.
+
+```powershell
+g++ -std=c++17 -O2 AI_Gomoku_GUI.cpp -o gomoku_gui.exe -lgdi32 -luser32 -lgdiplus
 .\gomoku_gui.exe
 ```
 

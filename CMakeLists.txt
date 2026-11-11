@@ -49,9 +49,15 @@ endif()
 
 if(WIN32)
     add_compile_definitions(NOMINMAX)
+    # Keep Windows engine settings separate from the native Linux runtime.
+    file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/runtime"
+        DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/third_party")
+    configure_file(third_party/runtime/rapfi/config.windows.toml
+        third_party/runtime/rapfi/config.toml COPYONLY)
+    file(COPY webui sangin_webui DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
     enable_language(RC)
-    target_link_libraries(gomoku_gui PRIVATE gdi32 user32)
-    target_link_libraries(gomoku_sangin PRIVATE gdi32 user32)
+    target_link_libraries(gomoku_gui PRIVATE gdi32 user32 gdiplus)
+    target_link_libraries(gomoku_sangin PRIVATE gdi32 user32 gdiplus)
     target_link_libraries(gomoku_webui PRIVATE ws2_32)
     target_link_libraries(gomoku_match_webui PRIVATE ws2_32)
 

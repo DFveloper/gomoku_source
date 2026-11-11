@@ -747,7 +747,8 @@ bool serve_file_from(Socket socket, const filesystem::path& root, const string& 
             at += origin.size();
         }
         const string script_marker = "__GOMOKU_SCRIPT__";
-        const string script_name = public_mode ? "public_app.js" : "app.js";
+        const bool sangin = root == sangin_web_root;
+        const string script_name = (public_mode || sangin) ? "public_app.js" : "app.js";
         while ((at = body.find(script_marker)) != string::npos)
             body.replace(at, script_marker.size(), script_name);
     }
@@ -777,20 +778,20 @@ void handle_connection(Socket socket) {
     if (!read_request(socket, request)) { close_socket(socket); return; }
     if (request.method == "GET" && request.path == "/sangin") {
         respond(socket, 301, "text/plain; charset=utf-8", "Redirecting\n", "Location: sangin/\r\n");
-    } else if (public_mode && request.method == "POST" && request.path == "/sangin/api/public/capabilities") {
+    } else if (request.method == "POST" && request.path == "/sangin/api/public/capabilities") {
         const int rapfi = static_cast<int>(gomoku::EngineVersion::Rapfi2025);
         ostringstream out;
         out << "{\"engines\":[{\"id\":" << rapfi << ",\"name\":\"Rapfi 2025 AVX2\",\"available\":"
             << (engine_available_for_size(rapfi, 15) ? "true" : "false")
             << "}],\"maxLevel\":5}";
         respond(socket, 200, "application/json; charset=utf-8", out.str());
-    } else if (public_mode && request.method == "POST" && request.path == "/sangin/api/public/move") {
+    } else if (request.method == "POST" && request.path == "/sangin/api/public/move") {
         auto result = public_move_response(request.body, true);
         respond(socket, result.first, "application/json; charset=utf-8", result.second);
-    } else if (public_mode && request.method == "POST" && request.path == "/sangin/api/public/review") {
+    } else if (request.method == "POST" && request.path == "/sangin/api/public/review") {
         auto result = public_review_response(request.body, 15);
         respond(socket, result.first, "application/json; charset=utf-8", result.second);
-    } else if (public_mode && request.path.rfind("/sangin/api/", 0) == 0) {
+    } else if (request.path.rfind("/sangin/api/", 0) == 0) {
         respond(socket, 404, "application/json; charset=utf-8", "{\"error\":\"unsupported Sangin API\"}");
     } else if (public_mode && request.method == "POST" && request.path == "/api/public/capabilities") {
         int size = json_int(request.body, "size", kDefaultBoard);
@@ -995,6 +996,8 @@ filesystem::path locate_sangin_web_root(const char* argv0) {
 }
 
 void locate_engine_runtime_root(const char* argv0) {
+    filesystem::path adjacent = filesystem::absolute(argv0).parent_path() / "third_party" / "runtime";
+    if (filesystem::exists(adjacent)) { engine_runtime_root = adjacent; return; }
     vector<filesystem::path> candidates;
 #ifdef GOMOKU_SOURCE_ROOT
     candidates.push_back(filesystem::path(GOMOKU_SOURCE_ROOT) / "third_party" / "runtime");
