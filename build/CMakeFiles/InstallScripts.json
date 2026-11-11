@@ -1,7 +1,7 @@
 {
 	"InstallScripts" : 
 	[
-		"/mnt/openwebui/gomoku/build/cmake_install.cmake"
+		"C:/Users/LattePanda/Downloads/gomoku_source/build/cmake_install.cmake"
 	],
 	"Parallel" : false
 }
