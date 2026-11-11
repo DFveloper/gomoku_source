@@ -122,7 +122,8 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
     }
     SetHandleInformation(to_child_write, HANDLE_FLAG_INHERIT, 0);
     SetHandleInformation(from_child_read, HANDLE_FLAG_INHERIT, 0);
-    SetNamedPipeHandleState(from_child_read, PIPE_READMODE_BYTE | PIPE_NOWAIT, nullptr, nullptr);
+    DWORD pipe_mode = PIPE_READMODE_BYTE | PIPE_NOWAIT;
+    SetNamedPipeHandleState(from_child_read, &pipe_mode, nullptr, nullptr);
 
     STARTUPINFOA startup{};
     startup.cb = sizeof(startup);

@@ -1,11 +1,18 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13)
 project(GomokuGUI LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(MINGW)
+    add_link_options(-static)
+endif()
+
 add_executable(gomoku_gui AI_Gomoku_GUI.cpp)
+add_executable(gomoku_sangin AI_Gomoku_GUI.cpp)
+target_compile_definitions(gomoku_sangin PRIVATE GOMOKU_SANGIN
+    GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(gomoku_gui PRIVATE
     GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 add_executable(gomoku_cli gomoku_cli.cpp)
@@ -21,6 +28,7 @@ target_compile_definitions(gomoku_match_webui PRIVATE
 
 find_package(Threads REQUIRED)
 target_link_libraries(gomoku_gui PRIVATE Threads::Threads)
+target_link_libraries(gomoku_sangin PRIVATE Threads::Threads)
 target_link_libraries(gomoku_cli PRIVATE Threads::Threads)
 target_link_libraries(engine_benchmark PRIVATE Threads::Threads)
 target_compile_definitions(engine_benchmark PRIVATE
@@ -40,8 +48,10 @@ if(NOT WIN32)
 endif()
 
 if(WIN32)
+    add_compile_definitions(NOMINMAX)
     enable_language(RC)
     target_link_libraries(gomoku_gui PRIVATE gdi32 user32)
+    target_link_libraries(gomoku_sangin PRIVATE gdi32 user32)
     target_link_libraries(gomoku_webui PRIVATE ws2_32)
     target_link_libraries(gomoku_match_webui PRIVATE ws2_32)
 
@@ -67,4 +77,6 @@ else()
     find_package(X11 REQUIRED)
     target_include_directories(gomoku_gui PRIVATE ${X11_INCLUDE_DIR})
     target_link_libraries(gomoku_gui PRIVATE ${X11_LIBRARIES} Xi)
+    target_include_directories(gomoku_sangin PRIVATE ${X11_INCLUDE_DIR})
+    target_link_libraries(gomoku_sangin PRIVATE ${X11_LIBRARIES} Xi)
 endif()

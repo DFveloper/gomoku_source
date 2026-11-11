@@ -42,6 +42,11 @@ constexpr int kMaxLevel = 5;
 constexpr int kMinW = 900;
 constexpr int kMinH = 620;
 
+#ifdef GOMOKU_SANGIN
+constexpr bool sangin_mode = true;
+#else
+constexpr bool sangin_mode = false;
+#endif
 int sz = kDefaultBoard;
 int brd[kMaxBoard][kMaxBoard];
 bool dbg = false;
@@ -138,6 +143,7 @@ void parse_args(int argc, char** argv) {
             if (n >= kMinBoard && n <= kMaxBoard) sz = n;
         }
     }
+    if (sangin_mode) { sz = 15; engine_sel = static_cast<int>(gomoku::EngineVersion::Rapfi2025); level_sel = 5; }
     const char* env_aspect = getenv("GOMOKU_ASPECT");
     if (target_aspect <= 0.0 && env_aspect) target_aspect = parse_aspect_value(env_aspect);
 }
@@ -648,6 +654,11 @@ bool hit(Rect r, int x, int y) {
 }
 
 void new_game() {
+#ifdef _WIN32
+    if (sangin_mode) MessageBoxA(nullptr,
+        "Renju: black vs Rapfi level 5 on 15x15.\nBlack cannot play overlines, double-threes or double-fours.",
+        "Sangin - Renju rules", MB_OK | MB_ICONINFORMATION);
+#endif
     ++ai_job_seq;
     ai_cancel.store(true);
     ai_thinking = false;
@@ -738,6 +749,12 @@ void cycle_size() {
 }
 
 void handle_click(int x, int y) {
+    if (sangin_mode && !review_mode && !hit(ui.buttons[0], x, y)) {
+        int r, c;
+        if (board_from_point(x, y, r, c)) play_human_move(r, c);
+        return;
+    }
+    if (sangin_mode && review_mode && (hit(ui.buttons[3], x, y) || hit(ui.buttons[4], x, y))) return;
     int r = 0, c = 0;
     if (review_mode) {
         if (hit(ui.buttons[0], x, y)) review_ply = max(0, review_ply - 1);
@@ -1024,13 +1041,14 @@ void draw_scene(HDC hdc) {
     const string review_new_label = "NEW";
     int button_count = review_mode ? 6 : 7;
     for (int i = 0; i < button_count; i++) {
+        if (sangin_mode && (review_mode ? (i == 3 || i == 4) : i != 0)) continue;
         round_rect(hdc, ui.buttons[i], i == 2 && dbg ? rgb(129, 182, 76) : rgb(238, 238, 228));
         text(hdc, (i == 5 && review_mode) ? review_new_label : labels[i],
              ui.buttons[i].x + 22, ui.buttons[i].y + 10, 22, rgb(38, 49, 38), true);
     }
     if (!review_mode) {
         text(hdc, "Touch or click an intersection.", panel.x + 28, ui.h - 76, 18, rgb(214, 224, 200));
-        text(hdc, "N/U/D/E/V/S/Q shortcuts supported.", panel.x + 28, ui.h - 48, 18, rgb(214, 224, 200));
+        text(hdc, sangin_mode ? "Renju: black forbidden moves apply." : "N/U/D/E/V/S/Q shortcuts supported.", panel.x + 28, ui.h - 48, 18, rgb(214, 224, 200));
     }
     if (review_mode) {
         int y = ui.buttons[5].y + 64;
@@ -1128,6 +1146,7 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_KEYUP:
             if (wp == 'Q' || wp == VK_ESCAPE) PostQuitMessage(0);
+            else if (sangin_mode) {}
             else if (review_mode) handle_review_key(static_cast<char>(wp));
             else if (wp == 'N') new_game();
             else if (wp == 'U') undo_turn();
@@ -1187,7 +1206,7 @@ int main(int argc, char** argv) {
         style = WS_POPUP;
     }
     set_surface_size(w, h);
-    g_hwnd = CreateWindowA(wc.lpszClassName, "Gomoku GUI", style,
+    g_hwnd = CreateWindowA(wc.lpszClassName, sangin_mode ? "Sangin" : "Gomoku GUI", style,
                            x, y, w, h,
                            nullptr, nullptr, inst, nullptr);
     ShowWindow(g_hwnd, fullscreen ? SW_SHOWMAXIMIZED : SW_SHOW);
@@ -1378,13 +1397,14 @@ void draw_scene() {
     const string review_new_label = "NEW";
     int button_count = review_mode ? 6 : 7;
     for (int i = 0; i < button_count; i++) {
+        if (sangin_mode && (review_mode ? (i == 3 || i == 4) : i != 0)) continue;
         fill(ui.buttons[i], i == 2 && dbg ? green : color(238, 238, 228));
         text((i == 5 && review_mode) ? review_new_label : labels[i],
              ui.buttons[i].x + 22, ui.buttons[i].y + 12, 22, color(38, 49, 38));
     }
     if (!review_mode) {
         text("Touch or click an intersection.", panel.x + 28, ui.h - 76, 18, color(214, 224, 200));
-        text("N/U/D/E/V/S/Q shortcuts supported.", panel.x + 28, ui.h - 48, 18, color(214, 224, 200));
+        text(sangin_mode ? "Renju: black forbidden moves apply." : "N/U/D/E/V/S/Q shortcuts supported.", panel.x + 28, ui.h - 48, 18, color(214, 224, 200));
     }
     if (review_mode) {
         int y = ui.buttons[5].y + 64;
@@ -1524,6 +1544,7 @@ int main(int argc, char** argv) {
                 XLookupString(&e.xkey, buf, sizeof(buf), &ks, nullptr);
                 char ch = buf[0];
                 if (ch == 'q' || ch == 'Q' || ks == XK_Escape) running = false;
+                else if (sangin_mode) {}
                 else if (review_mode) handle_review_key(ch);
                 else if (ch == 'n' || ch == 'N') new_game();
                 else if (ch == 'u' || ch == 'U') undo_turn();

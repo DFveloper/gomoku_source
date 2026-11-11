@@ -134,6 +134,25 @@ autostart file to run immediately after boot.
 
 ## Windows
 
+Build all targets with CMake, Ninja and w64devkit (automatically detected in
+`%USERPROFILE%/Downloads/w64devkit` or `C:/w64devkit`):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_windows.ps1 -Test
+.\.run\build-windows\gomoku_sangin.exe
+.\.run\build-windows\gomoku_engine_match.exe
+```
+
+Use `-ToolchainBin C:/path/to/bin` for another MinGW toolchain. The script uses
+`.run/build-windows` to avoid reusing Linux CMake caches in `build/`.
+Sangin is a native Win32/GDI window with 15x15 Renju, Rapfi level 5, a rule
+notice before each game, and post-game review. Engine/level/size controls,
+undo, heatmap, file controls and gameplay shortcuts are disabled there.
+Keep this source tree's `third_party/runtime` directory for Sangin's Rapfi
+runtime. Its bundled AVX2 executable requires an AVX2-capable CPU; engine
+failures use the existing built-in fallback. The native match app embeds
+the bundled external engines and can run independently of a browser.
+
 ```powershell
 g++ -std=c++17 -O2 AI_Gomoku_GUI.cpp -o gomoku_gui.exe -lgdi32 -luser32
 .\gomoku_gui.exe
