@@ -578,6 +578,19 @@ Three policies exist so the behaviour can be measured instead of assumed:
 `LocalOnly` (identical to the old engine), `Verified` (default), `Trusting`
 (use any legal expert move, no proof).
 
+The two properties a shippable mixture must have are asserted rather than
+inferred, in `tools/ensemble_invariants` (also a ctest case):
+
+```
+[PASS] missing experts degrade to the local engine's exact move   (x2 positions)
+[PASS] missing experts are reported as unavailable
+[PASS] at least one case was decided by the search, not tactics
+[PASS] a proven VCF win is reported as such
+[PASS] playing the proven move keeps a continuous-four win
+[PASS] an expert cannot override a proven win
+summary failures=0
+```
+
 ### Four bugs found by building it
 
 1. **`INFO max_depth <level>` crippled every expert.** The adapter sent our

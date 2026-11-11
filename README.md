@@ -284,7 +284,13 @@ build/tools/duel rapfi 1000 1 2   # ENGINE BUDGET_MS PAIRS THREADS
 DUEL_OPPONENT=rapfi DUEL_MIX_COUNCIL=alpha build/tools/duel mixture 1000 2 2
 DUEL_MIX_DICTATOR=1 build/tools/duel mixture 1000 2 2   # first member decides
 DUEL_ENSEMBLE=verified build/tools/duel rapfi 1000 1 2  # per-position report
+build/tools/expert_strength RAPFI_BINARY ALPHA_BINARY  # each member alone
+build/tools/ensemble_invariants [RAPFI_BINARY]         # mixture guarantees
 ```
+
+`ensemble_invariants` checks the two properties that make delegation safe to
+ship: with no expert available the mixture returns *exactly* the local engine's
+move, and a proven win can never be overridden by an expert. It runs in `ctest`.
 
 `ab_match` plays the working tree against a frozen copy of the previous
 revision (`tools/fixtures/baseline_core.h`) on shared openings with colours

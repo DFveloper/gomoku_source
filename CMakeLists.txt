@@ -20,9 +20,12 @@ add_executable(ab_match tools/ab_match.cpp)
 add_executable(id_soundness tools/id_soundness.cpp)
 add_executable(tactics_suite tools/tactics_suite.cpp)
 add_executable(duel tools/duel.cpp)
+add_executable(ensemble_invariants tools/ensemble_invariants.cpp)
 target_compile_definitions(duel PRIVATE
     GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
-foreach(tool_target ab_match id_soundness tactics_suite duel)
+target_compile_definitions(ensemble_invariants PRIVATE
+    GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
+foreach(tool_target ab_match id_soundness tactics_suite duel ensemble_invariants)
     target_include_directories(${tool_target} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/tools)
@@ -42,7 +45,7 @@ target_compile_definitions(engine_benchmark PRIVATE
     GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(gomoku_webui PRIVATE Threads::Threads)
 target_link_libraries(gomoku_match_webui PRIVATE Threads::Threads)
-foreach(tool_target ab_match id_soundness tactics_suite duel)
+foreach(tool_target ab_match id_soundness tactics_suite duel ensemble_invariants)
     target_link_libraries(${tool_target} PRIVATE Threads::Threads)
 endforeach()
 
@@ -51,6 +54,9 @@ add_test(NAME gomoku_tactical_and_style_regression COMMAND gomoku_cli test)
 add_test(NAME gomoku_iterative_deepening_root_soundness
          COMMAND id_soundness 2 4 2)
 add_test(NAME gomoku_tactics_suite COMMAND tactics_suite 1 2)
+# The two properties that make expert delegation shippable: it degrades to the
+# local engine when no expert exists, and a proof always outranks an expert.
+add_test(NAME gomoku_ensemble_invariants COMMAND ensemble_invariants)
 
 if(NOT WIN32)
     add_custom_target(third_party_engines
