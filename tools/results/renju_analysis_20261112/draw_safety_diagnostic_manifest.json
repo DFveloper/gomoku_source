@@ -1,0 +1,10 @@
+{
+  "kind": "diagnostic tails; never acceptance passes",
+  "rule": "unchanged 15x15 Renju placement-only referee",
+  "threads": 6,
+  "sha256": {
+    "/mnt/openwebui/gomoku/.run/analysis-v4/benchmark-draw-safety": "250f642a1cd1e8f028401e094dfd8b6364f4b5bb760ff0e64a43fb6fe0409fcf",
+    "/mnt/openwebui/gomoku/tools/results/star_reinforcement_branch_explore_20261113/round-11/experience.snapshot": "e7564d85f8a19fc41695ae9bd6e332f97615c13b6c0cd732d3dc4870a78f6ade",
+    "/mnt/openwebui/gomoku/tools/results/star_reinforcement_branch_explore_20261113/round-08/experience.snapshot": "083d1717114215f4b6afaf6f15f67acb2ec0a3d1a8aa71418b5cd011de94cf93"
+  }
+}

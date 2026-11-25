@@ -1,0 +1,14 @@
+checked "alpha_00.log" positions=40
+checked "alpha_03.log" positions=29
+checked "alpha_09.log" positions=28
+"alpha_13.log" ply=48 proven=12,9 actual=12,9
+"alpha_13.log" ply=50 proven=11,10 actual=11,10
+checked "alpha_13.log" positions=28
+checked "alpha_15.log" positions=18
+"rapfi_00.log" ply=59 proven=9,9 actual=7,9
+checked "rapfi_00.log" positions=38
+checked "rapfi_03.log" positions=28
+checked "rapfi_05.log" positions=45
+checked "rapfi_07.log" positions=25
+checked "rapfi_15.log" positions=28
+summary games=10 positions=307 winning_proofs_in_lost_games=3

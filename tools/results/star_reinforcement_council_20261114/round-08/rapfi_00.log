@@ -1,0 +1,499 @@
+ply=2 player=2 engine=4 move=4,4 elapsed_ms=5553 error=none
+experience plies=2 move=3,5 nonloss_weight=40 total_weight=40
+ply=3 player=1 engine=2 move=3,5 elapsed_ms=641 error=none
+ply=4 player=2 engine=4 move=3,4 elapsed_ms=5619 error=none
+experience plies=4 move=5,4 nonloss_weight=40 total_weight=40
+ply=5 player=1 engine=2 move=5,4 elapsed_ms=0 error=none
+ply=6 player=2 engine=4 move=6,5 elapsed_ms=5625 error=none
+experience plies=6 move=4,5 nonloss_weight=40 total_weight=40
+ply=7 player=1 engine=2 move=4,5 elapsed_ms=1 error=none
+ply=8 player=2 engine=4 move=2,5 elapsed_ms=5626 error=none
+experience plies=8 move=5,6 nonloss_weight=24 total_weight=24
+ply=9 player=1 engine=2 move=5,6 elapsed_ms=99 error=none
+ply=10 player=2 engine=4 move=5,2 elapsed_ms=5587 error=none
+experience plies=10 move=4,3 nonloss_weight=24 total_weight=24
+ply=11 player=1 engine=2 move=4,3 elapsed_ms=141 error=none
+ply=12 player=2 engine=4 move=5,7 elapsed_ms=5590 error=none
+experience plies=12 move=8,5 nonloss_weight=24 total_weight=24
+ply=13 player=1 engine=2 move=8,5 elapsed_ms=163 error=none
+ply=14 player=2 engine=4 move=7,6 elapsed_ms=5590 error=none
+experience plies=14 move=7,3 nonloss_weight=24 total_weight=24
+ply=15 player=1 engine=2 move=7,3 elapsed_ms=153 error=none
+ply=16 player=2 engine=4 move=6,3 elapsed_ms=5287 error=none
+experience plies=16 move=6,4 nonloss_weight=24 total_weight=24
+ply=17 player=1 engine=2 move=6,4 elapsed_ms=19 error=none
+ply=18 player=2 engine=4 move=8,4 elapsed_ms=5587 error=none
+experience plies=18 move=7,7 nonloss_weight=24 total_weight=24
+ply=19 player=1 engine=2 move=7,7 elapsed_ms=187 error=none
+ply=20 player=2 engine=4 move=9,7 elapsed_ms=5558 error=none
+experience plies=20 move=4,6 nonloss_weight=8 total_weight=8
+ply=21 player=1 engine=2 move=4,6 elapsed_ms=239 error=none
+ply=22 player=2 engine=4 move=3,7 elapsed_ms=5594 error=none
+experience plies=22 move=3,6 nonloss_weight=8 total_weight=8
+ply=23 player=1 engine=2 move=3,6 elapsed_ms=538 error=none
+ply=24 player=2 engine=4 move=2,6 elapsed_ms=5592 error=none
+experience plies=24 move=2,7 nonloss_weight=8 total_weight=8
+ply=25 player=1 engine=2 move=2,7 elapsed_ms=538 error=none
+ply=26 player=2 engine=4 move=1,8 elapsed_ms=5598 error=none
+experience plies=26 move=1,3 nonloss_weight=8 total_weight=8
+ply=27 player=1 engine=2 move=1,3 elapsed_ms=308 error=none
+ply=28 player=2 engine=4 move=2,3 elapsed_ms=5612 error=none
+experience plies=28 move=2,4 nonloss_weight=8 total_weight=8
+ply=29 player=1 engine=2 move=2,4 elapsed_ms=131 error=none
+ply=30 player=2 engine=4 move=0,2 elapsed_ms=5589 error=none
+experience plies=30 move=8,2 nonloss_weight=8 total_weight=8
+ply=31 player=1 engine=2 move=8,2 elapsed_ms=200 error=none
+ply=32 player=2 engine=4 move=5,5 elapsed_ms=5553 error=none
+experience plies=32 move=10,2 nonloss_weight=8 total_weight=8
+ply=33 player=1 engine=2 move=10,2 elapsed_ms=187 error=none
+ply=34 player=2 engine=4 move=9,3 elapsed_ms=5495 error=none
+experience plies=34 move=10,5 nonloss_weight=8 total_weight=8
+ply=35 player=1 engine=2 move=10,5 elapsed_ms=635 error=none
+ply=36 player=2 engine=4 move=10,6 elapsed_ms=5587 error=none
+experience plies=36 move=9,6 nonloss_weight=8 total_weight=8
+ply=37 player=1 engine=2 move=9,6 elapsed_ms=454 error=none
+ply=38 player=2 engine=4 move=11,4 elapsed_ms=5154 error=none
+experience plies=38 move=11,5 nonloss_weight=8 total_weight=8
+ply=39 player=1 engine=2 move=11,5 elapsed_ms=502 error=none
+ply=40 player=2 engine=4 move=9,5 elapsed_ms=5590 error=none
+experience plies=40 move=4,9 nonloss_weight=8 total_weight=8
+ply=41 player=1 engine=2 move=4,9 elapsed_ms=645 error=none
+ply=42 player=2 engine=4 move=4,8 elapsed_ms=5103 error=none
+experience plies=42 move=1,5 nonloss_weight=8 total_weight=8
+ply=43 player=1 engine=2 move=1,5 elapsed_ms=447 error=none
+ply=44 player=2 engine=4 move=4,2 elapsed_ms=5627 error=none
+experience plies=44 move=3,8 nonloss_weight=8 total_weight=8
+ply=45 player=1 engine=2 move=3,8 elapsed_ms=470 error=none
+ply=46 player=2 engine=4 move=1,6 elapsed_ms=5595 error=none
+experience plies=46 move=6,9 nonloss_weight=8 total_weight=8
+ply=47 player=1 engine=2 move=6,9 elapsed_ms=484 error=none
+ply=48 player=2 engine=4 move=6,11 elapsed_ms=5354 error=none
+experience plies=48 move=10,7 nonloss_weight=8 total_weight=8
+ply=49 player=1 engine=2 move=10,7 elapsed_ms=869 error=none
+ply=50 player=2 engine=4 move=11,8 elapsed_ms=5591 error=none
+experience plies=50 move=7,8 nonloss_weight=8 total_weight=8
+ply=51 player=1 engine=2 move=7,8 elapsed_ms=889 error=none
+ply=52 player=2 engine=4 move=8,7 elapsed_ms=5611 error=none
+experience plies=52 move=8,9 nonloss_weight=8 total_weight=8
+ply=53 player=1 engine=2 move=8,9 elapsed_ms=886 error=none
+ply=54 player=2 engine=4 move=6,7 elapsed_ms=5594 error=none
+experience plies=54 move=9,8 nonloss_weight=8 total_weight=8
+ply=55 player=1 engine=2 move=9,8 elapsed_ms=869 error=none
+ply=56 player=2 engine=4 move=7,10 elapsed_ms=5569 error=none
+experience plies=56 move=5,9 nonloss_weight=8 total_weight=8
+ply=57 player=1 engine=2 move=5,9 elapsed_ms=922 error=none
+ply=58 player=2 engine=4 move=7,9 elapsed_ms=5584 error=none
+experience plies=58 move=11,6 nonloss_weight=8 total_weight=8
+ply=59 player=1 engine=2 move=11,6 elapsed_ms=822 error=none
+ply=60 player=2 engine=4 move=12,5 elapsed_ms=5581 error=none
+experience plies=60 move=9,4 nonloss_weight=8 total_weight=8
+ply=61 player=1 engine=2 move=9,4 elapsed_ms=650 error=none
+ply=62 player=2 engine=4 move=8,3 elapsed_ms=5298 error=none
+experience plies=62 move=8,8 nonloss_weight=8 total_weight=8
+ply=63 player=1 engine=2 move=8,8 elapsed_ms=635 error=none
+ply=64 player=2 engine=4 move=6,8 elapsed_ms=5605 error=none
+experience plies=64 move=10,3 nonloss_weight=8 total_weight=8
+ply=65 player=1 engine=2 move=10,3 elapsed_ms=792 error=none
+ply=66 player=2 engine=4 move=11,2 elapsed_ms=5587 error=none
+experience plies=66 move=8,10 nonloss_weight=8 total_weight=8
+ply=67 player=1 engine=2 move=8,10 elapsed_ms=993 error=none
+ply=68 player=2 engine=4 move=8,11 elapsed_ms=5362 error=none
+experience plies=68 move=7,11 nonloss_weight=8 total_weight=8
+ply=69 player=1 engine=2 move=7,11 elapsed_ms=1017 error=none
+ply=70 player=2 engine=4 move=9,12 elapsed_ms=5576 error=none
+experience plies=70 move=10,10 nonloss_weight=8 total_weight=8
+ply=71 player=1 engine=2 move=10,10 elapsed_ms=1023 error=none
+ply=72 player=2 engine=4 move=11,11 elapsed_ms=5387 error=none
+experience plies=72 move=10,11 nonloss_weight=8 total_weight=8
+ply=73 player=1 engine=2 move=10,11 elapsed_ms=1058 error=none
+ply=74 player=2 engine=4 move=12,8 elapsed_ms=5595 error=none
+ply=75 player=1 engine=2 move=11,7 elapsed_ms=0 error=none
+ply=76 player=2 engine=4 move=13,8 elapsed_ms=5591 error=none
+experience plies=76 move=14,8 nonloss_weight=8 total_weight=8
+ply=77 player=1 engine=2 move=14,8 elapsed_ms=1350 error=none
+ply=78 player=2 engine=4 move=10,13 elapsed_ms=5612 error=none
+ply=79 player=1 engine=2 move=11,14 elapsed_ms=0 error=none
+ply=80 player=2 engine=4 move=4,1 elapsed_ms=5255 error=none
+root-council plies=80 roots=3 complete=1 promoted=1 depth=13 floor=10 reason=common-search move=10,9 phase_ms=2802
+root-council-candidate plies=80 move=10,1 scored=1 eval=331 depth=13 goal_risk=0
+root-council-candidate plies=80 move=10,9 scored=1 eval=371 depth=13 goal_risk=0
+root-council-candidate plies=80 move=3,2 scored=1 eval=299 depth=13 goal_risk=0
+adaptive plies=80 initial=10,9 eval=267 final=10,9 eval=371 depth=13 scored=1 alternate=0 learned=0 error=
+ply=81 player=1 engine=2 move=10,9 elapsed_ms=5050 error=none
+ply=82 player=2 engine=4 move=10,8 elapsed_ms=5605 error=none
+root-council plies=82 roots=2 complete=1 promoted=0 depth=15 floor=12 reason=keep-primary move=12,4 phase_ms=3065
+root-council-candidate plies=82 move=12,4 scored=1 eval=373 depth=15 goal_risk=0
+root-council-candidate plies=82 move=3,2 scored=1 eval=294 depth=15 goal_risk=0
+adaptive plies=82 initial=12,4 eval=368 final=12,4 eval=373 depth=15 scored=1 alternate=0 learned=0 error=
+ply=83 player=1 engine=2 move=12,4 elapsed_ms=5523 error=none
+ply=84 player=2 engine=4 move=11,3 elapsed_ms=5625 error=none
+root-council plies=84 roots=2 complete=1 promoted=0 depth=15 floor=15 reason=keep-primary move=9,2 phase_ms=2994
+root-council-candidate plies=84 move=9,2 scored=1 eval=328 depth=15 goal_risk=0
+root-council-candidate plies=84 move=3,2 scored=1 eval=-29964 depth=15 goal_risk=0
+adaptive plies=84 initial=9,2 eval=338 final=9,2 eval=328 depth=15 scored=1 alternate=0 learned=0 error=
+ply=85 player=1 engine=2 move=9,2 elapsed_ms=5461 error=none
+ply=86 player=2 engine=4 move=10,4 elapsed_ms=5605 error=none
+root-council plies=86 roots=2 complete=0 promoted=0 depth=14 floor=15 reason=shallow move=3,9 phase_ms=2338
+root-council-candidate plies=86 move=3,9 scored=1 eval=325 depth=14 goal_risk=0
+root-council-candidate plies=86 move=6,2 scored=1 eval=327 depth=14 goal_risk=0
+adaptive plies=86 initial=3,9 eval=300 final=3,9 eval=300 depth=15 scored=1 alternate=0 learned=0 error=
+ply=87 player=1 engine=2 move=3,9 elapsed_ms=5087 error=none
+ply=88 player=2 engine=4 move=2,9 elapsed_ms=5570 error=none
+root-council plies=88 roots=2 complete=0 promoted=0 depth=14 floor=16 reason=shallow move=8,6 phase_ms=3293
+root-council-candidate plies=88 move=8,6 scored=1 eval=340 depth=14 goal_risk=0
+root-council-candidate plies=88 move=6,2 scored=1 eval=299 depth=14 goal_risk=0
+adaptive plies=88 initial=8,6 eval=358 final=8,6 eval=358 depth=16 scored=1 alternate=0 learned=0 error=
+ply=89 player=1 engine=2 move=8,6 elapsed_ms=5488 error=none
+ply=90 player=2 engine=4 move=13,1 elapsed_ms=5592 error=none
+ply=91 player=1 engine=2 move=12,2 elapsed_ms=0 error=none
+ply=92 player=2 engine=4 move=11,12 elapsed_ms=5596 error=none
+root-council plies=92 roots=2 complete=1 promoted=0 depth=16 floor=14 reason=keep-primary move=12,10 phase_ms=3543
+root-council-candidate plies=92 move=12,10 scored=1 eval=379 depth=16 goal_risk=0
+root-council-candidate plies=92 move=6,2 scored=1 eval=381 depth=16 goal_risk=0
+adaptive plies=92 initial=12,10 eval=374 final=12,10 eval=379 depth=16 scored=1 alternate=0 learned=0 error=
+ply=93 player=1 engine=2 move=12,10 elapsed_ms=5518 error=none
+ply=94 player=2 engine=4 move=3,2 elapsed_ms=5592 error=none
+root-council plies=94 roots=1 complete=1 promoted=0 depth=15 floor=13 reason=keep-primary move=6,2 phase_ms=3493
+root-council-candidate plies=94 move=6,2 scored=1 eval=379 depth=15 goal_risk=0
+adaptive plies=94 initial=6,2 eval=380 final=6,2 eval=379 depth=15 scored=1 alternate=0 learned=0 error=
+ply=95 player=1 engine=2 move=6,2 elapsed_ms=5294 error=none
+ply=96 player=2 engine=4 move=7,2 elapsed_ms=5589 error=none
+root-council plies=96 roots=2 complete=1 promoted=1 depth=16 floor=15 reason=common-search move=1,4 phase_ms=3546
+root-council-candidate plies=96 move=9,1 scored=1 eval=366 depth=16 goal_risk=0
+root-council-candidate plies=96 move=1,4 scored=1 eval=392 depth=16 goal_risk=0
+adaptive plies=96 initial=9,1 eval=350 final=1,4 eval=392 depth=16 scored=1 alternate=0 learned=0 error=
+ply=97 player=1 engine=2 move=1,4 elapsed_ms=5519 error=none
+ply=98 player=2 engine=4 move=1,2 elapsed_ms=5044 error=none
+ply=99 player=1 engine=2 move=2,2 elapsed_ms=0 error=none
+ply=100 player=2 engine=4 move=9,13 elapsed_ms=5371 error=none
+root-council plies=100 roots=2 complete=0 promoted=0 depth=12 floor=14 reason=shallow move=11,10 phase_ms=3501
+root-council-candidate plies=100 move=11,10 scored=1 eval=373 depth=12 goal_risk=0
+root-council-candidate plies=100 move=9,10 scored=1 eval=389 depth=12 goal_risk=0
+adaptive plies=100 initial=11,10 eval=358 final=11,10 eval=358 depth=14 scored=1 alternate=0 learned=0 error=
+ply=101 player=1 engine=2 move=11,10 elapsed_ms=5502 error=none
+ply=102 player=2 engine=4 move=9,10 elapsed_ms=5601 error=none
+root-council plies=102 roots=2 complete=1 promoted=0 depth=14 floor=13 reason=keep-primary move=13,10 phase_ms=3444
+root-council-candidate plies=102 move=13,10 scored=1 eval=290 depth=14 goal_risk=0
+root-council-candidate plies=102 move=9,11 scored=1 eval=305 depth=14 goal_risk=0
+adaptive plies=102 initial=13,10 eval=331 final=13,10 eval=290 depth=14 scored=1 alternate=0 learned=0 error=
+ply=103 player=1 engine=2 move=13,10 elapsed_ms=5274 error=none
+ply=104 player=2 engine=4 move=14,10 elapsed_ms=5588 error=none
+root-council plies=104 roots=1 complete=1 promoted=0 depth=16 floor=14 reason=keep-primary move=9,11 phase_ms=3407
+root-council-candidate plies=104 move=9,11 scored=1 eval=356 depth=16 goal_risk=0
+adaptive plies=104 initial=9,11 eval=386 final=9,11 eval=356 depth=16 scored=1 alternate=0 learned=0 error=
+ply=105 player=1 engine=2 move=9,11 elapsed_ms=5476 error=none
+ply=106 player=2 engine=4 move=5,12 elapsed_ms=5598 error=none
+root-council plies=106 roots=3 complete=0 promoted=0 depth=13 floor=16 reason=shallow move=6,12 phase_ms=3496
+root-council-candidate plies=106 move=6,12 scored=1 eval=208 depth=13 goal_risk=0
+root-council-candidate plies=106 move=4,11 scored=1 eval=365 depth=13 goal_risk=0
+root-council-candidate plies=106 move=3,10 scored=1 eval=222 depth=13 goal_risk=0
+adaptive plies=106 initial=6,12 eval=361 final=6,12 eval=361 depth=16 scored=1 alternate=0 learned=0 error=
+ply=107 player=1 engine=2 move=6,12 elapsed_ms=5562 error=none
+ply=108 player=2 engine=4 move=5,13 elapsed_ms=5405 error=none
+root-council plies=108 roots=3 complete=0 promoted=0 depth=10 floor=14 reason=shallow move=6,6 phase_ms=3476
+root-council-candidate plies=108 move=6,6 scored=1 eval=205 depth=10 goal_risk=0
+root-council-candidate plies=108 move=4,13 scored=1 eval=385 depth=10 goal_risk=0
+root-council-candidate plies=108 move=3,10 scored=1 eval=387 depth=10 goal_risk=0
+adaptive plies=108 initial=6,6 eval=328 final=6,6 eval=328 depth=14 scored=1 alternate=0 learned=0 error=
+ply=109 player=1 engine=2 move=6,6 elapsed_ms=5471 error=none
+ply=110 player=2 engine=4 move=9,9 elapsed_ms=5593 error=none
+root-council plies=110 roots=3 complete=0 promoted=0 depth=13 floor=16 reason=shallow move=5,11 phase_ms=3489
+root-council-candidate plies=110 move=5,11 scored=1 eval=265 depth=13 goal_risk=0
+root-council-candidate plies=110 move=4,13 scored=1 eval=0 depth=13 goal_risk=0
+root-council-candidate plies=110 move=3,10 scored=1 eval=328 depth=13 goal_risk=0
+adaptive plies=110 initial=5,11 eval=331 final=5,11 eval=331 depth=16 scored=1 alternate=0 learned=0 error=
+ply=111 player=1 engine=2 move=5,11 elapsed_ms=5594 error=none
+ply=112 player=2 engine=4 move=4,13 elapsed_ms=5573 error=none
+ply=113 player=1 engine=2 move=3,14 elapsed_ms=0 error=none
+ply=114 player=2 engine=4 move=3,0 elapsed_ms=5571 error=none
+ply=115 player=1 engine=2 move=7,4 elapsed_ms=0 error=none
+ply=116 player=2 engine=4 move=4,10 elapsed_ms=5179 error=none
+root-council plies=116 roots=2 complete=1 promoted=1 depth=14 floor=14 reason=common-search move=3,10 phase_ms=3496
+root-council-candidate plies=116 move=13,12 scored=1 eval=362 depth=14 goal_risk=0
+root-council-candidate plies=116 move=3,10 scored=1 eval=387 depth=14 goal_risk=0
+adaptive plies=116 initial=13,12 eval=376 final=3,10 eval=387 depth=14 scored=1 alternate=0 learned=0 error=
+ply=117 player=1 engine=2 move=3,10 elapsed_ms=5503 error=none
+ply=118 player=2 engine=4 move=1,9 elapsed_ms=5566 error=none
+root-council plies=118 roots=3 complete=0 promoted=0 depth=12 floor=13 reason=shallow move=7,13 phase_ms=3442
+root-council-candidate plies=118 move=7,13 scored=1 eval=341 depth=12 goal_risk=0
+root-council-candidate plies=118 move=6,13 scored=1 eval=0 depth=12 goal_risk=0
+root-council-candidate plies=118 move=1,10 scored=1 eval=0 depth=12 goal_risk=0
+adaptive plies=118 initial=7,13 eval=387 final=7,13 eval=387 depth=13 scored=1 alternate=0 learned=0 error=
+ply=119 player=1 engine=2 move=7,13 elapsed_ms=5477 error=none
+ply=120 player=2 engine=4 move=8,12 elapsed_ms=5514 error=none
+root-council plies=120 roots=2 complete=0 promoted=0 depth=12 floor=13 reason=shallow move=3,12 phase_ms=3469
+root-council-candidate plies=120 move=3,12 scored=1 eval=0 depth=12 goal_risk=0
+root-council-candidate plies=120 move=10,12 scored=1 eval=0 depth=12 goal_risk=0
+adaptive plies=120 initial=3,12 eval=387 final=3,12 eval=387 depth=13 scored=1 alternate=0 learned=0 error=
+ply=121 player=1 engine=2 move=3,12 elapsed_ms=5210 error=none
+ply=122 player=2 engine=4 move=3,11 elapsed_ms=5322 error=none
+root-council plies=122 roots=1 complete=1 promoted=0 depth=14 floor=14 reason=keep-primary move=10,12 phase_ms=3531
+root-council-candidate plies=122 move=10,12 scored=1 eval=0 depth=14 goal_risk=0
+adaptive plies=122 initial=10,12 eval=387 final=10,12 eval=0 depth=14 scored=1 alternate=0 learned=0 error=
+ply=123 player=1 engine=2 move=10,12 elapsed_ms=5547 error=none
+ply=124 player=2 engine=4 move=10,1 elapsed_ms=5583 error=none
+root-council plies=124 roots=1 complete=1 promoted=0 depth=9 floor=9 reason=keep-primary move=9,1 phase_ms=3468
+root-council-candidate plies=124 move=9,1 scored=1 eval=812 depth=9 goal_risk=0
+adaptive plies=124 initial=9,1 eval=753 final=9,1 eval=812 depth=9 scored=1 alternate=0 learned=0 error=
+ply=125 player=1 engine=2 move=9,1 elapsed_ms=5472 error=none
+ply=126 player=2 engine=4 move=10,0 elapsed_ms=5590 error=none
+root-council plies=126 roots=3 complete=0 promoted=0 depth=8 floor=11 reason=shallow move=13,12 phase_ms=3363
+root-council-candidate plies=126 move=13,12 scored=1 eval=0 depth=8 goal_risk=0
+root-council-candidate plies=126 move=2,11 scored=1 eval=0 depth=8 goal_risk=0
+root-council-candidate plies=126 move=4,12 scored=1 eval=0 depth=8 goal_risk=0
+adaptive plies=126 initial=13,12 eval=686 final=13,12 eval=686 depth=11 scored=1 alternate=0 learned=0 error=
+ply=127 player=1 engine=2 move=13,12 elapsed_ms=5468 error=none
+ply=128 player=2 engine=4 move=12,11 elapsed_ms=5567 error=none
+root-council plies=128 roots=3 complete=0 promoted=0 depth=10 floor=13 reason=shallow move=4,11 phase_ms=3495
+root-council-candidate plies=128 move=4,11 scored=1 eval=177 depth=10 goal_risk=0
+root-council-candidate plies=128 move=1,12 scored=1 eval=659 depth=10 goal_risk=0
+root-council-candidate plies=128 move=4,12 scored=1 eval=0 depth=10 goal_risk=0
+adaptive plies=128 initial=4,11 eval=383 final=4,11 eval=383 depth=13 scored=1 alternate=0 learned=0 error=
+ply=129 player=1 engine=2 move=4,11 elapsed_ms=5505 error=none
+ply=130 player=2 engine=4 move=5,10 elapsed_ms=4310 error=none
+root-council plies=130 roots=3 complete=0 promoted=0 depth=10 floor=12 reason=shallow move=9,14 phase_ms=3464
+root-council-candidate plies=130 move=9,14 scored=1 eval=145 depth=10 goal_risk=0
+root-council-candidate plies=130 move=1,12 scored=1 eval=0 depth=10 goal_risk=0
+root-council-candidate plies=130 move=2,10 scored=1 eval=0 depth=10 goal_risk=0
+adaptive plies=130 initial=9,14 eval=552 final=9,14 eval=552 depth=12 scored=1 alternate=0 learned=0 error=
+ply=131 player=1 engine=2 move=9,14 elapsed_ms=5573 error=none
+ply=132 player=2 engine=4 move=1,10 elapsed_ms=5254 error=none
+ply=133 player=1 engine=2 move=1,7 elapsed_ms=0 error=none
+ply=134 player=2 engine=4 move=11,13 elapsed_ms=5096 error=none
+root-council plies=134 roots=1 complete=0 promoted=0 depth=9 floor=11 reason=shallow move=13,13 phase_ms=3485
+root-council-candidate plies=134 move=13,13 scored=1 eval=0 depth=9 goal_risk=0
+adaptive plies=134 initial=13,13 eval=457 final=13,13 eval=457 depth=11 scored=1 alternate=0 learned=0 error=
+ply=135 player=1 engine=2 move=13,13 elapsed_ms=5612 error=none
+ply=136 player=2 engine=4 move=2,10 elapsed_ms=5207 error=none
+ply=137 player=1 engine=2 move=4,12 elapsed_ms=0 error=none
+ply=138 player=2 engine=4 move=1,12 elapsed_ms=5600 error=none
+ply=139 player=1 engine=2 move=1,11 elapsed_ms=0 error=none
+ply=140 player=2 engine=4 move=12,13 elapsed_ms=5469 error=none
+ply=141 player=1 engine=2 move=8,13 elapsed_ms=0 error=none
+ply=142 player=2 engine=4 move=13,11 elapsed_ms=5645 error=none
+root-council plies=142 roots=2 complete=0 promoted=0 depth=9 floor=12 reason=shallow move=10,14 phase_ms=3473
+root-council-candidate plies=142 move=10,14 scored=1 eval=767 depth=9 goal_risk=0
+root-council-candidate plies=142 move=13,4 scored=1 eval=0 depth=9 goal_risk=0
+adaptive plies=142 initial=10,14 eval=958 final=10,14 eval=958 depth=12 scored=1 alternate=0 learned=0 error=
+ply=143 player=1 engine=2 move=10,14 elapsed_ms=5474 error=none
+ply=144 player=2 engine=4 move=8,14 elapsed_ms=5593 error=none
+root-council plies=144 roots=3 complete=0 promoted=0 depth=9 floor=11 reason=shallow move=3,1 phase_ms=3482
+root-council-candidate plies=144 move=3,1 scored=1 eval=0 depth=9 goal_risk=0
+root-council-candidate plies=144 move=13,4 scored=1 eval=0 depth=9 goal_risk=0
+root-council-candidate plies=144 move=11,1 scored=1 eval=0 depth=9 goal_risk=0
+adaptive plies=144 initial=3,1 eval=785 final=3,1 eval=785 depth=11 scored=1 alternate=0 learned=0 error=
+ply=145 player=1 engine=2 move=3,1 elapsed_ms=5199 error=none
+ply=146 player=2 engine=4 move=13,4 elapsed_ms=5586 error=none
+root-council plies=146 roots=2 complete=1 promoted=0 depth=14 floor=11 reason=keep-primary move=9,0 phase_ms=3489
+root-council-candidate plies=146 move=9,0 scored=1 eval=940 depth=14 goal_risk=0
+root-council-candidate plies=146 move=12,3 scored=1 eval=0 depth=14 goal_risk=0
+adaptive plies=146 initial=9,0 eval=1138 final=9,0 eval=940 depth=14 scored=1 alternate=0 learned=0 error=
+ply=147 player=1 engine=2 move=9,0 elapsed_ms=5341 error=none
+ply=148 player=2 engine=4 move=0,4 elapsed_ms=5596 error=none
+root-council plies=148 roots=3 complete=0 promoted=0 depth=9 floor=11 reason=shallow move=13,14 phase_ms=3519
+root-council-candidate plies=148 move=13,14 scored=1 eval=0 depth=9 goal_risk=0
+root-council-candidate plies=148 move=2,13 scored=1 eval=1440 depth=9 goal_risk=0
+root-council-candidate plies=148 move=11,1 scored=1 eval=0 depth=9 goal_risk=0
+adaptive plies=148 initial=13,14 eval=831 final=13,14 eval=831 depth=11 scored=1 alternate=0 learned=0 error=
+ply=149 player=1 engine=2 move=13,14 elapsed_ms=5457 error=none
+ply=150 player=2 engine=4 move=12,14 elapsed_ms=4476 error=none
+root-council plies=150 roots=3 complete=0 promoted=0 depth=9 floor=11 reason=shallow move=3,13 phase_ms=3520
+root-council-candidate plies=150 move=3,13 scored=1 eval=0 depth=9 goal_risk=0
+root-council-candidate plies=150 move=2,12 scored=1 eval=1121 depth=9 goal_risk=0
+root-council-candidate plies=150 move=11,1 scored=1 eval=1056 depth=9 goal_risk=0
+adaptive plies=150 initial=3,13 eval=1150 final=3,13 eval=1150 depth=11 scored=1 alternate=0 learned=0 error=
+ply=151 player=1 engine=2 move=3,13 elapsed_ms=5501 error=none
+ply=152 player=2 engine=4 move=11,1 elapsed_ms=5509 error=none
+ply=153 player=1 engine=2 move=11,0 elapsed_ms=0 error=none
+ply=154 player=2 engine=4 move=14,1 elapsed_ms=5559 error=none
+ply=155 player=1 engine=2 move=12,1 elapsed_ms=0 error=none
+ply=156 player=2 engine=4 move=12,3 elapsed_ms=5105 error=none
+ply=157 player=1 engine=2 move=14,5 elapsed_ms=0 error=none
+ply=158 player=2 engine=4 move=2,12 elapsed_ms=5605 error=none
+root-council plies=158 roots=2 complete=1 promoted=1 depth=11 floor=10 reason=common-search move=2,11 phase_ms=3470
+root-council-candidate plies=158 move=2,13 scored=1 eval=0 depth=11 goal_risk=0
+root-council-candidate plies=158 move=2,11 scored=1 eval=1407 depth=11 goal_risk=0
+adaptive plies=158 initial=2,13 eval=0 final=2,11 eval=1407 depth=11 scored=1 alternate=0 learned=0 error=
+ply=159 player=1 engine=2 move=2,11 elapsed_ms=5200 error=none
+ply=160 player=2 engine=4 move=1,13 elapsed_ms=5608 error=none
+ply=161 player=1 engine=2 move=0,14 elapsed_ms=0 error=none
+ply=162 player=2 engine=4 move=6,10 elapsed_ms=5612 error=none
+root-council plies=162 roots=2 complete=1 promoted=0 depth=10 floor=10 reason=keep-primary move=14,7 phase_ms=3519
+root-council-candidate plies=162 move=14,7 scored=1 eval=1676 depth=10 goal_risk=0
+root-council-candidate plies=162 move=2,14 scored=1 eval=1574 depth=10 goal_risk=0
+adaptive plies=162 initial=14,7 eval=1577 final=14,7 eval=1676 depth=10 scored=1 alternate=0 learned=0 error=
+ply=163 player=1 engine=2 move=14,7 elapsed_ms=5226 error=none
+ply=164 player=2 engine=4 move=14,6 elapsed_ms=5601 error=none
+root-council plies=164 roots=2 complete=0 promoted=0 depth=9 floor=11 reason=shallow move=12,7 phase_ms=3454
+root-council-candidate plies=164 move=12,7 scored=1 eval=1565 depth=9 goal_risk=0
+root-council-candidate plies=164 move=13,7 scored=1 eval=1572 depth=9 goal_risk=0
+adaptive plies=164 initial=12,7 eval=0 final=12,7 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=165 player=1 engine=2 move=12,7 elapsed_ms=5175 error=none
+ply=166 player=2 engine=4 move=13,7 elapsed_ms=2268 error=none
+root-council plies=166 roots=1 complete=0 promoted=0 depth=9 floor=11 reason=shallow move=13,5 phase_ms=3544
+root-council-candidate plies=166 move=13,5 scored=1 eval=1550 depth=9 goal_risk=0
+adaptive plies=166 initial=13,5 eval=0 final=13,5 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=167 player=1 engine=2 move=13,5 elapsed_ms=5208 error=none
+ply=168 player=2 engine=4 move=0,3 elapsed_ms=5599 error=none
+root-council plies=168 roots=1 complete=1 promoted=0 depth=10 floor=10 reason=keep-primary move=0,5 phase_ms=3505
+root-council-candidate plies=168 move=0,5 scored=1 eval=0 depth=10 goal_risk=0
+adaptive plies=168 initial=0,5 eval=1667 final=0,5 eval=0 depth=10 scored=1 alternate=0 learned=0 error=
+ply=169 player=1 engine=2 move=0,5 elapsed_ms=5172 error=none
+ply=170 player=2 engine=4 move=0,1 elapsed_ms=5567 error=none
+ply=171 player=1 engine=2 move=0,0 elapsed_ms=0 error=none
+ply=172 player=2 engine=4 move=4,7 elapsed_ms=5581 error=none
+root-council plies=172 roots=2 complete=0 promoted=0 depth=10 floor=11 reason=shallow move=12,6 phase_ms=3250
+root-council-candidate plies=172 move=12,6 scored=1 eval=1411 depth=10 goal_risk=0
+root-council-candidate plies=172 move=5,8 scored=1 eval=1643 depth=10 goal_risk=0
+adaptive plies=172 initial=12,6 eval=0 final=12,6 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=173 player=1 engine=2 move=12,6 elapsed_ms=4910 error=none
+ply=174 player=2 engine=4 move=7,5 elapsed_ms=5170 error=none
+root-council plies=174 roots=2 complete=0 promoted=0 depth=10 floor=11 reason=shallow move=5,8 phase_ms=3488
+root-council-candidate plies=174 move=5,8 scored=1 eval=1514 depth=10 goal_risk=0
+root-council-candidate plies=174 move=2,14 scored=1 eval=1672 depth=10 goal_risk=0
+adaptive plies=174 initial=5,8 eval=0 final=5,8 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=175 player=1 engine=2 move=5,8 elapsed_ms=5153 error=none
+ply=176 player=2 engine=4 move=11,9 elapsed_ms=5609 error=none
+root-council plies=176 roots=3 complete=0 promoted=0 depth=9 floor=10 reason=shallow move=12,12 phase_ms=3540
+root-council-candidate plies=176 move=12,12 scored=1 eval=1393 depth=9 goal_risk=0
+root-council-candidate plies=176 move=5,3 scored=1 eval=1775 depth=9 goal_risk=0
+root-council-candidate plies=176 move=2,14 scored=1 eval=1779 depth=9 goal_risk=0
+adaptive plies=176 initial=12,12 eval=0 final=12,12 eval=0 depth=10 scored=1 alternate=0 learned=0 error=
+ply=177 player=1 engine=2 move=12,12 elapsed_ms=5178 error=none
+ply=178 player=2 engine=4 move=2,8 elapsed_ms=5176 error=none
+root-council plies=178 roots=2 complete=0 promoted=0 depth=9 floor=11 reason=shallow move=13,6 phase_ms=3519
+root-council-candidate plies=178 move=13,6 scored=1 eval=1486 depth=9 goal_risk=0
+root-council-candidate plies=178 move=2,14 scored=1 eval=1687 depth=9 goal_risk=0
+adaptive plies=178 initial=13,6 eval=0 final=13,6 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=179 player=1 engine=2 move=13,6 elapsed_ms=5168 error=none
+ply=180 player=2 engine=4 move=5,3 elapsed_ms=5605 error=none
+root-council plies=180 roots=2 complete=1 promoted=1 depth=11 floor=10 reason=common-search move=2,14 phase_ms=3495
+root-council-candidate plies=180 move=7,12 scored=1 eval=1425 depth=11 goal_risk=0
+root-council-candidate plies=180 move=2,14 scored=1 eval=1532 depth=11 goal_risk=0
+adaptive plies=180 initial=7,12 eval=0 final=2,14 eval=1532 depth=11 scored=1 alternate=0 learned=0 error=
+ply=181 player=1 engine=2 move=2,14 elapsed_ms=5150 error=none
+ply=182 player=2 engine=4 move=4,14 elapsed_ms=5589 error=none
+root-council plies=182 roots=3 complete=0 promoted=0 depth=9 floor=10 reason=shallow move=6,13 phase_ms=3496
+root-council-candidate plies=182 move=6,13 scored=1 eval=1372 depth=9 goal_risk=0
+root-council-candidate plies=182 move=7,12 scored=1 eval=1372 depth=9 goal_risk=0
+root-council-candidate plies=182 move=4,0 scored=1 eval=1830 depth=9 goal_risk=0
+adaptive plies=182 initial=6,13 eval=0 final=6,13 eval=0 depth=10 scored=1 alternate=0 learned=0 error=
+ply=183 player=1 engine=2 move=6,13 elapsed_ms=5174 error=none
+ply=184 player=2 engine=4 move=12,9 elapsed_ms=5609 error=none
+root-council plies=184 roots=3 complete=0 promoted=0 depth=9 floor=11 reason=shallow move=13,3 phase_ms=3562
+root-council-candidate plies=184 move=13,3 scored=1 eval=1605 depth=9 goal_risk=0
+root-council-candidate plies=184 move=13,9 scored=1 eval=1534 depth=9 goal_risk=0
+root-council-candidate plies=184 move=4,0 scored=1 eval=1657 depth=9 goal_risk=0
+adaptive plies=184 initial=13,3 eval=0 final=13,3 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=185 player=1 engine=2 move=13,3 elapsed_ms=5216 error=none
+ply=186 player=2 engine=4 move=8,1 elapsed_ms=5377 error=none
+root-council plies=186 roots=3 complete=0 promoted=0 depth=10 floor=11 reason=shallow move=5,1 phase_ms=3492
+root-council-candidate plies=186 move=5,1 scored=1 eval=1559 depth=10 goal_risk=0
+root-council-candidate plies=186 move=2,1 scored=1 eval=1605 depth=10 goal_risk=0
+root-council-candidate plies=186 move=2,13 scored=1 eval=1679 depth=10 goal_risk=0
+adaptive plies=186 initial=5,1 eval=0 final=5,1 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=187 player=1 engine=2 move=5,1 elapsed_ms=5154 error=none
+ply=188 player=2 engine=4 move=13,9 elapsed_ms=5579 error=none
+root-council plies=188 roots=3 complete=0 promoted=0 depth=10 floor=11 reason=shallow move=2,13 phase_ms=3142
+root-council-candidate plies=188 move=2,13 scored=1 eval=1482 depth=10 goal_risk=0
+root-council-candidate plies=188 move=2,1 scored=1 eval=1406 depth=10 goal_risk=0
+root-council-candidate plies=188 move=4,0 scored=1 eval=1719 depth=10 goal_risk=0
+adaptive plies=188 initial=2,13 eval=0 final=2,13 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=189 player=1 engine=2 move=2,13 elapsed_ms=4818 error=none
+ply=190 player=2 engine=4 move=7,1 elapsed_ms=5616 error=none
+root-council plies=190 roots=3 complete=0 promoted=0 depth=10 floor=11 reason=shallow move=6,1 phase_ms=3461
+root-council-candidate plies=190 move=6,1 scored=1 eval=1598 depth=10 goal_risk=0
+root-council-candidate plies=190 move=2,1 scored=1 eval=1613 depth=10 goal_risk=0
+root-council-candidate plies=190 move=1,14 scored=1 eval=1588 depth=10 goal_risk=0
+adaptive plies=190 initial=6,1 eval=0 final=6,1 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=191 player=1 engine=2 move=6,1 elapsed_ms=5123 error=none
+ply=192 player=2 engine=4 move=7,12 elapsed_ms=5370 error=none
+root-council plies=192 roots=2 complete=0 promoted=0 depth=10 floor=12 reason=shallow move=2,1 phase_ms=3436
+root-council-candidate plies=192 move=2,1 scored=1 eval=1521 depth=10 goal_risk=0
+root-council-candidate plies=192 move=4,0 scored=1 eval=1552 depth=10 goal_risk=0
+adaptive plies=192 initial=2,1 eval=0 final=2,1 eval=0 depth=12 scored=1 alternate=0 learned=0 error=
+ply=193 player=1 engine=2 move=2,1 elapsed_ms=5122 error=none
+ply=194 player=2 engine=4 move=14,9 elapsed_ms=5582 error=none
+root-council plies=194 roots=2 complete=0 promoted=0 depth=10 floor=11 reason=shallow move=13,2 phase_ms=3488
+root-council-candidate plies=194 move=13,2 scored=1 eval=1567 depth=10 goal_risk=0
+root-council-candidate plies=194 move=1,1 scored=1 eval=1381 depth=10 goal_risk=0
+adaptive plies=194 initial=13,2 eval=0 final=13,2 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=195 player=1 engine=2 move=13,2 elapsed_ms=5151 error=none
+ply=196 player=2 engine=4 move=1,1 elapsed_ms=5512 error=none
+root-council plies=196 roots=3 complete=0 promoted=0 depth=10 floor=11 reason=shallow move=2,0 phase_ms=3468
+root-council-candidate plies=196 move=2,0 scored=1 eval=1601 depth=10 goal_risk=0
+root-council-candidate plies=196 move=14,11 scored=1 eval=1305 depth=10 goal_risk=0
+root-council-candidate plies=196 move=0,6 scored=1 eval=1613 depth=10 goal_risk=0
+adaptive plies=196 initial=2,0 eval=0 final=2,0 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=197 player=1 engine=2 move=2,0 elapsed_ms=5157 error=none
+ply=198 player=2 engine=4 move=1,14 elapsed_ms=5578 error=none
+root-council plies=198 roots=2 complete=0 promoted=0 depth=10 floor=12 reason=shallow move=4,0 phase_ms=3497
+root-council-candidate plies=198 move=4,0 scored=1 eval=1305 depth=10 goal_risk=0
+root-council-candidate plies=198 move=14,11 scored=1 eval=1482 depth=10 goal_risk=0
+adaptive plies=198 initial=4,0 eval=0 final=4,0 eval=0 depth=12 scored=1 alternate=0 learned=0 error=
+ply=199 player=1 engine=2 move=4,0 elapsed_ms=5160 error=none
+ply=200 player=2 engine=4 move=14,11 elapsed_ms=5554 error=none
+root-council plies=200 roots=2 complete=0 promoted=0 depth=10 floor=11 reason=shallow move=14,12 phase_ms=3488
+root-council-candidate plies=200 move=14,12 scored=1 eval=1285 depth=10 goal_risk=0
+root-council-candidate plies=200 move=5,0 scored=1 eval=1447 depth=10 goal_risk=0
+adaptive plies=200 initial=14,12 eval=0 final=14,12 eval=0 depth=11 scored=1 alternate=0 learned=0 error=
+ply=201 player=1 engine=2 move=14,12 elapsed_ms=5151 error=none
+ply=202 player=2 engine=4 move=14,13 elapsed_ms=5581 error=none
+root-council plies=202 roots=3 complete=0 promoted=0 depth=11 floor=13 reason=shallow move=5,0 phase_ms=3470
+root-council-candidate plies=202 move=5,0 scored=1 eval=1273 depth=11 goal_risk=0
+root-council-candidate plies=202 move=5,14 scored=1 eval=1377 depth=11 goal_risk=0
+root-council-candidate plies=202 move=6,14 scored=1 eval=1598 depth=11 goal_risk=0
+adaptive plies=202 initial=5,0 eval=0 final=5,0 eval=0 depth=13 scored=1 alternate=0 learned=0 error=
+ply=203 player=1 engine=2 move=5,0 elapsed_ms=5158 error=none
+ply=204 player=2 engine=4 move=6,0 elapsed_ms=5565 error=none
+root-council plies=204 roots=2 complete=0 promoted=0 depth=10 floor=12 reason=shallow move=5,14 phase_ms=3489
+root-council-candidate plies=204 move=5,14 scored=1 eval=1250 depth=10 goal_risk=0
+root-council-candidate plies=204 move=12,0 scored=1 eval=1301 depth=10 goal_risk=0
+adaptive plies=204 initial=5,14 eval=0 final=5,14 eval=0 depth=12 scored=1 alternate=0 learned=0 error=
+ply=205 player=1 engine=2 move=5,14 elapsed_ms=5118 error=none
+ply=206 player=2 engine=4 move=7,0 elapsed_ms=5316 error=none
+root-council plies=206 roots=2 complete=1 promoted=0 depth=11 floor=10 reason=keep-primary move=14,14 phase_ms=3520
+root-council-candidate plies=206 move=14,14 scored=1 eval=1499 depth=11 goal_risk=0
+root-council-candidate plies=206 move=0,8 scored=1 eval=1367 depth=11 goal_risk=0
+adaptive plies=206 initial=14,14 eval=0 final=14,14 eval=1499 depth=11 scored=1 alternate=0 learned=0 error=
+ply=207 player=1 engine=2 move=14,14 elapsed_ms=5151 error=none
+ply=208 player=2 engine=4 move=13,0 elapsed_ms=5244 error=none
+root-council plies=208 roots=2 complete=1 promoted=1 depth=12 floor=11 reason=common-search move=0,8 phase_ms=3485
+root-council-candidate plies=208 move=12,0 scored=1 eval=1315 depth=12 goal_risk=0
+root-council-candidate plies=208 move=0,8 scored=1 eval=1535 depth=12 goal_risk=0
+adaptive plies=208 initial=12,0 eval=0 final=0,8 eval=1535 depth=12 scored=1 alternate=0 learned=0 error=
+ply=209 player=1 engine=2 move=0,8 elapsed_ms=5149 error=none
+ply=210 player=2 engine=4 move=7,14 elapsed_ms=5383 error=none
+root-council plies=210 roots=3 complete=1 promoted=0 depth=17 floor=14 reason=keep-primary move=12,0 phase_ms=3344
+root-council-candidate plies=210 move=12,0 scored=1 eval=-29982 depth=17 goal_risk=0
+root-council-candidate plies=210 move=0,9 scored=1 eval=-29982 depth=17 goal_risk=0
+root-council-candidate plies=210 move=14,3 scored=1 eval=-29982 depth=17 goal_risk=0
+adaptive plies=210 initial=12,0 eval=1678 final=12,0 eval=-29982 depth=17 scored=1 alternate=0 learned=0 error=
+ply=211 player=1 engine=2 move=12,0 elapsed_ms=4904 error=none
+ply=212 player=2 engine=4 move=0,11 elapsed_ms=5304 error=none
+root-council plies=212 roots=3 complete=0 promoted=0 depth=15 floor=15 reason=incomplete-roots move=0,6 phase_ms=3499
+root-council-candidate plies=212 move=0,6 scored=0 eval=0 depth=0 goal_risk=0
+root-council-candidate plies=212 move=14,0 scored=0 eval=0 depth=0 goal_risk=0
+root-council-candidate plies=212 move=8,0 scored=0 eval=0 depth=0 goal_risk=0
+adaptive plies=212 initial=0,6 eval=0 final=0,6 eval=0 depth=15 scored=1 alternate=0 learned=0 error=
+ply=213 player=1 engine=2 move=0,6 elapsed_ms=5150 error=none
+ply=214 player=2 engine=4 move=14,2 elapsed_ms=5075 error=none
+endgame-proof plies=214 value=0 nodes=18308 move=0,7
+ply=215 player=1 engine=2 move=0,7 elapsed_ms=9 error=none
+ply=216 player=2 engine=4 move=0,9 elapsed_ms=717 error=none
+endgame-proof plies=216 value=0 nodes=5841 move=0,10
+ply=217 player=1 engine=2 move=0,10 elapsed_ms=2 error=none
+ply=218 player=2 engine=4 move=0,12 elapsed_ms=1275 error=none
+endgame-proof plies=218 value=0 nodes=565 move=0,13
+ply=219 player=1 engine=2 move=0,13 elapsed_ms=0 error=none
+ply=220 player=2 engine=4 move=8,0 elapsed_ms=826 error=none
+endgame-proof plies=220 value=0 nodes=53 move=1,0
+ply=221 player=1 engine=2 move=1,0 elapsed_ms=0 error=none
+ply=222 player=2 engine=4 move=6,14 elapsed_ms=647 error=none
+endgame-proof plies=222 value=0 nodes=5 move=14,0
+ply=223 player=1 engine=2 move=14,0 elapsed_ms=0 error=none
+ply=224 player=2 engine=4 move=14,3 elapsed_ms=637 error=none
+endgame-proof plies=224 value=0 nodes=1 move=14,4
+ply=225 player=1 engine=2 move=14,4 elapsed_ms=0 error=none
+star_case=0 opponent=4 start=3,3 lumen=black winner=0 plies=225 lumen_avg_ms=2727 lumen_max_ms=5612 opponent_avg_ms=5245 opponent_max_ms=5645 termination=normal status=PASS error=none
+moves=3,3 4,4 3,5 3,4 5,4 6,5 4,5 2,5 5,6 5,2 4,3 5,7 8,5 7,6 7,3 6,3 6,4 8,4 7,7 9,7 4,6 3,7 3,6 2,6 2,7 1,8 1,3 2,3 2,4 0,2 8,2 5,5 10,2 9,3 10,5 10,6 9,6 11,4 11,5 9,5 4,9 4,8 1,5 4,2 3,8 1,6 6,9 6,11 10,7 11,8 7,8 8,7 8,9 6,7 9,8 7,10 5,9 7,9 11,6 12,5 9,4 8,3 8,8 6,8 10,3 11,2 8,10 8,11 7,11 9,12 10,10 11,11 10,11 12,8 11,7 13,8 14,8 10,13 11,14 4,1 10,9 10,8 12,4 11,3 9,2 10,4 3,9 2,9 8,6 13,1 12,2 11,12 12,10 3,2 6,2 7,2 1,4 1,2 2,2 9,13 11,10 9,10 13,10 14,10 9,11 5,12 6,12 5,13 6,6 9,9 5,11 4,13 3,14 3,0 7,4 4,10 3,10 1,9 7,13 8,12 3,12 3,11 10,12 10,1 9,1 10,0 13,12 12,11 4,11 5,10 9,14 1,10 1,7 11,13 13,13 2,10 4,12 1,12 1,11 12,13 8,13 13,11 10,14 8,14 3,1 13,4 9,0 0,4 13,14 12,14 3,13 11,1 11,0 14,1 12,1 12,3 14,5 2,12 2,11 1,13 0,14 6,10 14,7 14,6 12,7 13,7 13,5 0,3 0,5 0,1 0,0 4,7 12,6 7,5 5,8 11,9 12,12 2,8 13,6 5,3 2,14 4,14 6,13 12,9 13,3 8,1 5,1 13,9 2,13 7,1 6,1 7,12 2,1 14,9 13,2 1,1 2,0 1,14 4,0 14,11 14,12 14,13 5,0 6,0 5,14 7,0 14,14 13,0 0,8 7,14 12,0 0,11 0,6 14,2 0,7 0,9 0,10 0,12 0,13 8,0 1,0 6,14 14,0 14,3 14,4

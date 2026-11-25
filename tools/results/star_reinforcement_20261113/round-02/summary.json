@@ -1,0 +1,40 @@
+{
+  "complete": false,
+  "passed": false,
+  "aborted_after_failure": true,
+  "games": [
+    {
+      "opponent": "rapfi",
+      "case": 3,
+      "player": 2,
+      "winner": 1,
+      "plies": 21,
+      "passed": false,
+      "exit_code": 1,
+      "error": "none",
+      "seconds": 66.48
+    },
+    {
+      "opponent": "rapfi",
+      "case": 7,
+      "player": 2,
+      "winner": 1,
+      "plies": 19,
+      "passed": false,
+      "exit_code": 1,
+      "error": "none",
+      "seconds": 64.35
+    },
+    {
+      "opponent": "rapfi",
+      "case": 9,
+      "player": 2,
+      "winner": 1,
+      "plies": 31,
+      "passed": false,
+      "exit_code": 1,
+      "error": "none",
+      "seconds": 116.33
+    }
+  ]
+}

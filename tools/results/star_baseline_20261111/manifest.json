@@ -1,0 +1,24 @@
+{
+  "started_utc": "2026-11-11T06:54:27Z",
+  "jobs": 12,
+  "local_threads": 1,
+  "nominal_ms": 5000,
+  "rule": "15x15 Renju",
+  "star_coordinates_zero_based": [
+    3,
+    7,
+    11
+  ],
+  "expected_games": 36,
+  "sha256": {
+    "/mnt/openwebui/gomoku/build/tools/engine_benchmark": "d8e7561d62ebb11069fa6e48c442819e79200aee401b359a758d87dd4c2a30e5",
+    "/mnt/openwebui/gomoku/engine_strength.h": "a73a234fcb0983d74c8d56939b5b9c1580c322e8134e2de849aa2545d3cc949e",
+    "/mnt/openwebui/gomoku/engine_ensemble.h": "ae312fa5bbcdd01c8b2842caa5d5a9922681dc846f1f2e91bc57f9c49f29e98b",
+    "/mnt/openwebui/gomoku/gomoku_core.h": "d4d6d98cf5b9add2036af93d81b795233115561f8f349028e4fa8303233639c4",
+    "/mnt/openwebui/gomoku/engine_adapter.h": "be4507527292737992af2c46bbe858d2eeb63751a252e059a2e8a69f60d46f8a",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/pbrain-rapfi": "fff31bf2d2b1189769e97eecdf55f9b5dd0883dbfbb7273c7189ee93f18c6c7d",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/config.toml": "d19a1514845feb149c7a146a68605ddfcd00ee674f1296850c578b1923de04c7",
+    "/mnt/openwebui/gomoku/third_party/runtime/alphagomoku/pbrain-agomoku": "8ab8d6a5e39a7dd0fc25a88d885242355482c6b3028089260095938136f85c6d",
+    "/mnt/openwebui/gomoku/third_party/runtime/alphagomoku/config.json": "e627f9aa3c5bf16979c56b163640342bb86e806926ed30fa21ae82f2147e734b"
+  }
+}

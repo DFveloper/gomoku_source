@@ -30,10 +30,9 @@
 //   3. the local search did not *prove* something better (an immediate five or
 //      a VCF win of our own).
 //
-// Every check is a proof, not a heuristic, so delegation can only replace a move
-// we would otherwise have played, never a proven win. The experts run
-// concurrently with the local search inside one shared wall-clock budget, so the
-// mixture costs the same clock as either member alone.
+// A completed tactical proof is evidence; an exhausted proof budget is unknown.
+// Voting, empirical routing and common-search ranking are heuristics and do not
+// guarantee non-loss. Actual process and verification times are recorded.
 //
 // The policy is explicit so the behaviour can be measured instead of assumed:
 //
@@ -44,9 +43,9 @@
 //
 // All members of the council run at the same time, in parallel with the local
 // search, so a council of three costs the same wall clock as a single expert.
-// Votes decide the *order* in which candidates are considered; proofs decide
-// what is allowed. Nothing here can turn a proven win into a loss, and nothing
-// here can be worse than the local engine when every expert is missing.
+// Votes decide ordering; complete tactical proofs can reject moves. The optional
+// root council additionally compares a complete common-depth AB iteration.
+// Strength still requires fresh games, including when experts agree.
 // ---------------------------------------------------------------------------
 
 #include <algorithm>
@@ -61,6 +60,7 @@
 #include <vector>
 
 #include "engine_adapter.h"
+#include "engine_endgame.h"
 
 namespace gomoku {
 
@@ -78,6 +78,10 @@ enum class EnsembleSource {
     LocalSearch,      // the in-tree search's answer
     ExpertDelegated,  // an external expert's move, verified
     ExpertCorrected,  // an external expert's move replaced ours because ours lost
+    LocalEndgame,     // complete endgame proof under the referee's rules
+    ExperienceBook,   // learned proposal; empirical, not a forced-result proof
+    ExperienceAdjusted, // search ordering corrected by historical failures
+    ExpertArbitrated, // common same-depth AB re-search, still a heuristic
 };
 
 inline const char* ensemble_source_name(EnsembleSource source) {
@@ -87,6 +91,10 @@ inline const char* ensemble_source_name(EnsembleSource source) {
         case EnsembleSource::LocalSearch: return "local-search";
         case EnsembleSource::ExpertDelegated: return "expert-delegated";
         case EnsembleSource::ExpertCorrected: return "expert-corrected";
+        case EnsembleSource::LocalEndgame: return "local-endgame";
+        case EnsembleSource::ExperienceBook: return "experience-book";
+        case EnsembleSource::ExperienceAdjusted: return "experience-adjusted";
+        case EnsembleSource::ExpertArbitrated: return "expert-arbitrated";
     }
     return "unknown";
 }
@@ -113,6 +121,8 @@ struct EnsembleStats {
     bool consensus = false;       // two or more experts picked the same point
     bool proof_overruled = false; // a proven loss decided the answer
     bool verification_truncated = false;  // ran out of clock before checking all
+    bool council_complete=false,council_promoted=false;
+    int council_roots=0,council_depth=0,council_ms=0,council_rescue_ms=0;
 };
 
 // One member of the mixture. Every member speaks the Gomocup protocol; the
@@ -133,6 +143,8 @@ struct EnsembleConfig {
     // Threads for the local search while experts are also running. On a small
     // machine this should be 1: each child process already wants a core.
     int local_threads = 1;
+    int primary_threads = 1; // Remaining workers can strengthen the primary expert.
+    bool prefer_nonloss = false;
     // Bound on each VCF proof used for verification, in nodes. A proof that runs
     // out of nodes reports "no win", which is the safe direction, so this is a
     // cost control rather than a correctness knob.
@@ -173,6 +185,29 @@ struct EnsembleConfig {
 
 namespace detail {
 
+inline bool loses_to_endgame_trap(int board[kMaxBoard][kMaxBoard],int size,int player,Move move) {
+    if(player!=1||!is_legal_move(board,size,player,move))return false;
+    int after[kMaxBoard][kMaxBoard];std::memcpy(after,board,sizeof(after));
+    after[move.r][move.c]=player;
+    const bool loses=white_can_seal_black_overline_trap(after,size);
+    if(loses&&std::getenv("GOMOKU_BENCH_TRACE"))
+        std::fprintf(stderr,"endgame-trap rejected=%d,%d\n",move.r,move.c);
+    return loses;
+}
+
+// Keep the fallback in the candidate set without granting it an expert vote.
+inline void add_ensemble_proposal(std::vector<Move>& proposals, std::vector<int>& votes,
+                                  Move move, bool expert_vote) {
+    for (size_t i = 0; i < proposals.size(); ++i) {
+        if (proposals[i].r == move.r && proposals[i].c == move.c) {
+            if (expert_vote) ++votes[i];
+            return;
+        }
+    }
+    proposals.push_back(move);
+    votes.push_back(expert_vote ? 1 : 0);
+}
+
 // How many worker threads the child will try to use. Rapfi is single-threaded by
 // default; AlphaGomoku and XL spread their search over several cores, so they can
 // only be a council member on a machine that has cores to spare.
@@ -193,7 +228,16 @@ inline bool loses_to_vcf(int board[kMaxBoard][kMaxBoard], int sz, int player, Mo
     int budget = node_budget;
     // If the opponent can force a continuous-four win after this move, the move
     // is losing regardless of how good the position looks to an evaluation.
-    return forced_four_search(local, sz, 3 - player, 16, budget);
+    const auto deadline=std::chrono::steady_clock::now()+std::chrono::milliseconds(350);
+    return forced_four_search(local, sz, 3 - player, 16, budget,nullptr,&deadline);
+}
+
+inline bool loses_to_vct(int board[kMaxBoard][kMaxBoard],int size,int player,Move move,int ms=300) {
+    if(!is_legal_move(board,size,player,move))return false;
+    int after[kMaxBoard][kMaxBoard];std::memcpy(after,board,sizeof(after));
+    after[move.r][move.c]=player;
+    return opponent_has_unavoidable_vcf_setup(after,size,3-player,
+        std::chrono::steady_clock::now()+std::chrono::milliseconds(ms),16,1000,nullptr,10,2);
 }
 
 }  // namespace detail
@@ -283,7 +327,8 @@ inline EnsembleStats choose_ensemble_move(
                  config.expert_startup_ms);
     const auto expert_started = std::chrono::steady_clock::now();
     if (config.policy != EnsemblePolicy::LocalOnly) {
-        for (const EnsembleExpert& member : council) {
+        for (size_t member_index = 0; member_index < council.size(); ++member_index) {
+            const EnsembleExpert& member = council[member_index];
             ExternalEngineRequest request;
             request.version = member.version;
             request.moves = history;
@@ -293,6 +338,8 @@ inline EnsembleStats choose_ensemble_move(
             request.level = std::max(1, std::min(5, 1 + static_cast<int>(
                 std::log2(std::max(1, expert_budget_ms / 250)))));
             request.board_size = sz;
+            request.threads = member_index == 0 ? std::max(1, config.primary_threads) : 1;
+            request.prefer_nonloss=config.prefer_nonloss;
             request.program = member.program.empty()
                 ? external_runtime_path(runtime_root, member.version)
                 : member.program;
@@ -360,7 +407,7 @@ inline EnsembleStats choose_ensemble_move(
         local_stop = true;
         local_thread.join();
     } else {
-        local_move = choose_ai_move(board, sz, player, level, &style, 0, last_own,
+        local_move = choose_ai_move(board, sz, player, level, &style, config.local_threads, last_own,
                                     cancel, &local_stats, config.nominal_budget_ms);
     }
     stats.local_depth = local_stats.search_depth;
@@ -407,16 +454,9 @@ inline EnsembleStats choose_ensemble_move(
     // the only one that can prove things, so it comes after the experts.
     std::vector<Move> proposals;
     std::vector<int> votes;
-    auto add_proposal = [&](Move move) {
+    auto add_proposal = [&](Move move, bool expert_vote = true) {
         if (move.r == -1 || !is_legal_move(board, sz, player, move)) return false;
-        for (size_t i = 0; i < proposals.size(); ++i) {
-            if (proposals[i].r == move.r && proposals[i].c == move.c) {
-                ++votes[i];
-                return true;
-            }
-        }
-        proposals.push_back(move);
-        votes.push_back(1);
+        detail::add_ensemble_proposal(proposals, votes, move, expert_vote);
         return true;
     };
     for (auto& slot : slots) {
@@ -437,8 +477,14 @@ inline EnsembleStats choose_ensemble_move(
                          history.size(), player, slot->row.load(), slot->column.load(),
                          slot->error.empty() ? "ok" : "error: ", slot->error.c_str());
     }
-    add_proposal(local_move);
+    // The weaker fallback must not cast the deciding vote against the primary
+    // expert. Consensus means agreement between independent external experts.
+    add_proposal(local_move, false);
     if (proposals.empty()) return finish({-1,-1}, EnsembleSource::LocalSearch);
+    int local_index = -1;
+    for (size_t i = 0; i < proposals.size(); ++i)
+        if (proposals[i].r == local_move.r && proposals[i].c == local_move.c)
+            local_index = static_cast<int>(i);
     if (config.policy == EnsemblePolicy::Trusting) {
         // No verification at all: the most trusted member that answered wins.
         for (auto& slot : slots) {
@@ -489,8 +535,12 @@ inline EnsembleStats choose_ensemble_move(
         if (std::chrono::steady_clock::now() >= verify_deadline) break;
         const int index = order[k];
         checked[index] = true;
-        verified_loses[index] = detail::loses_to_vcf(board, sz, player, proposals[index],
+        verified_loses[index] = detail::loses_to_endgame_trap(board,sz,player,proposals[index]) ||
+            detail::loses_to_vcf(board, sz, player, proposals[index],
                                                      config.verify_vcf_nodes);
+        if(!verified_loses[index] && stats.experts_answered>0 &&
+           std::chrono::steady_clock::now()<verify_deadline)
+            verified_loses[index]=detail::loses_to_vct(board,sz,player,proposals[index],250);
     }
     if (std::chrono::steady_clock::now() >= verify_deadline) stats.verification_truncated = true;
     stats.verify_ms = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -499,7 +549,7 @@ inline EnsembleStats choose_ensemble_move(
         // The leading candidate loses; prefer the first surviving move in vote
         // order so the mixture never walks into a proven loss. Unchecked moves
         // count as surviving, because a proof was only attempted for the leaders.
-        const bool local_was_leader = order[0] == static_cast<int>(proposals.size()) - 1;
+        const bool local_was_leader = order[0] == local_index;
         for (size_t k = 1; k < order.size(); ++k) {
             const int index = order[k];
             if (verified_loses[index]) continue;
@@ -507,7 +557,7 @@ inline EnsembleStats choose_ensemble_move(
             stats.expert_loses_to_vcf = !local_was_leader;
             stats.chosen_votes = votes[index];
             stats.consensus = votes[index] >= 2;
-            const bool chose_local = index == static_cast<int>(proposals.size()) - 1;
+            const bool chose_local = index == local_index;
             return finish(proposals[index], chose_local ? EnsembleSource::LocalSearch
                                                         : EnsembleSource::ExpertCorrected);
         }
@@ -515,9 +565,8 @@ inline EnsembleStats choose_ensemble_move(
     const int best = order[0];
     stats.chosen_votes = votes[best];
     stats.consensus = votes[best] >= 2;
-    stats.agreed = proposals.size() > 1 && votes[best] >= 2;
-    stats.local_loses_to_vcf = verified_loses[static_cast<size_t>(order.front())] &&
-                               order.front() == static_cast<int>(proposals.size()) - 1;
+    stats.agreed = best == local_index && votes[best] > 0;
+    stats.local_loses_to_vcf = local_index >= 0 && verified_loses[local_index];
     if (proposals[best].r == local_move.r && proposals[best].c == local_move.c)
         return finish(proposals[best], EnsembleSource::LocalSearch);
     return finish(proposals[best], EnsembleSource::ExpertDelegated);

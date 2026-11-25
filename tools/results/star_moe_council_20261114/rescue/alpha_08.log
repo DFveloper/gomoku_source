@@ -1,0 +1,43 @@
+ply=2 player=2 engine=5 move=6,6 elapsed_ms=4967 error=none
+experience plies=2 move=5,6 nonloss_weight=8 total_weight=8
+ply=3 player=1 engine=2 move=5,6 elapsed_ms=503 error=none
+ply=4 player=2 engine=5 move=5,8 elapsed_ms=4950 error=none
+experience plies=4 move=7,5 nonloss_weight=8 total_weight=8
+ply=5 player=1 engine=2 move=7,5 elapsed_ms=1 error=none
+ply=6 player=2 engine=5 move=6,9 elapsed_ms=4953 error=none
+experience plies=6 move=6,5 nonloss_weight=8 total_weight=8
+ply=7 player=1 engine=2 move=6,5 elapsed_ms=167 error=none
+ply=8 player=2 engine=5 move=4,7 elapsed_ms=4952 error=none
+experience plies=8 move=3,6 nonloss_weight=8 total_weight=8
+ply=9 player=1 engine=2 move=3,6 elapsed_ms=162 error=none
+ply=10 player=2 engine=5 move=8,5 elapsed_ms=4944 error=none
+experience plies=10 move=6,7 nonloss_weight=8 total_weight=8
+ply=11 player=1 engine=2 move=6,7 elapsed_ms=148 error=none
+ply=12 player=2 engine=5 move=4,5 elapsed_ms=4957 error=none
+experience plies=12 move=9,7 nonloss_weight=8 total_weight=8
+ply=13 player=1 engine=2 move=9,7 elapsed_ms=308 error=none
+ply=14 player=2 engine=5 move=8,7 elapsed_ms=4935 error=none
+experience plies=14 move=8,6 nonloss_weight=8 total_weight=8
+ply=15 player=1 engine=2 move=8,6 elapsed_ms=523 error=none
+ply=16 player=2 engine=5 move=10,8 elapsed_ms=4950 error=none
+experience plies=16 move=7,4 nonloss_weight=8 total_weight=8
+ply=17 player=1 engine=2 move=7,4 elapsed_ms=582 error=none
+ply=18 player=2 engine=5 move=7,3 elapsed_ms=4767 error=none
+experience plies=18 move=9,4 nonloss_weight=8 total_weight=8
+ply=19 player=1 engine=2 move=9,4 elapsed_ms=710 error=none
+ply=20 player=2 engine=5 move=8,11 elapsed_ms=1229 error=none
+ply=21 player=1 engine=2 move=7,10 elapsed_ms=0 error=none
+ply=22 player=2 engine=5 move=8,4 elapsed_ms=1100 error=none
+adaptive plies=22 initial=7,8 eval=29991 final=7,8 eval=29991 depth=31 scored=1 alternate=0 learned=0 error=
+ply=23 player=1 engine=2 move=7,8 elapsed_ms=2157 error=none
+ply=24 player=2 engine=5 move=7,6 elapsed_ms=1099 error=none
+adaptive plies=24 initial=9,8 eval=29993 final=9,8 eval=29993 depth=26 scored=1 alternate=0 learned=0 error=
+ply=25 player=1 engine=2 move=9,8 elapsed_ms=1808 error=none
+ply=26 player=2 engine=5 move=9,6 elapsed_ms=1079 error=none
+ply=27 player=1 engine=2 move=8,9 elapsed_ms=0 error=none
+ply=28 player=2 engine=5 move=9,10 elapsed_ms=1043 error=none
+ply=29 player=1 engine=2 move=10,7 elapsed_ms=0 error=none
+ply=30 player=2 engine=5 move=6,11 elapsed_ms=1048 error=none
+ply=31 player=1 engine=2 move=11,6 elapsed_ms=0 error=none
+star_case=8 opponent=5 start=7,7 lumen=black winner=1 plies=31 lumen_avg_ms=471 lumen_max_ms=2157 opponent_avg_ms=3398 opponent_max_ms=4967 termination=normal status=PASS error=none
+moves=7,7 6,6 5,6 5,8 7,5 6,9 6,5 4,7 3,6 8,5 6,7 4,5 9,7 8,7 8,6 10,8 7,4 7,3 9,4 8,11 7,10 8,4 7,8 7,6 9,8 9,6 8,9 9,10 10,7 6,11 11,6

@@ -1,0 +1,43 @@
+{
+  "started_utc": "2026-11-11T07:00:28Z",
+  "jobs": 6,
+  "local_threads": 6,
+  "nominal_ms": 5000,
+  "rule": "15x15 Renju",
+  "star_coordinates_zero_based": [
+    3,
+    7,
+    11
+  ],
+  "expected_games": 36,
+  "sha256": {
+    "/mnt/openwebui/gomoku/.run/star-build/engine_benchmark": "3bcb92183ad554ba953eb62a29461388d697095be71cba7b936cc694dd8301e2",
+    "/mnt/openwebui/gomoku/engine_strength.h": "284552891d45107e66a6391078782c990b1b572ae1a60fe1e630815c6626b4e8",
+    "/mnt/openwebui/gomoku/engine_ensemble.h": "ba2bcc1d488a7fd74d906e08f5deb3cc230b2b20172a7749eab24550acde733b",
+    "/mnt/openwebui/gomoku/gomoku_core.h": "d4d6d98cf5b9add2036af93d81b795233115561f8f349028e4fa8303233639c4",
+    "/mnt/openwebui/gomoku/engine_adapter.h": "88bc22024abac98ba100d5c70bb79a451614f916e92af2690c3befd427ba96e0",
+    "/mnt/openwebui/gomoku/engine_benchmark.cpp": "2d7c707fa7f840c610084514e7e6c34048fda056728926118642ae6d96059520",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/pbrain-rapfi": "fff31bf2d2b1189769e97eecdf55f9b5dd0883dbfbb7273c7189ee93f18c6c7d",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/config.toml": "d19a1514845feb149c7a146a68605ddfcd00ee674f1296850c578b1923de04c7",
+    "/mnt/openwebui/gomoku/third_party/runtime/alphagomoku/pbrain-agomoku": "8ab8d6a5e39a7dd0fc25a88d885242355482c6b3028089260095938136f85c6d",
+    "/mnt/openwebui/gomoku/third_party/runtime/alphagomoku/config.json": "e627f9aa3c5bf16979c56b163640342bb86e806926ed30fa21ae82f2147e734b",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/mix9svqfreestyle_bsmix.bin.lz4": "6bc0d1b0ff8e1d857f7f412923cd458f38f1a435087c91ae71fec3676c23ef62",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/mix9svqrenju_bs15_black.bin.lz4": "7ab8c974c30da07717ce6a504616a62ac8c981500503f0ced0fadefd3f46c5ec",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/mix9svqrenju_bs15_white.bin.lz4": "a31f318518d3b5630489054d9eb013fd5353c553999640c2bcfd8d95e6fe4e4e",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/mix9svqstandard_bs15.bin.lz4": "84334f5db96f45b3e36ebdde06d2259d878ae1eb347b7cf74574ac908b8d9e7d",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/model210901.bin": "2fa08cb15cf240d9533548c3e011b03d46809f6858362e97ee873d0632aa2015",
+    "/mnt/openwebui/gomoku/third_party/runtime/alphagomoku/networks/renju_conv_8x128.bin": "33eeec670c55ad7fedf1b78bfb7f44f7f747826e03e71beeb6f5e956981db63e",
+    "/mnt/openwebui/gomoku/tools/results/star_candidate_20261111/benchmark.snapshot": "f54b9d5af240d802e71acb912991b735d311ecadc049ace638e4b644e2b03832"
+  },
+  "legacy_snapshot_migration": {
+    "frozen_binary": ".run/star-build/engine_benchmark",
+    "reason": "Previous session predates executable snapshots. This is the retained benchmark binary from that session; its CLI hardening rebuild is documented in audit_notes.json. Engine logic for the explicit six-worker setting is unchanged."
+  },
+  "resumptions": [
+    {
+      "started_utc": "2026-11-12T05:18:31Z",
+      "jobs": 6,
+      "completed_before_resume": 26
+    }
+  ]
+}

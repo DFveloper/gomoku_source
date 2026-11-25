@@ -16,6 +16,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
+#include <cerrno>
+#include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -64,6 +66,9 @@ struct ExternalEngineRequest {
     // opponent should always send.
     int max_depth_hint = 0;
     int turn_time_ms = 0; // Explicit shared-clock budget; zero uses the level mapping.
+    int threads = 1; // Gomocup thread_num; explicit for reproducible CPU allocation.
+    bool referee_accept_black_foul = false; // Return an attempted foul for adjudication, never for engine selection.
+    bool prefer_nonloss = false; // Internal search utility only; the referee still scores actual draws.
     std::filesystem::path program;
     const std::atomic<bool>* cancel = nullptr;
 };
@@ -94,6 +99,18 @@ inline bool legal_external_move(const ExternalEngineRequest& request, Move move)
     int board[kMaxBoard][kMaxBoard];
     external_request_board(request, board);
     return is_legal_move(board, request.board_size, request.player, move);
+}
+
+inline bool black_forbidden_reply(int board[kMaxBoard][kMaxBoard],int size,int player,Move move) {
+    return player==1 && ok(size,move.r,move.c) && board[move.r][move.c]==0 &&
+           is_forbidden_move(board,size,move.r,move.c);
+}
+
+inline bool accepted_external_reply(const ExternalEngineRequest& request,Move move) {
+    if(legal_external_move(request,move))return true;
+    if(!request.referee_accept_black_foul)return false;
+    int board[kMaxBoard][kMaxBoard];external_request_board(request,board);
+    return black_forbidden_reply(board,request.board_size,request.player,move);
 }
 
 inline int external_turn_time_ms(EngineVersion version, int level) {
@@ -160,6 +177,10 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
                         "\nINFO timeout_turn " + std::to_string(turn_time_ms) +
                         "\nINFO timeout_match 1800000\n";
     input += "INFO rule 4\n";
+    input += "INFO thread_num " + std::to_string(std::max(1, request.threads)) + "\n";
+    if(request.prefer_nonloss && request.version==EngineVersion::Rapfi2025)
+        input+="INFO evaluator_draw_ratio 0\nINFO evaluator_draw_black_winrate "+
+            std::to_string(request.player==1?1:0)+"\nINFO draw_result "+std::to_string(request.player)+"\n";
     if (request.max_depth_hint > 0)
         input += "INFO max_depth " + std::to_string(request.max_depth_hint) + "\n";
     input += "BOARD\n";
@@ -193,7 +214,7 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
             else output.erase(0, line_end + 1);
             Move candidate;
             if (!parse_external_move_line(line, candidate)) continue;
-            if (legal_external_move(request, candidate)) result = candidate;
+            if (accepted_external_reply(request, candidate)) result = candidate;
             else illegal_move = true;
             break;
         }
@@ -246,6 +267,46 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
 
 #else
 
+// Atomic close-on-exec prevents concurrent experts from inheriting each
+// other's pipes and keeping them open after the owning child has exited.
+inline bool create_external_pipe(int descriptors[2]) {
+#ifdef __linux__
+    return pipe2(descriptors, O_CLOEXEC) == 0;
+#else
+    if (pipe(descriptors) != 0) return false;
+    for (int fd : {descriptors[0], descriptors[1]}) {
+        if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0) {
+            close(descriptors[0]); close(descriptors[1]);
+            descriptors[0] = descriptors[1] = -1;
+            return false;
+        }
+    }
+    return true;
+#endif
+}
+
+inline bool write_external_pipe(int descriptor, const char* data, size_t size) {
+    sigset_t blocked, previous, pending;
+    sigemptyset(&blocked); sigaddset(&blocked, SIGPIPE);
+    if (pthread_sigmask(SIG_BLOCK, &blocked, &previous) != 0) return false;
+    sigpending(&pending);
+    const bool already_pending = sigismember(&pending, SIGPIPE);
+    size_t sent = 0;
+    bool broken = false;
+    while (sent < size) {
+        const ssize_t count = write(descriptor, data + sent, size - sent);
+        if (count < 0 && errno == EINTR) continue;
+        if (count <= 0) { broken = count < 0 && errno == EPIPE; break; }
+        sent += static_cast<size_t>(count);
+    }
+    if (broken && !already_pending && !sigismember(&previous, SIGPIPE)) {
+        timespec zero{};
+        sigtimedwait(&blocked, nullptr, &zero);
+    }
+    pthread_sigmask(SIG_SETMASK, &previous, nullptr);
+    return sent == size;
+}
+
 // POSIX twin of the Win32 runner above; mirrors external_best_move() of the
 // match WebUI/GUI so every surface drives engines identically.
 inline Move run_external_engine(const ExternalEngineRequest& request, std::string& error) {
@@ -258,7 +319,7 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
     if (request.program.empty()) return fail("engine runtime binary not found");
 
     int to_child[2] = {-1, -1}, from_child[2] = {-1, -1};
-    if (pipe(to_child) != 0 || pipe(from_child) != 0) {
+    if (!create_external_pipe(to_child) || !create_external_pipe(from_child)) {
         for (int fd : {to_child[0], to_child[1], from_child[0], from_child[1]})
             if (fd != -1) close(fd);
         return fail("pipe creation failed");
@@ -298,6 +359,10 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
                         "\nINFO timeout_turn " + std::to_string(turn_time_ms) +
                         "\nINFO timeout_match 1800000\n";
     input += "INFO rule 4\n";
+    input += "INFO thread_num " + std::to_string(std::max(1, request.threads)) + "\n";
+    if(request.prefer_nonloss && request.version==EngineVersion::Rapfi2025)
+        input+="INFO evaluator_draw_ratio 0\nINFO evaluator_draw_black_winrate "+
+            std::to_string(request.player==1?1:0)+"\nINFO draw_result "+std::to_string(request.player)+"\n";
     if (request.max_depth_hint > 0)
         input += "INFO max_depth " + std::to_string(request.max_depth_hint) + "\n";
     input += "BOARD\n";
@@ -311,13 +376,7 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
     auto cancelled = [&]() { return request.cancel && request.cancel->load(); };
     std::atomic<bool> write_done{false}, write_succeeded{false};
     std::thread writer([&]() {
-        size_t sent = 0;
-        while (sent < input.size()) {
-            ssize_t count = write(to_child[1], input.data() + sent, input.size() - sent);
-            if (count <= 0) break;
-            sent += static_cast<size_t>(count);
-        }
-        write_succeeded = sent == input.size();
+        write_succeeded = write_external_pipe(to_child[1], input.data(), input.size());
         write_done = true;
     });
     Move result{-1, -1};
@@ -334,7 +393,7 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
             else output.erase(0, line_end + 1);
             Move candidate;
             if (!parse_external_move_line(line, candidate)) continue;
-            if (legal_external_move(request, candidate)) result = candidate;
+            if (accepted_external_reply(request, candidate)) result = candidate;
             else illegal_move = true;
             break;
         }
@@ -361,8 +420,7 @@ inline Move run_external_engine(const ExternalEngineRequest& request, std::strin
     writer.join();
     if (result.r != -1) {
         const char end[] = "END\n";
-        ssize_t end_written = write(to_child[1], end, sizeof(end) - 1);
-        (void)end_written;
+        write_external_pipe(to_child[1], end, sizeof(end) - 1);
     }
     close(to_child[1]);
     close(from_child[0]);

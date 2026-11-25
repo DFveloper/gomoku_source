@@ -1,0 +1,40 @@
+ply=2 player=2 engine=5 move=10,7 elapsed_ms=4931 error=none
+experience plies=2 move=10,9 nonloss_weight=32 total_weight=32
+ply=3 player=1 engine=2 move=10,9 elapsed_ms=488 error=none
+ply=4 player=2 engine=5 move=9,8 elapsed_ms=4951 error=none
+experience plies=4 move=11,6 nonloss_weight=28 total_weight=28
+ply=5 player=1 engine=2 move=11,6 elapsed_ms=0 error=none
+ply=6 player=2 engine=5 move=10,6 elapsed_ms=4948 error=none
+experience plies=6 move=10,5 nonloss_weight=28 total_weight=28
+ply=7 player=1 engine=2 move=10,5 elapsed_ms=266 error=none
+ply=8 player=2 engine=5 move=9,4 elapsed_ms=4958 error=none
+experience plies=8 move=11,8 nonloss_weight=28 total_weight=28
+ply=9 player=1 engine=2 move=11,8 elapsed_ms=288 error=none
+ply=10 player=2 engine=5 move=11,9 elapsed_ms=2083 error=none
+experience plies=10 move=9,10 nonloss_weight=28 total_weight=28
+ply=11 player=1 engine=2 move=9,10 elapsed_ms=347 error=none
+ply=12 player=2 engine=5 move=8,11 elapsed_ms=1948 error=none
+experience plies=12 move=11,5 nonloss_weight=4 total_weight=4
+ply=13 player=1 engine=2 move=11,5 elapsed_ms=162 error=none
+ply=14 player=2 engine=5 move=11,4 elapsed_ms=1094 error=none
+experience plies=14 move=13,5 nonloss_weight=4 total_weight=4
+ply=15 player=1 engine=2 move=13,5 elapsed_ms=428 error=none
+ply=16 player=2 engine=5 move=9,5 elapsed_ms=1160 error=none
+experience plies=16 move=12,6 nonloss_weight=4 total_weight=4
+ply=17 player=1 engine=2 move=12,6 elapsed_ms=551 error=none
+ply=18 player=2 engine=5 move=9,6 elapsed_ms=1104 error=none
+ply=19 player=1 engine=2 move=9,7 elapsed_ms=0 error=none
+ply=20 player=2 engine=5 move=9,3 elapsed_ms=1100 error=none
+ply=21 player=1 engine=2 move=9,2 elapsed_ms=0 error=none
+ply=22 player=2 engine=5 move=14,4 elapsed_ms=1090 error=none
+ply=23 player=1 engine=2 move=9,9 elapsed_ms=3 error=none
+ply=24 player=2 engine=5 move=10,8 elapsed_ms=1089 error=none
+ply=25 player=1 engine=2 move=12,7 elapsed_ms=1 error=none
+ply=26 player=2 engine=5 move=13,6 elapsed_ms=1094 error=none
+ply=27 player=1 engine=2 move=12,5 elapsed_ms=0 error=none
+ply=28 player=2 engine=5 move=14,5 elapsed_ms=1097 error=none
+ply=29 player=1 engine=2 move=12,4 elapsed_ms=0 error=none
+ply=30 player=2 engine=5 move=12,3 elapsed_ms=1096 error=none
+ply=31 player=1 engine=2 move=12,8 elapsed_ms=0 error=none
+star_case=14 opponent=5 start=11,7 lumen=black winner=1 plies=31 lumen_avg_ms=168 lumen_max_ms=551 opponent_avg_ms=2249 opponent_max_ms=4958 termination=normal status=PASS error=none
+moves=11,7 10,7 10,9 9,8 11,6 10,6 10,5 9,4 11,8 11,9 9,10 8,11 11,5 11,4 13,5 9,5 12,6 9,6 9,7 9,3 9,2 14,4 9,9 10,8 12,7 13,6 12,5 14,5 12,4 12,3 12,8

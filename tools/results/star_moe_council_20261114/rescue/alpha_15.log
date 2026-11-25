@@ -1,0 +1,56 @@
+experience plies=1 move=10,7 nonloss_weight=32 total_weight=40
+ply=2 player=2 engine=2 move=10,7 elapsed_ms=439 error=none
+ply=3 player=1 engine=5 move=10,5 elapsed_ms=5000 error=none
+experience plies=3 move=9,6 nonloss_weight=28 total_weight=32
+ply=4 player=2 engine=2 move=9,6 elapsed_ms=0 error=none
+ply=5 player=1 engine=5 move=8,5 elapsed_ms=4952 error=none
+experience plies=5 move=9,5 nonloss_weight=4 total_weight=8
+ply=6 player=2 engine=2 move=9,5 elapsed_ms=0 error=none
+ply=7 player=1 engine=5 move=9,4 elapsed_ms=4969 error=none
+experience plies=7 move=11,6 nonloss_weight=4 total_weight=8
+ply=8 player=2 engine=2 move=11,6 elapsed_ms=195 error=none
+ply=9 player=1 engine=5 move=9,8 elapsed_ms=4958 error=none
+experience plies=9 move=7,6 nonloss_weight=4 total_weight=4
+ply=10 player=2 engine=2 move=7,6 elapsed_ms=75 error=none
+ply=11 player=1 engine=5 move=8,6 elapsed_ms=4993 error=none
+experience plies=11 move=8,8 nonloss_weight=4 total_weight=4
+ply=12 player=2 engine=2 move=8,8 elapsed_ms=171 error=none
+ply=13 player=1 engine=5 move=5,4 elapsed_ms=4982 error=none
+adaptive plies=13 initial=8,4 eval=25 final=8,4 eval=25 depth=19 scored=1 alternate=0 learned=0 error=
+ply=14 player=2 engine=2 move=8,4 elapsed_ms=5811 error=none
+ply=15 player=1 engine=5 move=6,3 elapsed_ms=4958 error=none
+adaptive plies=15 initial=7,2 eval=-27 final=7,2 eval=-27 depth=20 scored=1 alternate=0 learned=0 error=
+ply=16 player=2 engine=2 move=7,2 elapsed_ms=5061 error=none
+ply=17 player=1 engine=5 move=5,5 elapsed_ms=4934 error=none
+adaptive plies=17 initial=5,3 eval=14 final=5,3 eval=14 depth=20 scored=1 alternate=0 learned=0 error=
+ply=18 player=2 engine=2 move=5,3 elapsed_ms=5394 error=none
+ply=19 player=1 engine=5 move=4,5 elapsed_ms=4960 error=none
+adaptive plies=19 initial=7,5 eval=309 final=7,5 eval=309 depth=21 scored=1 alternate=0 learned=0 error=
+ply=20 player=2 engine=2 move=7,5 elapsed_ms=5140 error=none
+ply=21 player=1 engine=5 move=7,4 elapsed_ms=4954 error=none
+adaptive plies=21 initial=6,2 eval=29981 final=6,2 eval=29981 depth=31 scored=1 alternate=0 learned=0 error=
+ply=22 player=2 engine=2 move=6,2 elapsed_ms=5289 error=none
+ply=23 player=1 engine=5 move=5,2 elapsed_ms=4983 error=none
+ply=24 player=2 engine=2 move=4,1 elapsed_ms=0 error=none
+ply=25 player=1 engine=5 move=7,3 elapsed_ms=4998 error=none
+adaptive plies=25 initial=10,2 eval=29985 final=10,2 eval=29985 depth=26 scored=1 alternate=0 learned=0 error=
+ply=26 player=2 engine=2 move=10,2 elapsed_ms=5540 error=none
+ply=27 player=1 engine=5 move=9,3 elapsed_ms=1858 error=none
+adaptive plies=27 initial=4,4 eval=29987 final=4,4 eval=29987 depth=26 scored=1 alternate=0 learned=0 error=
+ply=28 player=2 engine=2 move=4,4 elapsed_ms=1835 error=none
+ply=29 player=1 engine=5 move=10,3 elapsed_ms=1639 error=none
+ply=30 player=2 engine=2 move=8,3 elapsed_ms=0 error=none
+ply=31 player=1 engine=5 move=11,2 elapsed_ms=2275 error=none
+ply=32 player=2 engine=2 move=12,1 elapsed_ms=0 error=none
+ply=33 player=1 engine=5 move=3,6 elapsed_ms=1745 error=none
+ply=34 player=2 engine=2 move=2,7 elapsed_ms=0 error=none
+ply=35 player=1 engine=5 move=3,5 elapsed_ms=1782 error=none
+adaptive plies=35 initial=8,2 eval=29995 final=8,2 eval=29995 depth=26 scored=1 alternate=0 learned=0 error=
+ply=36 player=2 engine=2 move=8,2 elapsed_ms=2339 error=none
+ply=37 player=1 engine=5 move=9,2 elapsed_ms=2166 error=none
+adaptive plies=37 initial=8,0 eval=29997 final=8,0 eval=29997 depth=26 scored=1 alternate=0 learned=0 error=
+ply=38 player=2 engine=2 move=8,0 elapsed_ms=2383 error=none
+ply=39 player=1 engine=5 move=7,1 elapsed_ms=1878 error=none
+ply=40 player=2 engine=2 move=8,1 elapsed_ms=0 error=none
+star_case=15 opponent=5 start=11,7 lumen=white winner=2 plies=40 lumen_avg_ms=1983 lumen_max_ms=5811 opponent_avg_ms=3841 opponent_max_ms=5000 termination=normal status=PASS error=none
+moves=11,7 10,7 10,5 9,6 8,5 9,5 9,4 11,6 9,8 7,6 8,6 8,8 5,4 8,4 6,3 7,2 5,5 5,3 4,5 7,5 7,4 6,2 5,2 4,1 7,3 10,2 9,3 4,4 10,3 8,3 11,2 12,1 3,6 2,7 3,5 8,2 9,2 8,0 7,1 8,1

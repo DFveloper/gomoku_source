@@ -1,0 +1,12 @@
+[
+  {
+    "path": "/mnt/openwebui/gomoku/tools/results/star_reinforcement_branch_explore_20261113/round-11/experience.snapshot",
+    "alpha_rows": 41913,
+    "alpha_rows_sha256": "0b01d58b44160387e5c4638f46e4fc1d9aa9d7af2a67d80963f31bb261b5e1ba"
+  },
+  {
+    "path": "/mnt/openwebui/gomoku/.run/reinforcement-draw-safe-20261113/model-02/experience.txt",
+    "alpha_rows": 41913,
+    "alpha_rows_sha256": "0b01d58b44160387e5c4638f46e4fc1d9aa9d7af2a67d80963f31bb261b5e1ba"
+  }
+]

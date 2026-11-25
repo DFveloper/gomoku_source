@@ -1,5 +1,71 @@
 # Legacy vs strengthened engine benchmark
 
+## Rule-correctness investigation (2026-11-12)
+
+The undefeated goal remains unmet. The strongest completed unchanged-version
+audit accepted **34/36**: **Alpha 12 wins and 6 full-board draws (18/18)**;
+Rapfi 7 wins, 1 loss, 9 draws and 1 invalid ending (16/18).
+Its [full audit](tools/results/star_reinforcement_positive_20261113/round-08/LIVE_REPORT.md)
+records all games from one frozen executable and book. Rapfi White case 3 lost;
+Black case 12 ended without a legal final placement. Round 05 independently also
+accepted 34/36. Results from different versions are never pooled.
+
+The hard hole-risk filter accepted only 30/36 and remains opt-in. The new
+[search expert council](docs/moe-council.md) compares AB, MCTS and Alpha proposals
+using completed common-depth AB evaluations and a conservative Black risk tie
+breaker. All 15 software checks passed; fresh standard-clock and explicitly
+extra-compute audits are separate experiments. Neither software checks nor
+historical-tail diagnostics establish undefeated strength.
+[The active-run alias](.run/active-star-reinforcement/status.json) identifies the
+current research controller. A full fresh 36-game pass is still required.
+
+The historical audits below used an
+inaccurate heuristic forbidden-move classifier. A geometric, recursive
+classifier fixes 90 mismatching position masks, recovers an independently
+Rapfi-confirmed missed mate, and detects an actual Black foul in an old Alpha
+loss. A further regression covers three-extensions that simultaneously make
+five. Historical scores have not been retroactively rewritten.
+
+The endgame repair independently replays a previously failing 202-ply prefix
+to a 225-ply draw. A learned policy now retains failed continuations as well as
+past non-losses. Its automated training loop requires a fresh unchanged-version
+36-game pass and preserves failed attempts. See the
+[investigation and raw evidence](tools/results/renju_analysis_20261112/REPORT.md).
+
+## Nine-star-point acceptance audit (2026-11-11–12)
+
+**The strengthened candidate still fails the undefeated gate.** On 15x15 Renju,
+Black starts at every combination of rows/columns 4, 8 and 12. The candidate
+plays both colours against each opponent: 18 games per opponent, 36 total.
+Both sides receive the existing nominal 5000 ms budget; actual response times
+can exceed it and are recorded in the logs. Draws require all 225 plies.
+
+| Revision | Opponent | Wins | Losses | Draws | Invalid |
+|---|---|---:|---:|---:|---:|
+| Baseline | Rapfi | 9 | 7 | 2 | 0 |
+| Baseline | Alpha | 8 | 9 | 0 | 1 |
+| Candidate | Rapfi | 11 | 5 | 2 | 0 |
+| Candidate | Alpha | 12 | 5 | 0 | 1 |
+
+The candidate passed **25/36** cases. Alpha illegal-move failures are invalid
+games, never strength wins. The candidate routes extra workers to Rapfi via
+`INFO thread_num` (four Rapfi, one Alpha, one local worker in this run), excludes
+the weaker local fallback from expert voting, and fixes proposal-source
+accounting. Automatic allocation is now capped to available hardware.
+
+The suites overlapped on a 36-CPU host, and the candidate resumed from 26 saved
+games on the following day. This is an acceptance failure, not a controlled
+strength or Elo estimate. A separate 24-worker diagnostic also lost as White
+against Rapfi at the top-middle starting point, in 51 plies. A bounded replay
+of 307 positions from ten lost games found no winning VCF proof; it does not
+establish that no stronger move exists.
+
+Complete starting-point tables, move histories and provenance:
+[baseline](tools/results/star_baseline_20261111/REPORT.md),
+[candidate](tools/results/star_candidate_20261111/REPORT.md).
+Run `scripts/validate_star_points.py` for a fresh audit; interrupted runs can
+resume against their frozen executable and verified runtime hashes.
+
 ## Equal-time audit against native Rapfi (2026-11-09)
 
 The bundled external runtimes cannot start on this host (`GLIBC_2.38` /

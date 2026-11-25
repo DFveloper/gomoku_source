@@ -29,6 +29,23 @@ add_executable(tactics_suite tools/tactics_suite.cpp)
 add_executable(duel tools/duel.cpp)
 add_executable(ensemble_invariants tools/ensemble_invariants.cpp)
 add_executable(strength_check tools/strength_check.cpp)
+add_executable(session_invariants tools/session_invariants.cpp)
+target_include_directories(session_invariants PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(renju_rules_suite tools/renju_rules_suite.cpp)
+add_executable(threat_proof_suite tools/threat_proof_suite.cpp)
+add_executable(endgame_suite tools/endgame_suite.cpp)
+add_executable(experience_train tools/experience_train.cpp)
+add_executable(experience_suite tools/experience_suite.cpp)
+add_executable(council_suite tools/council_suite.cpp)
+target_include_directories(council_suite PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(council_suite PRIVATE GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(experience_suite PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(experience_train PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(endgame_suite PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(endgame_suite PRIVATE GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(threat_proof_suite PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(renju_rules_suite PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(renju_rules_suite PRIVATE GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 target_include_directories(strength_check PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(duel PRIVATE
     GOMOKU_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
@@ -48,6 +65,13 @@ target_compile_definitions(gomoku_match_webui PRIVATE
 
 find_package(Threads REQUIRED)
 target_link_libraries(strength_check PRIVATE Threads::Threads)
+target_link_libraries(session_invariants PRIVATE Threads::Threads)
+target_link_libraries(renju_rules_suite PRIVATE Threads::Threads)
+target_link_libraries(threat_proof_suite PRIVATE Threads::Threads)
+target_link_libraries(endgame_suite PRIVATE Threads::Threads)
+target_link_libraries(experience_train PRIVATE Threads::Threads)
+target_link_libraries(experience_suite PRIVATE Threads::Threads)
+target_link_libraries(council_suite PRIVATE Threads::Threads)
 target_link_libraries(gomoku_gui PRIVATE Threads::Threads)
 target_link_libraries(gomoku_sangin PRIVATE Threads::Threads)
 target_link_libraries(gomoku_cli PRIVATE Threads::Threads)
@@ -68,6 +92,31 @@ add_test(NAME gomoku_tactics_suite COMMAND tactics_suite 1 2)
 # The two properties that make expert delegation shippable: it degrades to the
 # local engine when no expert exists, and a proof always outranks an expert.
 add_test(NAME gomoku_ensemble_invariants COMMAND ensemble_invariants)
+add_test(NAME gomoku_strong_thread_allocation COMMAND strength_check --thread-config-only)
+add_test(NAME gomoku_retained_session_invariants COMMAND session_invariants)
+add_test(NAME gomoku_recursive_renju_rules COMMAND renju_rules_suite)
+add_test(NAME gomoku_complete_threat_proofs COMMAND threat_proof_suite)
+add_test(NAME gomoku_endgame_certificates COMMAND endgame_suite)
+add_test(NAME gomoku_learned_experience COMMAND experience_suite)
+add_test(NAME gomoku_common_root_council COMMAND council_suite)
+if(UNIX)
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME gomoku_star_acceptance_runner
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_validate_star_points.py)
+        add_test(NAME gomoku_experience_training_outcomes
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_experience_training.py
+                $<TARGET_FILE:experience_train>)
+        add_test(NAME gomoku_reinforcement_audit_loop
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_reinforce_star_experience.py)
+        add_test(NAME gomoku_opening_exploration
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_explore_star_openings.py)
+    endif()
+endif()
 
 if(NOT WIN32)
     add_custom_target(third_party_engines

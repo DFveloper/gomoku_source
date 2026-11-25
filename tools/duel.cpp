@@ -335,9 +335,13 @@ int level_for_budget(int budget_ms) {
 bool overline_for_black(const int board[gomoku::kMaxBoard][gomoku::kMaxBoard], int sz, Move move) {
     static const int dr[] = {0, 1, 1, 1};
     static const int dc[] = {1, 0, 1, -1};
-    for (int d = 0; d < 4; ++d)
-        if (gomoku::count_line(board, sz, move.r, move.c, dr[d], dc[d], 1) > 5) return true;
-    return false;
+    bool overline=false;
+    for (int d = 0; d < 4; ++d) {
+        const int length=gomoku::count_line(board,sz,move.r,move.c,dr[d],dc[d],1);
+        if(length==5)return false;
+        overline=overline||length>5;
+    }
+    return overline;
 }
 
 }  // namespace

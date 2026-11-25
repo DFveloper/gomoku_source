@@ -44,6 +44,20 @@ const std::vector<Move> kForcedPosition = {
 
 int main(int argc, char** argv) {
     {
+        std::vector<Move> proposals;
+        std::vector<int> votes;
+        detail::add_ensemble_proposal(proposals, votes, {7, 8}, true); // Rapfi
+        detail::add_ensemble_proposal(proposals, votes, {6, 6}, true); // Alpha
+        detail::add_ensemble_proposal(proposals, votes, {6, 6}, false); // Local
+        check(votes.size() == 2 && votes[0] == 1 && votes[1] == 1,
+              "local agreement cannot manufacture expert consensus against Rapfi");
+        detail::add_ensemble_proposal(proposals, votes, {7, 8}, true);
+        check(votes[0] == 2, "two experts agreeing still count as consensus");
+        detail::add_ensemble_proposal(proposals, votes, {3, 3}, false);
+        check(votes.back() == 0 && proposals.size() == 3,
+              "a distinct fallback remains available without an expert vote");
+    }
+    {
         // Black must block White's five at (12,10), which simultaneously makes
         // Black's open four. The old prover rejected the position immediately.
         int counter[kMaxBoard][kMaxBoard]{};
@@ -83,9 +97,12 @@ int main(int argc, char** argv) {
             int board[kMaxBoard][kMaxBoard];
             fill(board, moves);
             const int player = moves.size() % 2 == 0 ? 1 : 2;
-            OpponentStyle style{};
+            OpponentStyle style = analyze_opponent_style(kSize, moves, 3 - player);
+            Move last_own{-1, -1};
+            for (int i = static_cast<int>(moves.size()) - 1; i >= 0; --i)
+                if ((i % 2 == 0 ? 1 : 2) == player) { last_own = moves[i]; break; }
             const Move local = choose_ai_move(board, kSize, player, 1, &style, 1,
-                                              moves.back());
+                                              last_own);
 
             EnsembleConfig config;  // Verified by default
             // Point the primary expert at a path that cannot exist, and give the

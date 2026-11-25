@@ -1,0 +1,29 @@
+adaptive plies=1 initial=4,7 eval=-90 final=5,6 eval=-95 depth=35 alternate=0 learned=1 error=
+ply=2 player=2 engine=2 move=5,6 elapsed_ms=5889 error=none
+ply=3 player=1 engine=4 move=4,8 elapsed_ms=5193 error=none
+adaptive plies=3 initial=6,7 eval=-373 final=6,7 eval=-373 depth=44 alternate=0 learned=0 error=
+ply=4 player=2 engine=2 move=6,7 elapsed_ms=4984 error=none
+ply=5 player=1 engine=4 move=4,5 elapsed_ms=5578 error=none
+adaptive plies=5 initial=3,5 eval=-497 final=3,5 eval=-497 depth=41 alternate=0 learned=0 error=
+ply=6 player=2 engine=2 move=3,5 elapsed_ms=5172 error=none
+ply=7 player=1 engine=4 move=4,6 elapsed_ms=5608 error=none
+adaptive plies=7 initial=4,9 eval=-29986 final=4,9 eval=-29986 depth=45 alternate=0 learned=0 error=
+ply=8 player=2 engine=2 move=4,9 elapsed_ms=5334 error=none
+ply=9 player=1 engine=4 move=1,5 elapsed_ms=5598 error=none
+adaptive plies=9 initial=0,4 eval=-29988 final=0,4 eval=-29988 depth=37 alternate=0 learned=0 error=
+ply=10 player=2 engine=2 move=0,4 elapsed_ms=4870 error=none
+ply=11 player=1 engine=4 move=5,5 elapsed_ms=3942 error=none
+adaptive plies=11 initial=6,4 eval=-29990 final=6,4 eval=-29990 depth=37 alternate=0 learned=0 error=
+ply=12 player=2 engine=2 move=6,4 elapsed_ms=4909 error=none
+ply=13 player=1 engine=4 move=4,4 elapsed_ms=2100 error=none
+ply=14 player=2 engine=2 move=4,7 elapsed_ms=0 error=none
+ply=15 player=1 engine=4 move=3,3 elapsed_ms=793 error=none
+adaptive plies=15 initial=6,6 eval=-29994 final=6,6 eval=-29994 depth=0 alternate=0 learned=0 error=
+ply=16 player=2 engine=2 move=6,6 elapsed_ms=4537 error=none
+ply=17 player=1 engine=4 move=4,2 elapsed_ms=660 error=none
+ply=18 player=2 engine=2 move=4,3 elapsed_ms=0 error=none
+ply=19 player=1 engine=4 move=2,4 elapsed_ms=605 error=none
+ply=20 player=2 engine=2 move=0,6 elapsed_ms=0 error=none
+ply=21 player=1 engine=4 move=5,1 elapsed_ms=622 error=none
+star_case=3 opponent=4 start=3,7 lumen=white winner=1 plies=21 lumen_avg_ms=3569 lumen_max_ms=5889 opponent_avg_ms=3069 opponent_max_ms=5608 termination=normal status=FAIL error=none
+moves=3,7 5,6 4,8 6,7 4,5 3,5 4,6 4,9 1,5 0,4 5,5 6,4 4,4 4,7 3,3 6,6 4,2 4,3 2,4 0,6 5,1

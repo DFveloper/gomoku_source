@@ -1,0 +1,962 @@
+[
+  {
+    "case": 3,
+    "offset": [
+      -2,
+      -1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00003_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -2,
+      0
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00001_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -1,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00002_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -2,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00005_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      1,
+      -1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00004_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -1,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00007_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      1,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00006_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      0,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00010_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      1,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00011_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      2,
+      0
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00012_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -1,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00009_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -2,
+      -1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00014_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      2,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00013_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -2,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00015_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -2,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00016_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -2,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00017_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -1,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00018_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      2,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00019_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -1,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00020_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      2,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00021_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      0,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 0,
+    "log": "rapfi_opening_15_00008_00.log",
+    "accepted": true,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      0,
+      -2
+    ],
+    "repeat": 1,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00024_01.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      1,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00022_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      0,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00026_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      1,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00025_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      0,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00028_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -3,
+      0
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00023_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      2,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00029_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      2,
+      -1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00027_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -2,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00031_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -3,
+      -1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00030_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -2,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00033_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -1,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00034_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -3,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00032_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -1,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00036_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      1,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00038_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      2,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00037_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -3,
+      0
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00039_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      1,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00040_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      3,
+      -1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00042_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      0,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00041_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      3,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00044_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      0,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00043_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      3,
+      0
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00045_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -3,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00046_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -3,
+      -1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00047_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -3,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00048_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -3,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00049_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -2,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00050_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -1,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00051_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -1,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00053_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      2,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 0,
+    "log": "rapfi_opening_15_00035_00.log",
+    "accepted": true,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      2,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00054_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      2,
+      -2
+    ],
+    "repeat": 1,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00055_01.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      2,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00057_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      1,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00058_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -2,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00052_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      1,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00056_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      3,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00059_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      3,
+      -1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00060_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -3,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00063_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      3,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00061_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      -3,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00065_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -3,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00064_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -3,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00066_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      3,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00067_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -2,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00068_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 3,
+    "offset": [
+      3,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_03_00069_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -2,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00070_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      2,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00071_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      3,
+      1
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00062_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      2,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00072_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      3,
+      -2
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00073_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -3,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00075_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -3,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00076_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      3,
+      -3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00077_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      -4,
+      0
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00079_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      3,
+      3
+    ],
+    "repeat": 0,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00078_00.log",
+    "accepted": false,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      3,
+      2
+    ],
+    "repeat": 0,
+    "exit_code": 0,
+    "log": "rapfi_opening_15_00074_00.log",
+    "accepted": true,
+    "training_only": true
+  },
+  {
+    "case": 15,
+    "offset": [
+      3,
+      2
+    ],
+    "repeat": 1,
+    "exit_code": 1,
+    "log": "rapfi_opening_15_00080_01.log",
+    "accepted": false,
+    "training_only": true
+  }
+]

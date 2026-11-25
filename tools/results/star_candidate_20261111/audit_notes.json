@@ -1,0 +1,44 @@
+{
+  "cpu_concurrency": 36,
+  "overlap": "Baseline and candidate suites overlapped; this is an acceptance audit, not a controlled strength or Elo comparison.",
+  "benchmark_rebuild": "The retained benchmark was rebuilt during the original session only to reject malformed CLI numbers. All games used valid numeric arguments. Move-selection code in the retained binary was unchanged, and that binary was frozen for the resumed games.",
+  "engine_headers": {
+    "engine_strength.h": {
+      "sha256": "284552891d45107e66a6391078782c990b1b572ae1a60fe1e630815c6626b4e8",
+      "matches_start": true
+    },
+    "engine_ensemble.h": {
+      "sha256": "ba2bcc1d488a7fd74d906e08f5deb3cc230b2b20172a7749eab24550acde733b",
+      "matches_start": true
+    },
+    "gomoku_core.h": {
+      "sha256": "d4d6d98cf5b9add2036af93d81b795233115561f8f349028e4fa8303233639c4",
+      "matches_start": true
+    },
+    "engine_adapter.h": {
+      "sha256": "88bc22024abac98ba100d5c70bb79a451614f916e92af2690c3befd427ba96e0",
+      "matches_start": true
+    }
+  },
+  "resumption": "The original session saved 26 completed games. Ten unfinished/missing games were rerun on 2026-11-12 using the retained executable, identical runtime/model hashes, and the same explicit six-worker setting. See manifest.json resumptions and legacy_snapshot_migration.",
+  "later_source_updates": "After freezing the measured executable, source updates capped automatic/explicit allocation to available hardware and ensured that a missing primary expert does not transfer its worker allocation to Alpha. With six requested workers, 36 hardware threads and both experts present, the measured four-Rapfi/one-Alpha/one-local allocation is unchanged.",
+  "vcf_audit": {
+    "valid_lost_games": 10,
+    "replayed_positions": 307,
+    "max_attacks": 16,
+    "nodes_per_position": 22000,
+    "winning_proofs_detected": 0,
+    "scope": "Existing bounded VCF prover, not a complete solution or a proof that no stronger move exists."
+  },
+  "extra_thread_diagnostic": {
+    "opponent": "rapfi",
+    "case": 3,
+    "requested_workers": 24,
+    "rapfi_workers": 22,
+    "nominal_ms": 5000,
+    "result": "loss",
+    "plies": 51,
+    "scope": "One diagnostic game, excluded from the 36-game matrix. Binary included automatic/hardware allocation cap and preceded the missing-primary allocation fix."
+  },
+  "runtime_and_frozen_binary_hashes_verified_after_completion": true
+}

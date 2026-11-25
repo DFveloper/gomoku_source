@@ -75,6 +75,20 @@ struct OpponentStyle {
 
 inline bool ok(int sz, int r, int c) { return r >= 0 && r < sz && c >= 0 && c < sz; }
 
+inline Move symmetry_move(Move move,int size,int symmetry,bool inverse=false) {
+    if(!ok(size,move.r,move.c))return move;
+    if(inverse) {
+        for(int i=0;i<symmetry%4;++i)move={size-1-move.c,move.r};
+        if(symmetry>=4)move.c=size-1-move.c;
+    } else {
+        if(symmetry>=4)move.c=size-1-move.c;
+        for(int i=0;i<symmetry%4;++i)move={move.c,size-1-move.r};
+    }
+    return move;
+}
+
+
+
 inline const std::vector<PatternDef>& pattern_table() {
     static const std::vector<PatternDef> patterns = {
         {"XXXXX", TH_FIVE, 1000000},
@@ -382,21 +396,81 @@ inline bool has_five_for(const int board[kMaxBoard][kMaxBoard], int sz, int p) {
 inline bool is_forbidden_move(int board[kMaxBoard][kMaxBoard], int sz, int r, int c) {
     if (!ok(sz, r, c) || board[r][c] != 0) return false;
     board[r][c] = 1;
+    struct Restore { int& cell; ~Restore(){cell=0;} } restore{board[r][c]};
     static const int dr[] = {0, 1, 1, 1};
     static const int dc[] = {1, 0, 1, -1};
-    int open_threes = 0, fours = 0;
     bool exact_five = false, overline = false;
     for (int d = 0; d < 4; d++) {
         int n = count_line(board, sz, r, c, dr[d], dc[d], 1);
         exact_five = exact_five || n == 5;
         overline = overline || n > 5;
-        ThreatInfo info = evaluate_direction(board, sz, r, c, dr[d], dc[d], 1);
-        if (info.count[TH_OPEN_THREE]) open_threes++;
-        if (info.count[TH_OPEN_FOUR] || info.count[TH_BROKEN_FOUR] || info.count[TH_CLOSED_FOUR]) fours++;
     }
-    board[r][c] = 0;
-    if (exact_five && !overline) return false;
-    return overline || open_threes >= 2 || fours >= 2;
+    // RIF 9.2: attaining five ends the game before forbidden-move penalties.
+    if (exact_five) return false;
+    if (overline) return true;
+
+    struct Three {
+        int direction=0; unsigned stones=0;
+        Move extensions[2]{{-1,-1},{-1,-1}}; int count=0;
+    };
+    Three threes[16];int three_count=0, four_count=0;
+    for (int direction=0;direction<4;++direction) {
+        // Offset zero is index five. Border intersections act as white stones.
+        int line[11];
+        for(int i=0;i<11;++i) {
+            const int rr=r+(i-5)*dr[direction],cc=c+(i-5)*dc[direction];
+            line[i]=ok(sz,rr,cc)?board[rr][cc]:2;
+        }
+        unsigned four_sets[5]{};int sets=0;
+        for(int start=1;start<=5;++start) {
+            int black=0,empty=0;unsigned mask=0;
+            for(int i=start;i<start+5;++i) {
+                if(line[i]==1){++black;mask|=1u<<i;}
+                else if(line[i]==0)++empty;
+            }
+            if(black!=4||empty!=1||line[start-1]==1||line[start+5]==1)continue;
+            // An open four has two completion squares, but one four-stone set.
+            // Different sets on the same axis can still constitute double-four.
+            bool duplicate=false;
+            for(int i=0;i<sets;++i)if(four_sets[i]==mask)duplicate=true;
+            if(!duplicate){four_sets[sets++]=mask;if(++four_count>=2)return true;}
+        }
+        for(int start=2;start<=5;++start) {
+            if(line[start-1]!=0||line[start+4]!=0||line[start-2]==1||line[start+5]==1)continue;
+            int black=0,empty=0,extension=-1;unsigned mask=0;
+            for(int i=start;i<start+4;++i) {
+                if(line[i]==1){++black;mask|=1u<<i;}
+                else if(line[i]==0){++empty;extension=i;}
+            }
+            if(black!=3||empty!=1)continue;
+            int group=0;
+            while(group<three_count&&(threes[group].direction!=direction||threes[group].stones!=mask))++group;
+            if(group==three_count){threes[group].direction=direction;threes[group].stones=mask;++three_count;}
+            if(threes[group].count<2)threes[group].extensions[threes[group].count++]={
+                r+(extension-5)*dr[direction],c+(extension-5)*dc[direction]};
+        }
+    }
+    if(three_count<2)return false;
+    // RIF 9.3: a geometric three is genuine only if it can legally become a
+    // straight four. Recurse rather than treating a forbidden extension as legal.
+    // Each recursion places a new stone, so no depth cap can invent a proof.
+    int genuine=0;
+    for(int i=0;i<three_count;++i) {
+        for(int j=0;j<threes[i].count;++j) {
+            const Move e=threes[i].extensions[j];
+            // RIF's definition of a three excludes an extension that also
+            // completes five elsewhere, even though that winning move is legal.
+            bool completes_five=false;
+            for(int direction=0;direction<4;++direction)
+                completes_five=completes_five||count_line(board,sz,e.r,e.c,dr[direction],dc[direction],1)==5;
+            if(completes_five)continue;
+            if(!is_forbidden_move(board,sz,e.r,e.c)) {
+                if(++genuine>=2)return true;
+                break;
+            }
+        }
+    }
+    return false;
 }
 
 inline bool is_legal_move(int board[kMaxBoard][kMaxBoard], int sz, int p, Move move) {
@@ -747,7 +821,8 @@ inline std::uint64_t position_hash(const int board[kMaxBoard][kMaxBoard], int sz
 }
 
 inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, int p,
-                                int max_attacks, int node_budget);
+                                int max_attacks, int node_budget,
+                                const std::chrono::steady_clock::time_point* deadline);
 
 inline int negamax(int board[kMaxBoard][kMaxBoard], int sz, int p, int depth, int alpha, int beta,
                    Move last, int last_p, const OpponentStyle* style = nullptr, int quiet_depth = 2,
@@ -846,7 +921,8 @@ inline Move find_immediate_win(int board[kMaxBoard][kMaxBoard], int sz, int p) {
 }
 
 inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, int p,
-                                int max_attacks = 6, int node_budget = 900);
+                                int max_attacks = 6, int node_budget = 900,
+                                const std::chrono::steady_clock::time_point* deadline = nullptr);
 
 // Looks one ordinary reply beyond the VCF horizon.  A setup counts as proven
 // only when one opponent reply leaves VCF after every legal answer, including
@@ -855,7 +931,8 @@ inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, i
 inline bool opponent_has_unavoidable_vcf_setup(
         const int board[kMaxBoard][kMaxBoard], int sz, int opponent,
         const std::chrono::steady_clock::time_point& deadline,
-        int reply_width = 16, int vcf_node_budget = 80) {
+        int reply_width = 16, int vcf_node_budget = 80, Move* witness = nullptr,
+        int vcf_attacks = 6, int setup_depth = 1) {
     const int defender = 3 - opponent;
     int after_reply[kMaxBoard][kMaxBoard];
     std::memcpy(after_reply, board, sizeof(after_reply));
@@ -863,8 +940,14 @@ inline bool opponent_has_unavoidable_vcf_setup(
     for (const auto& item : replies) {
         if (std::chrono::steady_clock::now() >= deadline) return false;
         const Move reply = item.second;
+        if(setup_depth>1) {
+            const auto threat=analyze_move(after_reply,sz,reply.r,reply.c,opponent);
+            if(!threat.count[TH_FIVE]&&!threat.count[TH_OPEN_FOUR]&&!threat.count[TH_BROKEN_FOUR]&&
+               !threat.count[TH_CLOSED_FOUR]&&!threat.count[TH_OPEN_THREE]&&!threat.count[TH_BROKEN_THREE])continue;
+        }
         after_reply[reply.r][reply.c] = opponent;
         if (check_win_at(after_reply, sz, reply.r, reply.c, opponent)) {
+            if(witness)*witness=reply;
             after_reply[reply.r][reply.c] = 0;
             return true;
         }
@@ -877,8 +960,12 @@ inline bool opponent_has_unavoidable_vcf_setup(
                     (defender == 1 && is_forbidden_move(after_reply, sz, r, c))) continue;
                 has_legal_answer = true;
                 after_reply[r][c] = defender;
-                const bool survives = check_win_at(after_reply, sz, r, c, defender) ||
-                    !has_forced_four_win(after_reply, sz, opponent, 6, vcf_node_budget);
+                const bool counterwin=check_win_at(after_reply,sz,r,c,defender);
+                bool proved=!counterwin&&has_forced_four_win(after_reply,sz,opponent,vcf_attacks,vcf_node_budget,&deadline);
+                if(!proved&&!counterwin&&setup_depth>1&&std::chrono::steady_clock::now()<deadline)
+                    proved=opponent_has_unavoidable_vcf_setup(after_reply,sz,opponent,deadline,
+                        std::min(reply_width,8),vcf_node_budget,nullptr,vcf_attacks,setup_depth-1);
+                const bool survives=counterwin||!proved;
                 after_reply[r][c] = 0;
                 if (survives) {
                     every_answer_loses = false;
@@ -891,7 +978,10 @@ inline bool opponent_has_unavoidable_vcf_setup(
             }
         }
         after_reply[reply.r][reply.c] = 0;
-        if (has_legal_answer && every_answer_loses) return true;
+        if (has_legal_answer && every_answer_loses) {
+            if(witness)*witness=reply;
+            return true;
+        }
     }
     return false;
 }
@@ -923,7 +1013,9 @@ struct SearchStats {
 // prover on every candidate is unsound, because the replay leaves the defender
 // without a move and so "proves" chains that begin with a quiet move.
 inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
-                               int attacks_left, int& budget, Move* first_move = nullptr);
+                               int attacks_left, int& budget, Move* first_move = nullptr,
+                               const std::chrono::steady_clock::time_point* deadline = nullptr,
+                               const std::atomic<bool>* cancel = nullptr);
 
 // Root candidate set: the static ranking, plus a guaranteed defensive floor.
 //
@@ -1023,7 +1115,8 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
         std::memcpy(local, board, sizeof(local));
         int budget = vcf_budget;
         Move proven{-1, -1};
-        if (forced_four_search(local, sz, p, 16, budget, &proven)) {
+        const auto proof_deadline=std::min(deadline,vcf_started+std::chrono::milliseconds(std::min(500,time_budget_ms/4)));
+        if (forced_four_search(local, sz, p, 16, budget, &proven,&proof_deadline,cancel)) {
             if (stats) {
                 stats->vcf_win = true;
                 stats->vcf_ms = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1431,7 +1524,7 @@ inline Move choose_ai_move(int board[kMaxBoard][kMaxBoard], int sz, int p = 2, i
         std::memcpy(local, board, sizeof(local));
         local[move.r][move.c] = p;
         int budget = vcf_budget;
-        const bool loses = forced_four_search(local, sz, op, 16, budget);
+        const bool loses = forced_four_search(local, sz, op, 16, budget,nullptr,&tactical_deadline,cancel);
         if (stats) {
             stats->audits += 1;
             stats->audit_ms += static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1503,8 +1596,11 @@ inline int five_completion_squares(int board[kMaxBoard][kMaxBoard], int sz,
 // them when necessary. Attack and node
 // budgets bound the worst case for post-game replay loops.
 inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
-                               int attacks_left, int& budget, Move* first_move) {
-    if (attacks_left <= 0 || budget <= 0) return false;
+                               int attacks_left, int& budget, Move* first_move,
+                               const std::chrono::steady_clock::time_point* deadline,
+                               const std::atomic<bool>* cancel) {
+    auto stopped=[&]{return (deadline&&std::chrono::steady_clock::now()>=*deadline)||(cancel&&cancel->load());};
+    if (attacks_left <= 0 || budget <= 0 || stopped()) return false;
     --budget;
     const int op = 3 - p;
     // A forcing move can simultaneously block the defender's five and create
@@ -1520,6 +1616,7 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
     struct FourCandidate { Move move; int score; };
     std::vector<FourCandidate> fours;
     for (Move m : generate_candidates(board, sz, 1)) {
+        if(stopped())return false;
         if (required_block.r != -1 &&
             (m.r != required_block.r || m.c != required_block.c)) continue;
         if (p == 1 && is_forbidden_move(board, sz, m.r, m.c)) continue;
@@ -1539,6 +1636,7 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
     static const int dr[] = {0, 1, 1, 1};
     static const int dc[] = {1, 0, 1, -1};
     for (const auto& item : fours) {
+        if(stopped())return false;
         Move f = item.move;
         board[f.r][f.c] = p;
         if (find_immediate_win(board, sz, op).r != -1) {
@@ -1569,7 +1667,7 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
                 won = true;  // The forced block is itself illegal for Black.
             } else {
                 board[block.r][block.c] = op;
-                won = forced_four_search(board, sz, p, attacks_left - 1, budget);
+                won = forced_four_search(board, sz, p, attacks_left - 1, budget,nullptr,deadline,cancel);
                 board[block.r][block.c] = 0;
             }
         }
@@ -1584,11 +1682,12 @@ inline bool forced_four_search(int board[kMaxBoard][kMaxBoard], int sz, int p,
 }
 
 inline bool has_forced_four_win(const int board[kMaxBoard][kMaxBoard], int sz, int p,
-                                int max_attacks, int node_budget) {
+                                int max_attacks, int node_budget,
+                                const std::chrono::steady_clock::time_point* deadline) {
     int local[kMaxBoard][kMaxBoard];
     std::memcpy(local, board, sizeof(local));
     int budget = node_budget;
-    return forced_four_search(local, sz, p, max_attacks, budget);
+    return forced_four_search(local, sz, p, max_attacks, budget,nullptr,deadline);
 }
 
 // static_eval ingredients recombined for tempo.  Potential entries here are

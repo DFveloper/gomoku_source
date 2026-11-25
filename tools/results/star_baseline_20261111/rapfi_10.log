@@ -1,0 +1,2 @@
+star_case=10 opponent=4 start=7,11 lumen=black winner=1 plies=35 lumen_avg_ms=3351 lumen_max_ms=5888 opponent_avg_ms=3250 opponent_max_ms=5894 status=PASS error=none
+moves=7,11 5,10 8,10 6,9 7,8 8,11 9,9 10,8 5,8 6,8 6,7 4,9 9,10 8,9 10,10 7,10 11,11 12,12 9,7 10,13 9,12 5,9 7,9 3,9 2,9 7,7 9,11 9,13 11,13 10,12 11,10 12,10 11,12 11,14 11,9

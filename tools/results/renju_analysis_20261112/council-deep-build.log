@@ -1,0 +1,39 @@
+[  5%] Built target gomoku_cli
+[ 13%] Building CXX object CMakeFiles/gomoku_gui.dir/AI_Gomoku_GUI.cpp.o
+[ 13%] Building CXX object CMakeFiles/engine_benchmark.dir/engine_benchmark.cpp.o
+[ 15%] Building CXX object CMakeFiles/gomoku_sangin.dir/AI_Gomoku_GUI.cpp.o
+[ 15%] Building CXX object CMakeFiles/gomoku_webui.dir/AI_Gomoku_WebUI.cpp.o
+[ 18%] Building CXX object CMakeFiles/gomoku_match_webui.dir/Gomoku_Engine_Match_WebUI.cpp.o
+[ 23%] Built target ab_match
+[ 28%] Built target id_soundness
+[ 34%] Built target tactics_suite
+[ 36%] Building CXX object CMakeFiles/duel.dir/tools/duel.cpp.o
+[ 39%] Linking CXX executable duel
+[ 39%] Built target duel
+[ 42%] Building CXX object CMakeFiles/ensemble_invariants.dir/tools/ensemble_invariants.cpp.o
+[ 44%] Linking CXX executable engine_benchmark
+[ 44%] Built target engine_benchmark
+[ 47%] Building CXX object CMakeFiles/strength_check.dir/tools/strength_check.cpp.o
+[ 50%] Linking CXX executable gomoku_webui
+[ 50%] Built target gomoku_webui
+[ 55%] Built target session_invariants
+[ 60%] Built target renju_rules_suite
+[ 65%] Built target threat_proof_suite
+[ 71%] Built target endgame_suite
+[ 76%] Built target experience_train
+[ 78%] Building CXX object CMakeFiles/experience_suite.dir/tools/experience_suite.cpp.o
+[ 81%] Linking CXX executable gomoku_gui
+[ 81%] Built target gomoku_gui
+[ 84%] Building CXX object CMakeFiles/council_suite.dir/tools/council_suite.cpp.o
+[ 86%] Linking CXX executable gomoku_sangin
+[ 86%] Built target gomoku_sangin
+[ 89%] Linking CXX executable gomoku_match_webui
+[ 89%] Built target gomoku_match_webui
+[ 92%] Linking CXX executable ensemble_invariants
+[ 92%] Built target ensemble_invariants
+[ 94%] Linking CXX executable strength_check
+[ 94%] Built target strength_check
+[ 97%] Linking CXX executable experience_suite
+[ 97%] Built target experience_suite
+[100%] Linking CXX executable council_suite
+[100%] Built target council_suite

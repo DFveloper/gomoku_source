@@ -440,6 +440,11 @@ The candidate uses a **5000 ms nominal design budget**, with no forced cutoff at
 actual response time; benchmark output reports maximum and average wall time.
 Rapfi, Alpha and the local search propose candidates. Agreement ranks the
 candidates, then tactical proofs reject moves that permit a proven loss.
+Only external experts vote: agreement from the weaker local fallback does not
+overrule Rapfi. With six requested workers, one runs local search, one runs
+Alpha, and four are requested from Rapfi using `INFO thread_num`.
+The UI's automatic setting uses the available hardware, capped at 32 workers;
+an explicit request is also capped to the available hardware.
 Immediate wins and forced blocks take precedence. Missing experts fall back to
 local search, and expired or cancelled workers are joined before returning.
 
@@ -456,14 +461,126 @@ then checks cancellation and immediate-win precedence. It needs enough logical
 cores to host two experts. The candidate can also be previewed in the browser
 with `gomoku_webui.exe --sangin-candidate` at `/sangin/`.
 
-Measure the candidate against standalone Rapfi with the same nominal 5-second
-protocol budget, four openings and swapped colours (eight games):
+Measure the candidate against Rapfi and Alpha with the same nominal 5-second
+protocol budget. Each opponent plays all nine starting points with colours
+swapped: **18 games per opponent, 36 total**. Only Black's first stone is fixed,
+at every combination of rows/columns 4, 8 and 12 (zero-based: 3, 7 and 11).
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate_strength.ps1
 ```
 
-The gate rejects any candidate loss or invalid game and saves raw results to
-`rapfi-strength-validation.log` in the build directory. It does not change Sangin's
+The gate rejects any candidate loss or invalid game and saves raw results in a
+timestamped `star-strength-*` directory in the build directory. It does not change Sangin's
 default automatically. No finite opening suite can prove no losses in every
 possible position; historical Linux results above are not Windows validation.
+
+On Linux, run isolated games concurrently (six games × six workers fits the
+36-CPU development host):
+
+```bash
+cmake -S . -B .run/star-build -DCMAKE_BUILD_TYPE=Release
+cmake --build .run/star-build --parallel 6 --target engine_benchmark
+python3 scripts/validate_star_points.py --binary .run/star-build/engine_benchmark \
+  --jobs 6 --threads 6 --output tools/results/star-new-run
+```
+
+Use a new output directory for each run. The runner records executable, source,
+configuration and model hashes, saves every game's moves, and writes incremental
+`summary.json`. Acceptance requires all 36 completed games without a loss or
+error; an unfinished game cannot count as a draw. The nominal budget is not a
+strict tournament clock; actual maximum response times are included in each log.
+After an interruption, use `--resume --output tools/results/star-new-run` to run
+only missing games. The runner verifies the frozen executable and original
+runtime files before resuming and keeps the original thread allocation.
+
+The latest [Renju investigation](tools/results/renju_analysis_20261112/REPORT.md)
+documents corrected recursive forbidden-move rules and a concrete missed win.
+The undefeated gate is still failing. Persistent search and a draw-equivalent
+candidate objective can be tested with `GOMOKU_RETAINED_SEARCH=1` and
+`GOMOKU_NONLOSS_OBJECTIVE=1`; experimental settings are recorded in the run
+manifest and must match when resuming. These flags have not replaced the
+default strategy. An actual attempted Black forbidden move is now recorded as
+a White rule win; malformed, occupied, out-of-bounds and missing replies remain
+invalid games.
+
+An opt-in experience policy learns from completed game histories and recorded
+failures. It uses fixed board states and opponent profiles, with symmetry
+augmentation; it does not read live benchmark results while choosing moves.
+Tactical and endgame checks take precedence over empirical proposals.
+
+```bash
+cmake --build .run/star-checks --parallel 3 --target experience_train engine_benchmark
+.run/star-checks/experience_train .run/my-experience/experience.txt \
+  tools/results/star_candidate_20261111/*_??.log
+GOMOKU_EXPERIENCE_BOOK="$PWD/.run/my-experience/experience.txt" \
+GOMOKU_MCTS_SEARCH=1 GOMOKU_NONLOSS_OBJECTIVE=1 \
+python3 scripts/validate_star_points.py --binary .run/star-checks/engine_benchmark \
+  --jobs 3 --threads 6 --order hard-first --output tools/results/experience-new-run
+```
+
+The runner freezes the book as well as the executable. Each result directory
+has a `LIVE_REPORT.md`. The optional `--fail-fast` stops starting games after a
+failure, finishes games already running, and marks the version failed rather
+than passing a partial suite. A normal full audit still runs all 36 games.
+
+For repeated training, `scripts/reinforce_star_experience.py` accepts a completed
+failed audit through `--after-run`, additional observations through `--seed-run`,
+and empty `--work` and `--results` directories. It preserves every attempted
+version, verifies unchanged opponents, and only sets `goal_met` after one
+version completes all 36 fresh games without a failure. Its default curriculum
+tries difficult White games first and retrains after a loss; `--full-audits`
+retains all games for every failed version. `--rounds` limits training versions.
+Writing `STOP` in the work directory stops between attempts. The default
+production strategy is unchanged while these learned profiles are experimental.
+
+To retain the Alpha policy that previously completed 18/18 without a loss,
+pass `--preserve-alpha tools/results/star_experience_20261112/experience.snapshot`
+to the training controller. It freezes those Alpha proposals and selects AB
+non-loss search for Alpha with `GOMOKU_ALPHA_LEGACY=1`. A new Alpha failure
+releases that preservation for later training attempts. This is experimental;
+acceptance still requires all 36 fresh games from the same version.
+
+Use `--full-audit-every 3` to finish all 36 games on the first and every third
+training attempt. This prevents early losses from hiding the remaining starting
+conditions. The V3 experience format additionally records repeatedly failed
+opponent-reply branches. Those moves yield to exploration of other legal roots;
+this is an empirical hint, not a tactical certificate. Earlier V1/V2 books keep
+their existing behavior. Episode results are preserved unchanged.
+
+`--preserve-alpha` also accepts a modern V2/V3 book. It retains every Alpha action,
+including losses and reply-branch flags, and keeps modern search routing. Only a
+V1 book enables legacy Alpha routing. A fresh Alpha failure releases preservation
+for subsequent training. The latest completed best audit is
+[34/36](tools/results/star_reinforcement_positive_20261113/round-08/LIVE_REPORT.md),
+still failing the undefeated goal.
+
+For training diagnostics, `engine_benchmark --teacher-alpha-tail STAR_LOG
+PREFIX_PLIES [THREADS=1] [RUNTIME_ROOT]` lets Alpha play the candidate side after
+a legal imported prefix. It emits a teacher-only `replay_case`, never a fresh
+opening acceptance result. Such completed histories can train experience books;
+they cannot pass the 36-game gate themselves.
+
+For controlled research, `GOMOKU_RAPFI_BOOK_ONLY=1` retains demonstrated Rapfi
+continuations without empirical root bans, negative penalties or extra PV
+expansion. Alpha routing is unaffected. `GOMOKU_BLACK_DRAW_SAFETY=1` separately
+enables the experimental Black overline-hole heuristic; it has not solved the
+acceptance gate. Both settings are captured and checked on resume. The training
+controller exposes `--rapfi-book-only` and `--black-draw-safety` for these modes.
+
+`scripts/explore_star_openings.py` explores previously unplayed White replies
+against the unchanged Rapfi runtime. It requires a reference audit, records each
+trial's configuration, and confirms a promising response in two consecutive
+fresh games. Its records are training data: it never declares the 36-game goal
+achieved and its varied configurations cannot be pooled into acceptance. The
+production candidate must pass its own new, fixed-version 36-game audit.
+
+These controls apply to the experimental retained/experience profile. The Black
+hole-risk option additionally requires `GOMOKU_NONLOSS_OBJECTIVE=1`; the training
+controller sets that objective automatically. Opening trials use retained AB
+without a learned book, while the parallel fixed-book audit uses the Rapfi
+positive-only policy. Their results remain separate.
+
+The experimental [search expert council](docs/moe-council.md) adds real MCTS
+proposals and common-depth AB arbitration. Optional additional deepening is
+recorded as a separate extra-compute profile; it has not achieved the goal.

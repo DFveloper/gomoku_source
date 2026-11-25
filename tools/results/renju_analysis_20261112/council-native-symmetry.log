@@ -1,0 +1,6 @@
+root-council plies=1 roots=1 complete=1 promoted=0 depth=19 floor=17 reason=keep-primary move=6,6 phase_ms=1027
+adaptive plies=1 initial=6,6 eval=-288 final=6,6 eval=-329 depth=19 scored=1 alternate=0 learned=0 error=
+[PASS] native restricted MultiPV: depth=17 roots=2 move=6,6 error=
+root=6,7 score=-262 depth=17
+root=6,6 score=-303 depth=17
+[PASS] native council: launched=3 answered=3 roots=1 complete=1 promoted=0 depth=19 phase_ms=1027 move=6,6

@@ -1,0 +1,366 @@
+{
+  "complete": true,
+  "passed": false,
+  "games": [
+    {
+      "opponent": "alpha",
+      "case": 0,
+      "player": 1,
+      "winner": 2,
+      "plies": 70,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 320.75
+    },
+    {
+      "opponent": "alpha",
+      "case": 1,
+      "player": 2,
+      "winner": 2,
+      "plies": 56,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 241.52
+    },
+    {
+      "opponent": "alpha",
+      "case": 2,
+      "player": 1,
+      "winner": 1,
+      "plies": 35,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 143.07
+    },
+    {
+      "opponent": "alpha",
+      "case": 3,
+      "player": 2,
+      "winner": 1,
+      "plies": 67,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 314.91
+    },
+    {
+      "opponent": "alpha",
+      "case": 4,
+      "player": 1,
+      "winner": 1,
+      "plies": 63,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 248.2
+    },
+    {
+      "opponent": "alpha",
+      "case": 5,
+      "player": 2,
+      "winner": 2,
+      "plies": 36,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 134.66
+    },
+    {
+      "opponent": "alpha",
+      "case": 6,
+      "player": 1,
+      "winner": 1,
+      "plies": 57,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 237.0
+    },
+    {
+      "opponent": "alpha",
+      "case": 7,
+      "player": 2,
+      "winner": 1,
+      "plies": 35,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 149.92
+    },
+    {
+      "opponent": "alpha",
+      "case": 8,
+      "player": 1,
+      "winner": 2,
+      "plies": 72,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 325.22
+    },
+    {
+      "opponent": "alpha",
+      "case": 9,
+      "player": 2,
+      "winner": 1,
+      "plies": 39,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 152.74
+    },
+    {
+      "opponent": "alpha",
+      "case": 10,
+      "player": 1,
+      "winner": 1,
+      "plies": 37,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 146.89
+    },
+    {
+      "opponent": "alpha",
+      "case": 11,
+      "player": 2,
+      "winner": 1,
+      "plies": 39,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 141.56
+    },
+    {
+      "opponent": "alpha",
+      "case": 12,
+      "player": 1,
+      "winner": 1,
+      "plies": 51,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 223.21
+    },
+    {
+      "opponent": "alpha",
+      "case": 13,
+      "player": 2,
+      "winner": 1,
+      "plies": 83,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 344.54
+    },
+    {
+      "opponent": "alpha",
+      "case": 14,
+      "player": 1,
+      "winner": 2,
+      "plies": 112,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 504.19
+    },
+    {
+      "opponent": "alpha",
+      "case": 15,
+      "player": 2,
+      "winner": 1,
+      "plies": 47,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 166.56
+    },
+    {
+      "opponent": "alpha",
+      "case": 16,
+      "player": 1,
+      "winner": 1,
+      "plies": 63,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 224.41
+    },
+    {
+      "opponent": "alpha",
+      "case": 17,
+      "player": 2,
+      "winner": 2,
+      "plies": 36,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 131.93
+    },
+    {
+      "opponent": "rapfi",
+      "case": 0,
+      "player": 1,
+      "winner": 1,
+      "plies": 95,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 412.21
+    },
+    {
+      "opponent": "rapfi",
+      "case": 1,
+      "player": 2,
+      "winner": 2,
+      "plies": 60,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 228.22
+    },
+    {
+      "opponent": "rapfi",
+      "case": 2,
+      "player": 1,
+      "winner": 1,
+      "plies": 47,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 164.12
+    },
+    {
+      "opponent": "rapfi",
+      "case": 3,
+      "player": 2,
+      "winner": 1,
+      "plies": 57,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 258.13
+    },
+    {
+      "opponent": "rapfi",
+      "case": 4,
+      "player": 1,
+      "winner": 2,
+      "plies": 72,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 332.2
+    },
+    {
+      "opponent": "rapfi",
+      "case": 5,
+      "player": 2,
+      "winner": 2,
+      "plies": 104,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 457.31
+    },
+    {
+      "opponent": "rapfi",
+      "case": 6,
+      "player": 1,
+      "winner": 0,
+      "plies": 225,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 1238.94
+    },
+    {
+      "opponent": "rapfi",
+      "case": 7,
+      "player": 2,
+      "winner": 1,
+      "plies": 47,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 196.07
+    },
+    {
+      "opponent": "rapfi",
+      "case": 8,
+      "player": 1,
+      "winner": 1,
+      "plies": 53,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 231.53
+    },
+    {
+      "opponent": "rapfi",
+      "case": 9,
+      "player": 2,
+      "winner": 1,
+      "plies": 31,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 102.95
+    },
+    {
+      "opponent": "rapfi",
+      "case": 10,
+      "player": 1,
+      "winner": 1,
+      "plies": 35,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 112.26
+    },
+    {
+      "opponent": "rapfi",
+      "case": 11,
+      "player": 2,
+      "winner": 1,
+      "plies": 33,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 109.63
+    },
+    {
+      "opponent": "rapfi",
+      "case": 12,
+      "player": 1,
+      "winner": 0,
+      "plies": 225,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 1222.67
+    },
+    {
+      "opponent": "rapfi",
+      "case": 13,
+      "player": 2,
+      "winner": 2,
+      "plies": 90,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 389.23
+    },
+    {
+      "opponent": "rapfi",
+      "case": 14,
+      "player": 1,
+      "winner": 1,
+      "plies": 51,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 199.26
+    },
+    {
+      "opponent": "rapfi",
+      "case": 15,
+      "player": 2,
+      "winner": 1,
+      "plies": 61,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 290.71
+    },
+    {
+      "opponent": "rapfi",
+      "case": 16,
+      "player": 1,
+      "winner": 2,
+      "plies": 80,
+      "passed": false,
+      "exit_code": 1,
+      "seconds": 409.98
+    },
+    {
+      "opponent": "rapfi",
+      "case": 17,
+      "player": 2,
+      "winner": 2,
+      "plies": 50,
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 174.09
+    }
+  ]
+}

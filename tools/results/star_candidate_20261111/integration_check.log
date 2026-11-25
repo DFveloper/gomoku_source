@@ -1,0 +1,3 @@
+[PASS] explicit, automatic and hardware-limited expert thread allocation
+[PASS] Rapfi + Alpha: launched=2 answered=2 move=(6,6) source=expert-delegated depth=4 time_ms=5508
+[PASS] cancellation and immediate-win precedence

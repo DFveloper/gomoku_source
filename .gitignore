@@ -6,3 +6,6 @@ build/tools/
 # Locally built external engines (tools/build_native_engines.sh). The bundled
 # binaries stay tracked; native builds sit beside them.
 third_party/runtime/*/*.native-*
+__pycache__/
+tools/results/**/benchmark.snapshot
+tools/results/**/experience.snapshot

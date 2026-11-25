@@ -1,0 +1,6 @@
+old_move_risk=1 defensive_move_risk=0
+root-council plies=172 roots=2 complete=1 promoted=0 depth=10 floor=10 reason=keep-primary move=2,1 phase_ms=2741
+root-council-candidate plies=172 move=2,1 scored=1 eval=1442 depth=10 goal_risk=1
+root-council-candidate plies=172 move=2,0 scored=1 eval=1215 depth=10 goal_risk=0
+adaptive plies=172 initial=2,1 eval=0 final=2,1 eval=1442 depth=10 scored=1 alternate=0 learned=0 error=
+[PASS] native goal council move=2,1 risk=1 roots=2 complete=1 promoted=0 depth=10

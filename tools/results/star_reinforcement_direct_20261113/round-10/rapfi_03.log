@@ -1,0 +1,53 @@
+experience plies=1 move=4,6 nonloss_weight=4 total_weight=32
+ply=2 player=2 engine=2 move=4,6 elapsed_ms=129 error=none
+ply=3 player=1 engine=4 move=5,8 elapsed_ms=5589 error=none
+experience plies=3 move=6,9 nonloss_weight=4 total_weight=8
+ply=4 player=2 engine=2 move=6,9 elapsed_ms=0 error=none
+ply=5 player=1 engine=4 move=3,8 elapsed_ms=5618 error=none
+adaptive plies=5 initial=6,7 eval=-29958 final=6,7 eval=-29958 depth=21 alternate=0 learned=0 error=
+ply=6 player=2 engine=2 move=6,7 elapsed_ms=5830 error=none
+ply=7 player=1 engine=4 move=3,9 elapsed_ms=5580 error=none
+adaptive plies=7 initial=3,10 eval=-29968 final=3,10 eval=-29968 depth=26 alternate=0 learned=0 error=
+ply=8 player=2 engine=2 move=3,10 elapsed_ms=5288 error=none
+ply=9 player=1 engine=4 move=4,8 elapsed_ms=5482 error=none
+adaptive plies=9 initial=6,8 eval=-29970 final=6,8 eval=-29970 depth=26 alternate=0 learned=0 error=
+ply=10 player=2 engine=2 move=6,8 elapsed_ms=4451 error=none
+ply=11 player=1 engine=4 move=6,10 elapsed_ms=5503 error=none
+adaptive plies=11 initial=5,9 eval=-29972 final=5,9 eval=-29972 depth=26 alternate=0 learned=0 error=
+ply=12 player=2 engine=2 move=5,9 elapsed_ms=5054 error=none
+ply=13 player=1 engine=4 move=2,8 elapsed_ms=5556 error=none
+ply=14 player=2 engine=2 move=1,8 elapsed_ms=0 error=none
+ply=15 player=1 engine=4 move=4,10 elapsed_ms=5593 error=none
+adaptive plies=15 initial=6,6 eval=-29976 final=6,6 eval=-29976 depth=26 alternate=0 learned=0 error=
+ply=16 player=2 engine=2 move=6,6 elapsed_ms=5353 error=none
+ply=17 player=1 engine=4 move=6,5 elapsed_ms=2442 error=none
+adaptive plies=17 initial=1,7 eval=-29978 final=1,7 eval=-29978 depth=26 alternate=0 learned=0 error=
+ply=18 player=2 engine=2 move=1,7 elapsed_ms=2167 error=none
+ply=19 player=1 engine=4 move=4,11 elapsed_ms=5569 error=none
+adaptive plies=19 initial=4,9 eval=-29980 final=4,9 eval=-29980 depth=26 alternate=0 learned=0 error=
+ply=20 player=2 engine=2 move=4,9 elapsed_ms=2148 error=none
+ply=21 player=1 engine=4 move=5,11 elapsed_ms=5513 error=none
+ply=22 player=2 engine=2 move=6,12 elapsed_ms=0 error=none
+ply=23 player=1 engine=4 move=7,9 elapsed_ms=5586 error=none
+adaptive plies=23 initial=4,12 eval=-29984 final=4,12 eval=-29984 depth=26 alternate=0 learned=0 error=
+ply=24 player=2 engine=2 move=4,12 elapsed_ms=2020 error=none
+ply=25 player=1 engine=4 move=6,11 elapsed_ms=5564 error=none
+adaptive plies=25 initial=3,11 eval=-29986 final=3,11 eval=-29986 depth=26 alternate=0 learned=0 error=
+ply=26 player=2 engine=2 move=3,11 elapsed_ms=1699 error=none
+ply=27 player=1 engine=4 move=7,10 elapsed_ms=2382 error=none
+adaptive plies=27 initial=8,11 eval=-29988 final=8,11 eval=-29988 depth=26 alternate=0 learned=0 error=
+ply=28 player=2 engine=2 move=8,11 elapsed_ms=1564 error=none
+ply=29 player=1 engine=4 move=9,8 elapsed_ms=1412 error=none
+adaptive plies=29 initial=5,12 eval=-29990 final=5,12 eval=-29990 depth=28 alternate=0 learned=0 error=
+ply=30 player=2 engine=2 move=5,12 elapsed_ms=1186 error=none
+ply=31 player=1 engine=4 move=9,7 elapsed_ms=660 error=none
+ply=32 player=2 engine=2 move=8,8 elapsed_ms=0 error=none
+ply=33 player=1 engine=4 move=8,10 elapsed_ms=612 error=none
+ply=34 player=2 engine=2 move=5,10 elapsed_ms=0 error=none
+ply=35 player=1 engine=4 move=9,10 elapsed_ms=601 error=none
+ply=36 player=2 engine=2 move=10,10 elapsed_ms=0 error=none
+ply=37 player=1 engine=4 move=9,9 elapsed_ms=599 error=none
+ply=38 player=2 engine=2 move=9,6 elapsed_ms=0 error=none
+ply=39 player=1 engine=4 move=9,11 elapsed_ms=617 error=none
+star_case=3 opponent=4 start=3,7 lumen=white winner=1 plies=39 lumen_avg_ms=1941 lumen_max_ms=5830 opponent_avg_ms=3709 opponent_max_ms=5618 termination=normal status=FAIL error=none
+moves=3,7 4,6 5,8 6,9 3,8 6,7 3,9 3,10 4,8 6,8 6,10 5,9 2,8 1,8 4,10 6,6 6,5 1,7 4,11 4,9 5,11 6,12 7,9 4,12 6,11 3,11 7,10 8,11 9,8 5,12 9,7 8,8 8,10 5,10 9,10 10,10 9,9 9,6 9,11

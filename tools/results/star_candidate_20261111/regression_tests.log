@@ -1,0 +1,17 @@
+Test project /mnt/openwebui/gomoku/.run/star-checks
+    Start 1: gomoku_tactical_and_style_regression
+    Start 2: gomoku_iterative_deepening_root_soundness
+1/6 Test #2: gomoku_iterative_deepening_root_soundness ...   Passed   14.17 sec
+    Start 6: gomoku_star_acceptance_runner
+2/6 Test #1: gomoku_tactical_and_style_regression ........   Passed   15.79 sec
+    Start 4: gomoku_ensemble_invariants
+3/6 Test #6: gomoku_star_acceptance_runner ...............   Passed    3.52 sec
+    Start 3: gomoku_tactics_suite
+4/6 Test #3: gomoku_tactics_suite ........................   Passed    0.00 sec
+    Start 5: gomoku_strong_thread_allocation
+5/6 Test #5: gomoku_strong_thread_allocation .............   Passed    0.00 sec
+6/6 Test #4: gomoku_ensemble_invariants ..................   Passed    2.01 sec
+
+100% tests passed, 0 tests failed out of 6
+
+Total Test time (real) =  17.80 sec

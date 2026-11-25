@@ -1,0 +1,14 @@
+{
+  "kind": "diagnostic and standalone real case; not a 36-game pass",
+  "notes": "Frozen first branch-aware binary; latest source additionally skips repeatedly failed alternatives at flagged positions.",
+  "threads": 6,
+  "candidate_nonloss_objective": true,
+  "sha256": {
+    "/mnt/openwebui/gomoku/.run/analysis-v4/benchmark-branch": "7fa73582077299b1dd859f838d0560ddc2db49e274f3c8efc64b0a099214f4cc",
+    "/mnt/openwebui/gomoku/.run/analysis-v4/branch-model/experience.txt": "c3e4d59716540cb75ec8c46ccba85971b7788d6d4c4c0777c6d00aa446be7cb0",
+    "/mnt/openwebui/gomoku/tools/results/renju_analysis_20261112/branch_star_rapfi3.log": "dfd211043e8b91c9a2c2b2cae48866e022df1628f281604591c2366e67dc8991",
+    "/mnt/openwebui/gomoku/tools/results/renju_analysis_20261112/branch_tail_rapfi3_p5.log": "6251f459bd53aaea15b358ca365dff861fcd78ebd59fdac3f9de677a4e0b2c0c",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/pbrain-rapfi": "fff31bf2d2b1189769e97eecdf55f9b5dd0883dbfbb7273c7189ee93f18c6c7d",
+    "/mnt/openwebui/gomoku/third_party/runtime/rapfi/config.toml": "d19a1514845feb149c7a146a68605ddfcd00ee674f1296850c578b1923de04c7"
+  }
+}

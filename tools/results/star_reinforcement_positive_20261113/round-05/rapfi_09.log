@@ -1,0 +1,309 @@
+experience plies=1 move=6,6 nonloss_weight=20 total_weight=96
+ply=2 player=2 engine=2 move=6,6 elapsed_ms=344 error=none
+ply=3 player=1 engine=4 move=5,6 elapsed_ms=5718 error=none
+experience plies=3 move=6,7 nonloss_weight=20 total_weight=76
+ply=4 player=2 engine=2 move=6,7 elapsed_ms=0 error=none
+ply=5 player=1 engine=4 move=6,5 elapsed_ms=5651 error=none
+experience plies=5 move=7,5 nonloss_weight=20 total_weight=72
+ply=6 player=2 engine=2 move=7,5 elapsed_ms=40 error=none
+ply=7 player=1 engine=4 move=5,8 elapsed_ms=5186 error=none
+experience plies=7 move=5,7 nonloss_weight=16 total_weight=64
+ply=8 player=2 engine=2 move=5,7 elapsed_ms=139 error=none
+ply=9 player=1 engine=4 move=4,8 elapsed_ms=5587 error=none
+experience plies=9 move=8,4 nonloss_weight=16 total_weight=40
+ply=10 player=2 engine=2 move=8,4 elapsed_ms=127 error=none
+ply=11 player=1 engine=4 move=9,3 elapsed_ms=5446 error=none
+experience plies=11 move=3,8 nonloss_weight=16 total_weight=40
+ply=12 player=2 engine=2 move=3,8 elapsed_ms=48 error=none
+ply=13 player=1 engine=4 move=6,9 elapsed_ms=5589 error=none
+experience plies=13 move=4,7 nonloss_weight=16 total_weight=32
+ply=14 player=2 engine=2 move=4,7 elapsed_ms=1 error=none
+ply=15 player=1 engine=4 move=5,9 elapsed_ms=5583 error=none
+experience plies=15 move=5,10 nonloss_weight=16 total_weight=16
+ply=16 player=2 engine=2 move=5,10 elapsed_ms=365 error=none
+ply=17 player=1 engine=4 move=3,7 elapsed_ms=5588 error=none
+experience plies=17 move=6,10 nonloss_weight=16 total_weight=16
+ply=18 player=2 engine=2 move=6,10 elapsed_ms=394 error=none
+ply=19 player=1 engine=4 move=7,9 elapsed_ms=5620 error=none
+experience plies=19 move=4,9 nonloss_weight=16 total_weight=16
+ply=20 player=2 engine=2 move=4,9 elapsed_ms=242 error=none
+ply=21 player=1 engine=4 move=2,7 elapsed_ms=5634 error=none
+experience plies=21 move=6,8 nonloss_weight=16 total_weight=16
+ply=22 player=2 engine=2 move=6,8 elapsed_ms=367 error=none
+ply=23 player=1 engine=4 move=7,10 elapsed_ms=5652 error=none
+experience plies=23 move=7,8 nonloss_weight=16 total_weight=16
+ply=24 player=2 engine=2 move=7,8 elapsed_ms=335 error=none
+ply=25 player=1 engine=4 move=2,6 elapsed_ms=5567 error=none
+ply=26 player=2 engine=2 move=1,5 elapsed_ms=0 error=none
+ply=27 player=1 engine=4 move=2,5 elapsed_ms=5131 error=none
+experience plies=27 move=2,4 nonloss_weight=16 total_weight=16
+ply=28 player=2 engine=2 move=2,4 elapsed_ms=237 error=none
+ply=29 player=1 engine=4 move=3,3 elapsed_ms=5607 error=none
+experience plies=29 move=5,5 nonloss_weight=16 total_weight=16
+ply=30 player=2 engine=2 move=5,5 elapsed_ms=403 error=none
+ply=31 player=1 engine=4 move=5,4 elapsed_ms=5595 error=none
+experience plies=31 move=4,3 nonloss_weight=16 total_weight=16
+ply=32 player=2 engine=2 move=4,3 elapsed_ms=404 error=none
+ply=33 player=1 engine=4 move=3,5 elapsed_ms=5579 error=none
+experience plies=33 move=4,5 nonloss_weight=8 total_weight=8
+ply=34 player=2 engine=2 move=4,5 elapsed_ms=526 error=none
+ply=35 player=1 engine=4 move=4,4 elapsed_ms=5352 error=none
+experience plies=35 move=5,3 nonloss_weight=8 total_weight=8
+ply=36 player=2 engine=2 move=5,3 elapsed_ms=709 error=none
+ply=37 player=1 engine=4 move=8,9 elapsed_ms=5599 error=none
+ply=38 player=2 engine=2 move=9,9 elapsed_ms=0 error=none
+ply=39 player=1 engine=4 move=9,8 elapsed_ms=5606 error=none
+experience plies=39 move=6,11 nonloss_weight=8 total_weight=8
+ply=40 player=2 engine=2 move=6,11 elapsed_ms=371 error=none
+ply=41 player=1 engine=4 move=7,12 elapsed_ms=5602 error=none
+experience plies=41 move=8,7 nonloss_weight=8 total_weight=8
+ply=42 player=2 engine=2 move=8,7 elapsed_ms=731 error=none
+ply=43 player=1 engine=4 move=4,10 elapsed_ms=5608 error=none
+experience plies=43 move=5,11 nonloss_weight=8 total_weight=8
+ply=44 player=2 engine=2 move=5,11 elapsed_ms=759 error=none
+ply=45 player=1 engine=4 move=8,6 elapsed_ms=5256 error=none
+experience plies=45 move=7,4 nonloss_weight=8 total_weight=8
+ply=46 player=2 engine=2 move=7,4 elapsed_ms=759 error=none
+ply=47 player=1 engine=4 move=10,4 elapsed_ms=5585 error=none
+experience plies=47 move=7,3 nonloss_weight=8 total_weight=8
+ply=48 player=2 engine=2 move=7,3 elapsed_ms=748 error=none
+ply=49 player=1 engine=4 move=7,2 elapsed_ms=5578 error=none
+experience plies=49 move=8,2 nonloss_weight=8 total_weight=8
+ply=50 player=2 engine=2 move=8,2 elapsed_ms=776 error=none
+ply=51 player=1 engine=4 move=3,6 elapsed_ms=5232 error=none
+ply=52 player=2 engine=2 move=3,4 elapsed_ms=0 error=none
+ply=53 player=1 engine=4 move=4,6 elapsed_ms=5603 error=none
+ply=54 player=2 engine=2 move=1,6 elapsed_ms=0 error=none
+ply=55 player=1 engine=4 move=8,3 elapsed_ms=5592 error=none
+experience plies=55 move=10,5 nonloss_weight=8 total_weight=8
+ply=56 player=2 engine=2 move=10,5 elapsed_ms=857 error=none
+ply=57 player=1 engine=4 move=1,7 elapsed_ms=5635 error=none
+ply=58 player=2 engine=2 move=0,8 elapsed_ms=0 error=none
+ply=59 player=1 engine=4 move=9,5 elapsed_ms=5600 error=none
+ply=60 player=2 engine=2 move=11,3 elapsed_ms=0 error=none
+ply=61 player=1 engine=4 move=11,4 elapsed_ms=5242 error=none
+adaptive plies=61 initial=9,12 eval=355 final=9,12 eval=355 depth=16 alternate=0 learned=0 error=
+ply=62 player=2 engine=2 move=9,12 elapsed_ms=6100 error=none
+ply=63 player=1 engine=4 move=11,8 elapsed_ms=5264 error=none
+adaptive plies=63 initial=11,6 eval=360 final=11,6 eval=360 depth=16 alternate=0 learned=0 error=
+ply=64 player=2 engine=2 move=11,6 elapsed_ms=5434 error=none
+ply=65 player=1 engine=4 move=7,11 elapsed_ms=5599 error=none
+ply=66 player=2 engine=2 move=7,13 elapsed_ms=0 error=none
+ply=67 player=1 engine=4 move=10,10 elapsed_ms=5597 error=none
+adaptive plies=67 initial=12,7 eval=366 final=12,7 eval=366 depth=14 alternate=0 learned=0 error=
+ply=68 player=2 engine=2 move=12,7 elapsed_ms=5414 error=none
+ply=69 player=1 engine=4 move=9,4 elapsed_ms=5419 error=none
+adaptive plies=69 initial=9,6 eval=341 final=9,6 eval=341 depth=15 alternate=0 learned=0 error=
+ply=70 player=2 engine=2 move=9,6 elapsed_ms=5600 error=none
+ply=71 player=1 engine=4 move=9,1 elapsed_ms=5575 error=none
+ply=72 player=2 engine=2 move=9,2 elapsed_ms=0 error=none
+ply=73 player=1 engine=4 move=6,1 elapsed_ms=5605 error=none
+ply=74 player=2 engine=2 move=5,0 elapsed_ms=0 error=none
+ply=75 player=1 engine=4 move=10,8 elapsed_ms=5366 error=none
+adaptive plies=75 initial=13,8 eval=349 final=13,8 eval=349 depth=15 alternate=0 learned=0 error=
+ply=76 player=2 engine=2 move=13,8 elapsed_ms=5397 error=none
+ply=77 player=1 engine=4 move=14,9 elapsed_ms=5575 error=none
+adaptive plies=77 initial=11,10 eval=371 final=11,10 eval=371 depth=17 alternate=0 learned=0 error=
+ply=78 player=2 engine=2 move=11,10 elapsed_ms=5452 error=none
+ply=79 player=1 engine=4 move=12,8 elapsed_ms=5638 error=none
+ply=80 player=2 engine=2 move=8,8 elapsed_ms=0 error=none
+ply=81 player=1 engine=4 move=12,4 elapsed_ms=5590 error=none
+ply=82 player=2 engine=2 move=13,4 elapsed_ms=0 error=none
+ply=83 player=1 engine=4 move=8,1 elapsed_ms=5583 error=none
+adaptive plies=83 initial=5,1 eval=298 final=5,1 eval=298 depth=13 alternate=0 learned=0 error=
+ply=84 player=2 engine=2 move=5,1 elapsed_ms=6190 error=none
+ply=85 player=1 engine=4 move=10,1 elapsed_ms=5617 error=none
+ply=86 player=2 engine=2 move=7,1 elapsed_ms=0 error=none
+ply=87 player=1 engine=4 move=6,3 elapsed_ms=5584 error=none
+ply=88 player=2 engine=2 move=9,0 elapsed_ms=0 error=none
+ply=89 player=1 engine=4 move=6,2 elapsed_ms=5598 error=none
+ply=90 player=2 engine=2 move=6,4 elapsed_ms=0 error=none
+ply=91 player=1 engine=4 move=12,1 elapsed_ms=5584 error=none
+ply=92 player=2 engine=2 move=11,1 elapsed_ms=0 error=none
+ply=93 player=1 engine=4 move=11,9 elapsed_ms=5587 error=none
+adaptive plies=93 initial=13,7 eval=364 final=13,7 eval=364 depth=15 alternate=0 learned=0 error=
+ply=94 player=2 engine=2 move=13,7 elapsed_ms=5963 error=none
+ply=95 player=1 engine=4 move=10,11 elapsed_ms=5569 error=none
+adaptive plies=95 initial=13,6 eval=376 final=13,6 eval=376 depth=12 alternate=0 learned=0 error=
+ply=96 player=2 engine=2 move=13,6 elapsed_ms=5782 error=none
+ply=97 player=1 engine=4 move=13,5 elapsed_ms=5577 error=none
+adaptive plies=97 initial=4,2 eval=376 final=4,2 eval=376 depth=15 alternate=0 learned=0 error=
+ply=98 player=2 engine=2 move=4,2 elapsed_ms=5420 error=none
+ply=99 player=1 engine=4 move=3,1 elapsed_ms=5588 error=none
+adaptive plies=99 initial=12,6 eval=309 final=12,6 eval=309 depth=15 alternate=0 learned=0 error=
+ply=100 player=2 engine=2 move=12,6 elapsed_ms=5513 error=none
+ply=101 player=1 engine=4 move=10,6 elapsed_ms=5588 error=none
+adaptive plies=101 initial=9,11 eval=312 final=9,11 eval=312 depth=17 alternate=0 learned=0 error=
+ply=102 player=2 engine=2 move=9,11 elapsed_ms=5761 error=none
+ply=103 player=1 engine=4 move=13,10 elapsed_ms=5611 error=none
+adaptive plies=103 initial=9,10 eval=387 final=9,10 eval=387 depth=13 alternate=0 learned=0 error=
+ply=104 player=2 engine=2 move=9,10 elapsed_ms=5440 error=none
+ply=105 player=1 engine=4 move=9,13 elapsed_ms=5391 error=none
+adaptive plies=105 initial=10,12 eval=382 final=10,12 eval=382 depth=13 alternate=0 learned=0 error=
+ply=106 player=2 engine=2 move=10,12 elapsed_ms=5754 error=none
+ply=107 player=1 engine=4 move=1,10 elapsed_ms=5563 error=none
+adaptive plies=107 initial=11,7 eval=390 final=11,7 eval=390 depth=14 alternate=0 learned=0 error=
+ply=108 player=2 engine=2 move=11,7 elapsed_ms=5781 error=none
+ply=109 player=1 engine=4 move=10,7 elapsed_ms=5580 error=none
+adaptive plies=109 initial=12,9 eval=380 final=12,9 eval=380 depth=11 alternate=0 learned=0 error=
+ply=110 player=2 engine=2 move=12,9 elapsed_ms=5743 error=none
+ply=111 player=1 engine=4 move=2,12 elapsed_ms=5582 error=none
+adaptive plies=111 initial=3,11 eval=284 final=3,11 eval=284 depth=15 alternate=0 learned=0 error=
+ply=112 player=2 engine=2 move=3,11 elapsed_ms=5737 error=none
+ply=113 player=1 engine=4 move=12,2 elapsed_ms=5582 error=none
+adaptive plies=113 initial=2,11 eval=404 final=2,11 eval=404 depth=8 alternate=0 learned=0 error=
+ply=114 player=2 engine=2 move=2,11 elapsed_ms=5387 error=none
+ply=115 player=1 engine=4 move=4,11 elapsed_ms=5558 error=none
+adaptive plies=115 initial=12,5 eval=379 final=12,5 eval=379 depth=11 alternate=0 learned=0 error=
+ply=116 player=2 engine=2 move=12,5 elapsed_ms=5744 error=none
+ply=117 player=1 engine=4 move=10,3 elapsed_ms=5573 error=none
+adaptive plies=117 initial=11,2 eval=412 final=11,2 eval=412 depth=13 alternate=0 learned=0 error=
+ply=118 player=2 engine=2 move=11,2 elapsed_ms=5717 error=none
+ply=119 player=1 engine=4 move=14,10 elapsed_ms=5265 error=none
+adaptive plies=119 initial=13,11 eval=442 final=13,11 eval=442 depth=9 alternate=0 learned=0 error=
+ply=120 player=2 engine=2 move=13,11 elapsed_ms=5723 error=none
+ply=121 player=1 engine=4 move=14,8 elapsed_ms=5626 error=none
+adaptive plies=121 initial=14,7 eval=406 final=14,7 eval=406 depth=10 alternate=0 learned=0 error=
+ply=122 player=2 engine=2 move=14,7 elapsed_ms=5725 error=none
+ply=123 player=1 engine=4 move=11,5 elapsed_ms=5152 error=none
+adaptive plies=123 initial=9,7 eval=445 final=9,7 eval=445 depth=8 alternate=0 learned=0 error=
+ply=124 player=2 engine=2 move=9,7 elapsed_ms=5738 error=none
+ply=125 player=1 engine=4 move=2,8 elapsed_ms=5576 error=none
+ply=126 player=2 engine=2 move=2,9 elapsed_ms=0 error=none
+ply=127 player=1 engine=4 move=1,9 elapsed_ms=5482 error=none
+ply=128 player=2 engine=2 move=0,10 elapsed_ms=0 error=none
+ply=129 player=1 engine=4 move=3,9 elapsed_ms=5239 error=none
+ply=130 player=2 engine=2 move=0,6 elapsed_ms=0 error=none
+ply=131 player=1 engine=4 move=1,11 elapsed_ms=5594 error=none
+ply=132 player=2 engine=2 move=1,8 elapsed_ms=0 error=none
+ply=133 player=1 engine=4 move=14,12 elapsed_ms=5572 error=none
+ply=134 player=2 engine=2 move=14,11 elapsed_ms=0 error=none
+ply=135 player=1 engine=4 move=1,12 elapsed_ms=5529 error=none
+ply=136 player=2 engine=2 move=1,13 elapsed_ms=0 error=none
+ply=137 player=1 engine=4 move=0,12 elapsed_ms=5580 error=none
+ply=138 player=2 engine=2 move=2,10 elapsed_ms=0 error=none
+ply=139 player=1 engine=4 move=4,12 elapsed_ms=5591 error=none
+ply=140 player=2 engine=2 move=3,12 elapsed_ms=0 error=none
+ply=141 player=1 engine=4 move=10,2 elapsed_ms=5605 error=none
+ply=142 player=2 engine=2 move=10,0 elapsed_ms=0 error=none
+ply=143 player=1 engine=4 move=12,0 elapsed_ms=5313 error=none
+ply=144 player=2 engine=2 move=12,3 elapsed_ms=0 error=none
+ply=145 player=1 engine=4 move=14,2 elapsed_ms=5587 error=none
+ply=146 player=2 engine=2 move=13,3 elapsed_ms=0 error=none
+ply=147 player=1 engine=4 move=4,13 elapsed_ms=5607 error=none
+ply=148 player=2 engine=2 move=4,14 elapsed_ms=0 error=none
+ply=149 player=1 engine=4 move=8,10 elapsed_ms=5242 error=none
+adaptive plies=149 initial=3,10 eval=0 final=3,10 eval=0 depth=14 alternate=0 learned=0 error=
+ply=150 player=2 engine=2 move=3,10 elapsed_ms=5446 error=none
+ply=151 player=1 engine=4 move=1,2 elapsed_ms=5570 error=none
+adaptive plies=151 initial=3,14 eval=2051 final=3,14 eval=2051 depth=13 alternate=0 learned=0 error=
+ply=152 player=2 engine=2 move=3,14 elapsed_ms=5495 error=none
+ply=153 player=1 engine=4 move=3,13 elapsed_ms=5064 error=none
+adaptive plies=153 initial=0,7 eval=1524 final=0,7 eval=1524 depth=11 alternate=0 learned=0 error=
+ply=154 player=2 engine=2 move=0,7 elapsed_ms=5496 error=none
+ply=155 player=1 engine=4 move=0,9 elapsed_ms=4770 error=none
+adaptive plies=155 initial=0,4 eval=0 final=0,4 eval=0 depth=14 alternate=0 learned=0 error=
+ply=156 player=2 engine=2 move=0,4 elapsed_ms=5491 error=none
+ply=157 player=1 engine=4 move=0,5 elapsed_ms=5592 error=none
+adaptive plies=157 initial=5,13 eval=2038 final=5,13 eval=2038 depth=12 alternate=0 learned=0 error=
+ply=158 player=2 engine=2 move=5,13 elapsed_ms=5284 error=none
+ply=159 player=1 engine=4 move=5,14 elapsed_ms=5278 error=none
+adaptive plies=159 initial=6,12 eval=1430 final=6,12 eval=1430 depth=12 alternate=0 learned=0 error=
+ply=160 player=2 engine=2 move=6,12 elapsed_ms=5111 error=none
+ply=161 player=1 engine=4 move=7,6 elapsed_ms=5363 error=none
+adaptive plies=161 initial=8,5 eval=2056 final=8,5 eval=2056 depth=11 alternate=0 learned=0 error=
+ply=162 player=2 engine=2 move=8,5 elapsed_ms=5154 error=none
+ply=163 player=1 engine=4 move=11,12 elapsed_ms=5586 error=none
+adaptive plies=163 initial=6,13 eval=0 final=6,13 eval=0 depth=13 alternate=0 learned=0 error=
+ply=164 player=2 engine=2 move=6,13 elapsed_ms=5051 error=none
+ply=165 player=1 engine=4 move=6,14 elapsed_ms=2088 error=none
+adaptive plies=165 initial=5,2 eval=0 final=5,2 eval=0 depth=10 alternate=0 learned=0 error=
+ply=166 player=2 engine=2 move=5,2 elapsed_ms=5047 error=none
+ply=167 player=1 engine=4 move=10,13 elapsed_ms=5607 error=none
+ply=168 player=2 engine=2 move=12,11 elapsed_ms=0 error=none
+ply=169 player=1 engine=4 move=5,12 elapsed_ms=5469 error=none
+adaptive plies=169 initial=13,2 eval=1339 final=13,2 eval=1339 depth=12 alternate=0 learned=0 error=
+ply=170 player=2 engine=2 move=13,2 elapsed_ms=5180 error=none
+ply=171 player=1 engine=4 move=12,10 elapsed_ms=5304 error=none
+adaptive plies=171 initial=8,11 eval=0 final=8,11 eval=0 depth=12 alternate=0 learned=0 error=
+ply=172 player=2 engine=2 move=8,11 elapsed_ms=5301 error=none
+ply=173 player=1 engine=4 move=11,11 elapsed_ms=5605 error=none
+adaptive plies=173 initial=13,12 eval=0 final=13,12 eval=0 depth=14 alternate=0 learned=0 error=
+ply=174 player=2 engine=2 move=13,12 elapsed_ms=5273 error=none
+ply=175 player=1 engine=4 move=14,13 elapsed_ms=5673 error=none
+adaptive plies=175 initial=13,0 eval=0 final=13,0 eval=0 depth=11 alternate=0 learned=0 error=
+ply=176 player=2 engine=2 move=13,0 elapsed_ms=5043 error=none
+ply=177 player=1 engine=4 move=13,1 elapsed_ms=2983 error=none
+adaptive plies=177 initial=2,3 eval=0 final=2,3 eval=0 depth=12 alternate=0 learned=0 error=
+ply=178 player=2 engine=2 move=2,3 elapsed_ms=5026 error=none
+ply=179 player=1 engine=4 move=12,12 elapsed_ms=5572 error=none
+adaptive plies=179 initial=13,9 eval=0 final=13,9 eval=0 depth=12 alternate=0 learned=0 error=
+ply=180 player=2 engine=2 move=13,9 elapsed_ms=5041 error=none
+ply=181 player=1 engine=4 move=14,14 elapsed_ms=5604 error=none
+ply=182 player=2 engine=2 move=13,13 elapsed_ms=0 error=none
+ply=183 player=1 engine=4 move=3,2 elapsed_ms=5618 error=none
+adaptive plies=183 initial=2,2 eval=0 final=2,2 eval=0 depth=13 alternate=0 learned=0 error=
+ply=184 player=2 engine=2 move=2,2 elapsed_ms=5018 error=none
+ply=185 player=1 engine=4 move=2,1 elapsed_ms=5595 error=none
+adaptive plies=185 initial=1,4 eval=0 final=1,4 eval=0 depth=12 alternate=0 learned=0 error=
+ply=186 player=2 engine=2 move=1,4 elapsed_ms=5011 error=none
+ply=187 player=1 engine=4 move=4,1 elapsed_ms=5597 error=none
+adaptive plies=187 initial=1,1 eval=0 final=1,1 eval=0 depth=11 alternate=0 learned=0 error=
+ply=188 player=2 engine=2 move=1,1 elapsed_ms=4995 error=none
+ply=189 player=1 engine=4 move=2,13 elapsed_ms=5626 error=none
+adaptive plies=189 initial=12,13 eval=0 final=12,13 eval=0 depth=12 alternate=0 learned=0 error=
+ply=190 player=2 engine=2 move=12,13 elapsed_ms=5000 error=none
+ply=191 player=1 engine=4 move=8,12 elapsed_ms=5634 error=none
+adaptive plies=191 initial=10,9 eval=1429 final=10,9 eval=1429 depth=13 alternate=0 learned=0 error=
+ply=192 player=2 engine=2 move=10,9 elapsed_ms=4957 error=none
+ply=193 player=1 engine=4 move=11,13 elapsed_ms=5595 error=none
+adaptive plies=193 initial=8,13 eval=0 final=8,13 eval=0 depth=12 alternate=0 learned=0 error=
+ply=194 player=2 engine=2 move=8,13 elapsed_ms=5002 error=none
+ply=195 player=1 engine=4 move=1,3 elapsed_ms=5515 error=none
+adaptive plies=195 initial=7,14 eval=0 final=7,14 eval=0 depth=13 alternate=0 learned=0 error=
+ply=196 player=2 engine=2 move=7,14 elapsed_ms=5001 error=none
+ply=197 player=1 engine=4 move=0,3 elapsed_ms=5615 error=none
+adaptive plies=197 initial=11,0 eval=0 final=11,0 eval=0 depth=13 alternate=0 learned=0 error=
+ply=198 player=2 engine=2 move=11,0 elapsed_ms=4997 error=none
+ply=199 player=1 engine=4 move=8,0 elapsed_ms=5143 error=none
+adaptive plies=199 initial=8,14 eval=0 final=8,14 eval=0 depth=13 alternate=0 learned=0 error=
+ply=200 player=2 engine=2 move=8,14 elapsed_ms=4987 error=none
+ply=201 player=1 engine=4 move=7,0 elapsed_ms=5618 error=none
+adaptive plies=201 initial=0,1 eval=0 final=0,1 eval=0 depth=12 alternate=0 learned=0 error=
+ply=202 player=2 engine=2 move=0,1 elapsed_ms=4985 error=none
+ply=203 player=1 engine=4 move=2,14 elapsed_ms=5606 error=none
+adaptive plies=203 initial=0,2 eval=0 final=0,2 eval=0 depth=12 alternate=0 learned=0 error=
+ply=204 player=2 engine=2 move=0,2 elapsed_ms=4986 error=none
+ply=205 player=1 engine=4 move=6,0 elapsed_ms=5607 error=none
+adaptive plies=205 initial=0,11 eval=1417 final=0,11 eval=1417 depth=11 alternate=0 learned=0 error=
+ply=206 player=2 engine=2 move=0,11 elapsed_ms=4985 error=none
+ply=207 player=1 engine=4 move=0,13 elapsed_ms=5528 error=none
+adaptive plies=207 initial=14,6 eval=0 final=14,6 eval=0 depth=14 alternate=0 learned=0 error=
+ply=208 player=2 engine=2 move=14,6 elapsed_ms=4986 error=none
+ply=209 player=1 engine=4 move=14,1 elapsed_ms=5601 error=none
+adaptive plies=209 initial=0,14 eval=1863 final=0,14 eval=1863 depth=17 alternate=0 learned=0 error=
+ply=210 player=2 engine=2 move=0,14 elapsed_ms=4988 error=none
+ply=211 player=1 engine=4 move=11,14 elapsed_ms=5235 error=none
+adaptive plies=211 initial=10,14 eval=0 final=10,14 eval=0 depth=16 alternate=0 learned=0 error=
+ply=212 player=2 engine=2 move=10,14 elapsed_ms=4987 error=none
+ply=213 player=1 engine=4 move=1,14 elapsed_ms=5294 error=none
+endgame-proof plies=213 value=0 nodes=174209 move=0,0
+ply=214 player=2 engine=2 move=0,0 elapsed_ms=85 error=none
+ply=215 player=1 engine=4 move=4,0 elapsed_ms=5130 error=none
+endgame-proof plies=215 value=0 nodes=17673 move=1,0
+ply=216 player=2 engine=2 move=1,0 elapsed_ms=10 error=none
+ply=217 player=1 engine=4 move=14,4 elapsed_ms=1699 error=none
+endgame-proof plies=217 value=0 nodes=4510 move=14,0
+ply=218 player=2 engine=2 move=14,0 elapsed_ms=2 error=none
+ply=219 player=1 engine=4 move=14,3 elapsed_ms=853 error=none
+endgame-proof plies=219 value=0 nodes=401 move=14,5
+ply=220 player=2 engine=2 move=14,5 elapsed_ms=0 error=none
+ply=221 player=1 engine=4 move=13,14 elapsed_ms=710 error=none
+endgame-proof plies=221 value=0 nodes=16 move=2,0
+ply=222 player=2 engine=2 move=2,0 elapsed_ms=0 error=none
+ply=223 player=1 engine=4 move=12,14 elapsed_ms=643 error=none
+endgame-proof plies=223 value=0 nodes=2 move=3,0
+ply=224 player=2 engine=2 move=3,0 elapsed_ms=0 error=none
+ply=225 player=1 engine=4 move=9,14 elapsed_ms=616 error=none
+star_case=9 opponent=4 start=7,7 lumen=white winner=0 plies=225 lumen_avg_ms=2621 lumen_max_ms=6190 opponent_avg_ms=5251 opponent_max_ms=5718 termination=normal status=PASS error=none
+moves=7,7 6,6 5,6 6,7 6,5 7,5 5,8 5,7 4,8 8,4 9,3 3,8 6,9 4,7 5,9 5,10 3,7 6,10 7,9 4,9 2,7 6,8 7,10 7,8 2,6 1,5 2,5 2,4 3,3 5,5 5,4 4,3 3,5 4,5 4,4 5,3 8,9 9,9 9,8 6,11 7,12 8,7 4,10 5,11 8,6 7,4 10,4 7,3 7,2 8,2 3,6 3,4 4,6 1,6 8,3 10,5 1,7 0,8 9,5 11,3 11,4 9,12 11,8 11,6 7,11 7,13 10,10 12,7 9,4 9,6 9,1 9,2 6,1 5,0 10,8 13,8 14,9 11,10 12,8 8,8 12,4 13,4 8,1 5,1 10,1 7,1 6,3 9,0 6,2 6,4 12,1 11,1 11,9 13,7 10,11 13,6 13,5 4,2 3,1 12,6 10,6 9,11 13,10 9,10 9,13 10,12 1,10 11,7 10,7 12,9 2,12 3,11 12,2 2,11 4,11 12,5 10,3 11,2 14,10 13,11 14,8 14,7 11,5 9,7 2,8 2,9 1,9 0,10 3,9 0,6 1,11 1,8 14,12 14,11 1,12 1,13 0,12 2,10 4,12 3,12 10,2 10,0 12,0 12,3 14,2 13,3 4,13 4,14 8,10 3,10 1,2 3,14 3,13 0,7 0,9 0,4 0,5 5,13 5,14 6,12 7,6 8,5 11,12 6,13 6,14 5,2 10,13 12,11 5,12 13,2 12,10 8,11 11,11 13,12 14,13 13,0 13,1 2,3 12,12 13,9 14,14 13,13 3,2 2,2 2,1 1,4 4,1 1,1 2,13 12,13 8,12 10,9 11,13 8,13 1,3 7,14 0,3 11,0 8,0 8,14 7,0 0,1 2,14 0,2 6,0 0,11 0,13 14,6 14,1 0,14 11,14 10,14 1,14 0,0 4,0 1,0 14,4 14,0 14,3 14,5 13,14 2,0 12,14 3,0 9,14
